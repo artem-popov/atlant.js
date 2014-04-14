@@ -1,0 +1,25 @@
+{
+  "name": "atlant.js",
+  "version": "0.0.1",
+  "homepage": "https://github.com/artem-popov/atlant.js",
+  "authors": [
+    "Artem Popov <artem.popov@frumatic.com>"
+  ],
+  "description": "Atlant.js is a micro-routing framework for (yet) Angular.js. It is provides robust routing and dependency injection mechanism. It uses bacon.js streams to rule all out.",
+  "main": "src/ng/ng-s-atlant-route.js",
+  "keywords": [
+    "angular",
+    "route",
+    "routes",
+    "routing",
+    "bacon.js"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
