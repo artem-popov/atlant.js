@@ -2,7 +2,7 @@
  *
  * @TODO: fast switching generate console.error.
  */
-angular.module('atlant', []).service('$atlantRoute', ['$http', '$templateCache', '$compile', '$s', '$location', '$rootScope', '$timeout', '$controller', 'CacheService', '$atlantParams', function($http, $templateCache, $compile, $s, $location, $rootScope, $timeout, $controller, CacheService, $atlantParams) {
+angular.module('atlant', []).service('$atlant', ['$http', '$templateCache', '$compile', '$s', '$location', '$rootScope', '$timeout', '$controller', 'CacheService', '$atlantParams', function($http, $templateCache, $compile, $s, $location, $rootScope, $timeout, $controller, CacheService, $atlantParams) {
 
     // Initialization specific vars
     var isRenderApplyed  // Is Render already set OnValue for renders
