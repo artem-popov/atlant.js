@@ -7,7 +7,11 @@ It uses bacon.js streams to work.
 Examples and documentation are on the way.
 
 
-Development installation:
+#Which files to use?
+
+use from the /dev folder
+
+#Development installation:
 
 npm install -g gulp
 npm install
