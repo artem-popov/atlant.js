@@ -5,3 +5,9 @@ It is provides robust routing and dependency injection mechanism.
 It uses bacon.js streams to work.
 
 Examples and documentation are on the way.
+
+
+Development installation:
+
+npm install -g gulp
+npm install
