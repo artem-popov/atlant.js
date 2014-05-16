@@ -173,24 +173,22 @@ window.s = (function(){
     }
     var notEmpty = _.compose( negate, empty );
 
-    var dot = _.curry( function(item, obj) {
-        return obj[item];
-    });
+    var simpleDot = function(expression, obj) {
+        return obj[expression];
+    }
 
-    /* @TODO deprecated */
-    var flipDot = _.curry( function(obj, item) {
-        if (obj) return obj[item];
-        else return obj;
+    var flipSimpleDot = function(obj, expression) {
+        return obj[expression];
+    }
+
+    // expression is ".something" or ".something.something"
+    var dot = _.curry( function(expression, obj) {
+        return expression.split('.').filter($s.notEmpty).reduce(flipSimpleDot, obj);
     });
 
     // expression is ".something" or ".something.something"
-    var flipParse = _.curry( function(expression, obj) {
-        return expression.split('.').filter($s.notEmpty).reduce($s.flipDot, obj);
-    });
-
-    // expression is ".something" or ".something.something"
-    var parse = _.curry( function(obj, expression) {
-        return expression.split('.').filter($s.notEmpty).reduce($s.flipDot, obj);
+    var flipDot = _.curry( function(obj, expression) {
+        return dot(expression, obj);
     });
 
     var set = _.curry( function(item, obj, value) {
@@ -264,9 +262,9 @@ window.s = (function(){
     }
 
     var promise = function(value) {
-        var defer = $q.defer();
-        defer.resolve(value);
-        return defer.promise;
+        return new Promise( function(fullfill, reject ) { 
+             fullfill(value);
+        });
     }
 
     //memoize.js - by @addyosmani, @philogb, @mathias
@@ -314,8 +312,6 @@ window.s = (function(){
     this.filter = filter;
     this.reduce = reduce;
     this.dot 	= dot;
-    this.flipParse = flipParse;
-    this.parse = parse;
     this.flipDot 	= flipDot;
     this.push 	= push;
     this.split 	= split;
