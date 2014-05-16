@@ -6,14 +6,30 @@
 window.atlant = (function(){
     // Initialization specific vars
     var isRenderApplyed  // Is Render already set OnValue for renders
-        ,defaultViewId = 'streamView'
-        ,skipRoutes = []  // This routes will be skipped in StreamRoutes
         ,params = [] // Route mask params parsed
         ,routes = []  // Routes collected
         ,streams = {} // Streams collected
         ,renderNames = []
-        ,parentOf = {}
         ,viewNames = [];
+
+    /*
+     * Very simple attacher. uses viewName as attribute name of attribute and installs string inside 
+     */
+    var simpleAttacherProvider = function(viewName, string) {
+        var fragment = document.createDocumentFragment();
+        fragment.appendChild(string);
+
+        var element = document.querySelector('[' + viewName + ']');
+        element.appendChild(fragment);
+
+    }
+
+    var prefs = {
+            parentOf: {}
+            ,defaultView: ''
+            ,attacherProvider: simpleAttacherProvider 
+            ,skipRoutes: []  // This routes will be skipped in StreamRoutes
+    }
 
 //    var log = s.nop;
     var log = console.log.bind(console, '--');
@@ -61,7 +77,7 @@ window.atlant = (function(){
         ,viewReady = {}
 
     // Render specific vars
-    var lastScopes = {}   // Each viewId has it's own scope - used on render.
+    var lastScopes = {}   // Each viewName has it's own scope - used on render.
         ,dataByView = {}  // This data will be injected into scope when render occurs.
         ,scopeAttached = {}; // Registering view templateUrl to know that this url was rendered in that view. Stops rendering this URL in this view then.
 
@@ -136,9 +152,9 @@ window.atlant = (function(){
             /**
              * @returns interpolation of the redirect path with the parametrs
              */
-            ,interpolate: function(string, params) {
+            ,interpolate: function(template, params) {
                 var result = [];
-                forEach((string||'').split(':'), function(segment, i) {
+                template.split(':').map( function(segment, i) {
                     if (i == 0) {
                         result.push(segment);
                     } else {
@@ -222,7 +238,50 @@ window.atlant = (function(){
             }
         });
 
-        return { convertPromiseD:convertPromiseD, safeD: safeD, injectParamsD:injectParamsD };
+
+        var simpleType = function(data, key) {
+            return 'string' === typeof data[key] || 'number' === typeof data[key] || 'boolean' === typeof data[key]
+        }
+        
+        /**
+         * Injects depend values from upstream into object which is supplyed first.
+         */
+        var injectDependsIntoScope = function ( scope, upstream ) {
+            var viewName =  upstream.render.viewId;
+
+            var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
+            var data = s.map( s.dot(upstream), injects );
+            var saveData4Childs = s.set(viewName, dataByView)(data);
+
+            s.extend( data, dataByView[prefs.parentOf[viewName]])
+
+            s.extend( scope, data );
+            Object.keys(data).filter(simpleType.bind(this, data)).map(function(key){
+                Object.defineProperty(scope, key, {
+                    get: function () {
+                        return s.parse( upstream, injects[key] );
+                    }
+                });
+            });
+        };
+
+        var injectInfoIntoScope = function(scope, upstream) {
+            scope.__info = { 
+                params: upstream.params
+                ,route: {
+                    mask: upstream.route.mask    
+                    ,path: upstream.path
+                }
+            }
+        }
+
+        return { 
+            convertPromiseD: convertPromiseD
+            ,safeD: safeD
+            ,injectParamsD: injectParamsD
+            ,injectDependsIntoScope: injectDependsIntoScope
+            ,injectInfoIntoScope: injectInfoIntoScope
+       };
     }();
 
 
@@ -245,35 +304,24 @@ window.atlant = (function(){
 
     var assignRenders = function(){
 
-        var templateRetrieve = s.curry( function(templateUrl, upstream) {
-            return $http
-                .get(templateUrl, {cache: $templateCache})
-                .then(function(response) { return response.data; });
-        });
-
         var renderStopper = function(upstream) {
-            if ( viewRendered[upstream.render.viewId] || isRedirected ) return false;
-            else viewRendered[upstream.render.viewId] = true;
+            if ( viewRendered[upstream.render.viewName] || isRedirected ) return false;
+            else viewRendered[upstream.render.viewName] = true;
             return true;
         };
 
+        // Registering render for view.
         var assignRender = function(stream) {
-            var ups = Upstream();
-
-            // Registering render for view.
+            console.log('assigning render for ', stream);
             stream
                 .filter( renderStopper )
-                .map( ups.fmap(_.extend) )
-                .flatMap( function(upstream) {
-                    if (upstream.render.templateUrl) {
-                        return clientFuncs.convertPromiseD( templateRetrieve( upstream.render.templateUrl ), upstream );
-                    } else {
-                        return Bacon.constant(upstream.render.template);
-                    }
-                })
-                .mapError(function() { console.error((new Error('Error rendering template.')).stack); return ''; })
-                .map(ups.join('render', 'template'))
-                .onValue( renderStream );
+                .onValue( function(upstream){ 
+                    var scope = {}; // @TODO use cached scope
+                    clientFuncs.injectDependsIntoScope(scope, upstream);
+                    clientFuncs.injectInfoIntoScope(scope, upstream);
+
+                    s.dot('.render.renderProvider', upstream)(scope); 
+                })        
         };
 
         var assignLastRedirect = function() {
@@ -290,10 +338,10 @@ window.atlant = (function(){
         };
 
         var getOrderedStreams = function(name, stream) {
-            if (! parentOf[name] ) return stream;
+            if (! prefs.parentOf[name] ) return stream;
 
-            log('View dependentions:', name, JSON.stringify(stream), 'are depends on', parentOf[name], JSON.stringify(renders[parentOf[name]]));
-            var parentStream = viewReady[parentOf[name]];
+            log('View dependentions:', name, JSON.stringify(stream), 'are depends on', prefs.parentOf[name], JSON.stringify(renders[prefs.parentOf[name]]));
+            var parentStream = viewReady[prefs.parentOf[name]];
             stream = Bacon.combineWith(yC, parentStream, stream).changes().filter(function(x){return x});
 
             return stream;
@@ -302,113 +350,19 @@ window.atlant = (function(){
         return function() {
             if ( isRenderApplyed ) return;
 
-            isRenderApplyed = true;
-            for(var viewId in renders) {
-                var orderedStreams = s.map(getOrderedStreams.bind(this, viewId), renders[viewId])
+            isRenderApplyed = true
+            for(var viewName in renders) {
+                var orderedStreams = s.map(getOrderedStreams.bind(this, viewName), renders[viewName])
                 s.map(assignRender, orderedStreams);
             }
 
-            for(var viewId in defaultRoutes) {
-                assignRender(defaultRoutes[viewId]);
+            for(var viewName in defaultRoutes) {
+                assignRender(defaultRoutes[viewName]);
             }
 
             assignLastRedirect();
         };
     }();
-
-	/* Render Stream */
-    var renderStream = function(){
-
-        var simpleType = function(data, key) {
-            return 'string' === typeof data[key] || 'number' === typeof data[key] || 'boolean' === typeof data[key]
-        }
-        var injectDependsIntoScope = function ( scope, upstream ) {
-            var viewName =  upstream.render.viewId;
-
-            var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
-            var data = s.map( s.parse(upstream), injects );
-            var saveData4Childs = s.set(viewName, dataByView)(data);
-
-            s.extend( data, dataByView[parentOf[viewName]])
-            console.log('datax:',upstream,data);
-
-            s.extend( scope, data );
-            Object.keys(data).filter(simpleType.bind(this, data)).map(function(key){
-                Object.defineProperty(scope, key, {
-                    get: function () {
-                        return s.parse( upstream, injects[key] );
-                    }
-                });
-            });
-        };
-        var destroyScope = function (scope) {
-            if (scope) {
-                scope.$destroy();
-                scope = null;
-            }
-        };
-        var clearView = function (view, scope) {
-            view.html('');
-            if (scope) {
-                destroyScope(scope);
-            }
-        }
-
-        return function(upstream) {
-            var controller = upstream.render.controller;
-            var templateUrl = upstream.render.templateUrl;
-            var viewId = upstream.render.viewId;
-
-            if ( ! upstream.render.template ) { // Just clearing view
-                var view = $( '#' + viewId );
-                clearView(view, void 0);
-                return;
-            }
-
-            $timeout( function(){
-                if ( scopeAttached[viewId] !== templateUrl ) { // stopping re-rendering the same tpl again and again
-
-                    var lastScope = $rootScope.$new();
-                    injectDependsIntoScope(lastScope, upstream);
-                    var view = $( '#' + viewId );
-
-//                    log('lastscope is:',lastScopes[templateUrl]);
-                    clearView(view, lastScopes[templateUrl]);
-                    view.html(upstream.render.template);
-                    var link = $compile(view.contents());
-
-                    try {                   // Unsafe app code inside ;)
-                        if (controller) {
-                            controller = $controller( controller, {scope:lastScope});
-                            view.children().data('$ngControllerController', controller);
-                        }
-                        link(lastScope);
-                    } catch(e) {
-                        console.error('Controller cannot be instantiated:', e.message, e.stack);
-                    }
-
-                    lastScopes[templateUrl] = lastScope;
-                    scopeAttached[viewId] = templateUrl; // mask this tpl as rendered.
-                    log('rendering!:',controller, 'with', templateUrl, 'into', viewId, view[0] );
-                    log('render data is: ', upstream);
-                    log('scope is: ', lastScope);
-                } else {
-                    log('Caching template because it is already rendered in the view: "', templateUrl, '" in "', viewId, '"');
-                }
-
-                log('SIGNAL:',upstream.render.viewId, 'pushed signal', upstream );
-                if (viewReady[upstream.render.viewId])
-                    viewReady[upstream.render.viewId].push(upstream);
-
-                $rootScope.$apply();
-            });
-
-        };
-
-    }();
-
-
-
 
 	/* matchRouteLast */
     var matchRouteLast = function(){
@@ -427,7 +381,6 @@ window.atlant = (function(){
         var matchRoute = s.memoize( function(path, mask){ //@TODO add real match, now works only for routes without params
             // TODO(i): this code is convoluted and inefficient, we should construct the route matching
             //   regex only once and then reuse it
-
             var negate = '!' == mask[0];
             if (negate) {
                 mask = mask.slice(1, mask.length-1);
@@ -453,10 +406,10 @@ window.atlant = (function(){
             }
             // Append trailing path part.
             regex += when.substr(lastMatchedIndex);
-
+            
             var match = path.match(new RegExp(regex));
             if (match) {
-                forEach(params, function(name, index) {
+                params.map(function(name, index) {
                     dst[name] = match[index + 1];
                 });
 
@@ -647,10 +600,10 @@ window.atlant = (function(){
             scopeAttached = [];
             dataByView = {};
             return {
-                path: window.location.pathName
+                path: window.location.pathname
             };
         })
-        .filter( s.compose( s.empty, s.flip(utils.matchRoutes)(Matching.continue, skipRoutes), s.dot('path')  )) // If route marked as 'skip', then we should not treat it at all.
+        .filter( s.compose( s.empty, s.flip(utils.matchRoutes)(Matching.continue, prefs.skipRoutes), s.dot('path')  )) // If route marked as 'skip', then we should not treat it at all.
 
 
     var rootStream = Bacon.fromBinder(function(sink) {
@@ -750,57 +703,43 @@ window.atlant = (function(){
      * Applyed to any stream and will force render of "template" with "controller" into "view"
      * @param controller
      * @param templateUrl
-     * @param viewId - directive name which will be used to inject template
+     * @param viewName - directive name which will be used to inject template
      * @returns {*}
      */
     var _render = function(){
-        var parseViewName = function(viewName) {
-            var relation = viewName.split('.');
-            var name, parent;
-            if ( 2 == relation.length ) {
-                name = relation[1];
-                parent = relation[0];
-            }
-            if ( 1 == relation.length ) {
-                name = relation[0];
-            }
-
-            return {name:name, parent:parent};
-        };
-        return function(controller, tpl, viewId){
+        return function(renderProvider, viewName) { 
 
             if ( ! state.lastOp ) throw new Error('"render" should nest something');
+            
+            type(renderProvider, 'function');
+            type(viewName, 'string');
 
-            viewId = viewId || defaultViewId;
+            viewName = viewName || prefs.defaultView;
 
-            var nameObject = parseViewName(viewId);
-            if (nameObject.parent && ! parentOf[nameObject.name] ) parentOf[nameObject.name] = nameObject.parent;
-            var name = nameObject.name;
+            if ( !viewName ) throw new Error('Default render name is not provided.');
+        
             var ups = Upstream();
-
-            var template = (tpl && ':' === tpl[0]) ? tpl.slice(1, tpl.length-1): '';
-            var templateUrl = (tpl && ':' !== tpl[0]) ? tpl: '';
 
             var thisRender = state.lastOp
                 .map(ups.fmap(_.extend))
-                .map(function() { return {controller:controller, template:template, templateUrl:templateUrl, viewId:name, parentView:nameObject.parent }; })
+                .map(function() { return { renderProvider: renderProvider, viewName:viewName }; })
                 .map(ups.join('render', void 0));
 
-            // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewId.
-            if ( ! renders[name] ) renders[name] = [];
-            renders[name].push(thisRender);
+            // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewName.
+            if ( ! renders[viewName] ) renders[viewName] = [];
+            renders[viewName].push(thisRender);
 
-            if( ! viewReady[name]) viewReady[name] = new Bacon.Bus(); // This will signal that this view is rendered. Will be used in onValue assignment.
+            if( ! viewReady[viewName]) viewReady[viewName] = new Bacon.Bus(); // This will signal that this view is rendered. Will be used in onValue assignment.
 
             if (void 0 !== state.lastIf) State.rollback();
-            State.print('_____renderStateAfter:'+controller, state);
+            State.print('_____renderStateAfter:', state);
 
             return this;
         };
     }();
 
-    var _clear = function(viewId) {
-        return _render.bind(this)(void 0, void 0, viewId);
+    var _clear = function(viewName) {
+        return _render.bind(this)( s.flip(simpleAttacherProvider).bind(void 0, ''), viewName);
     }
 
     var _redirect = function(url){
@@ -836,6 +775,9 @@ window.atlant = (function(){
 //        return this;
 //    }
 
+    var type = function(item, type) {
+        if ( type !== typeof item && item ) throw new Error('Type Error: ' + item + ' should be ' + type);
+    }
     /* Not ordered commands */
     /**
      * Default route.
@@ -843,18 +785,23 @@ window.atlant = (function(){
      * @param route
      * @returns {otherwise}
      */
-    var _otherwise = function(controller, templateUrl, viewId) {
+    var _otherwise = function(renderProvider, viewName) {
+        
+        type(renderProvider, 'function');
+        type(viewName, 'string');
 
-        viewId = viewId || defaultViewId;
+        viewName = viewName || prefs.defaultView;
+
+        if ( !viewName ) throw new Error('Default render name is not provided.');
 
         var ups = Upstream();
 
-        defaultRoutes[viewId] = otherWiseRootStream
+        defaultRoutes[viewName] = otherWiseRootStream
             .map(ups.fmap(_.extend))
-            .map(function() { return {controller:controller, templateUrl:templateUrl, viewId:viewId }; })
+            .map(function() { return { renderProvider: renderProvider, viewName:viewName }; })
             .map(ups.join('render', void 0))
 
-        add('defaultOf'+viewId, defaultRoutes[viewId])
+        add('defaultOf'+viewName, defaultRoutes[viewName])
         return this;
     }
 
@@ -863,11 +810,23 @@ window.atlant = (function(){
      * @param view - is a directive for injecting template
      * @returns atlant 
      */
-    var _defaultView = function( viewId ) {
-        defaultViewId = viewId;
+    var _defaultView = function( defaultViewName ) {
+        prefs.defaultView = defaultViewName;
         return this;
     }
 
+    /**
+     * Attacher attach view to html
+     */
+    var _attacher = function( attacherProvider ) {
+         prefs.attacherProvider = attacherProvider;
+         return this; 
+    }
+    
+    var _views = function(hirearchyObject) {
+        prefs.parentOf = s.merge( prefs.parentOf, hirearchyObject );
+        return this;
+    }
 
     /**
      * Function: skip
@@ -878,8 +837,8 @@ window.atlant = (function(){
      */
     var _skip = function(){
         var pushSkipVariants = function(path) {
-                skipRoutes.push( {mask: path} );
-                skipRoutes.push( {mask: utils.getPossiblePath(path)} );
+                prefs.skipRoutes.push( {mask: path} );
+                prefs.skipRoutes.push( {mask: utils.getPossiblePath(path)} );
         };
 
         return function (path){
@@ -893,7 +852,9 @@ window.atlant = (function(){
     }();
 
     return {
-        defaultView: _defaultView
+        views: _views
+        ,defaultView: _defaultView
+        ,attacher: _attacher
         ,when: _when
         ,lastWhen: _lastWhen
         ,depends: _depends
