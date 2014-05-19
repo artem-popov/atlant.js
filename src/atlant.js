@@ -201,6 +201,9 @@ window.atlant = (function(){
 
                 return s.head(routes);
             }
+            ,getLocation: function() {
+                return window.location.pathname;
+            }
         };
     }();
 
@@ -582,7 +585,9 @@ window.atlant = (function(){
     // Because we are using the same ng-view with angular, then we need to know when it's filled by ng.
     document.addEventListener("DOMContentLoaded", onRouteChange);
     window.addEventListener("popstate", onRouteChange);
-    
+   
+    var publishStream = new Bacon.Bus();
+
     var routeChangedStream = Bacon
         .fromBinder(function(sink) {
             // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
@@ -593,6 +598,7 @@ window.atlant = (function(){
             document.addEventListener("DOMContentLoaded", routeChanged);
             window.addEventListener("popstate", routeChanged);
         })
+        .merge(publishStream)        
         .map(function(route) {
             isLastWasMatched = false;
             isRedirected = false;
@@ -600,11 +606,10 @@ window.atlant = (function(){
             scopeAttached = [];
             dataByView = {};
             return {
-                path: window.location.pathname
+                path: utils.getLocation()
             };
         })
         .filter( s.compose( s.empty, s.flip(utils.matchRoutes)(Matching.continue, prefs.skipRoutes), s.dot('path')  )) // If route marked as 'skip', then we should not treat it at all.
-
 
     var rootStream = Bacon.fromBinder(function(sink) {
             routeChangedStream.onValue(function(upstream) {
@@ -733,7 +738,6 @@ window.atlant = (function(){
 
             if (void 0 !== state.lastIf) State.rollback();
             State.print('_____renderStateAfter:', state);
-
             return this;
         };
     }();
@@ -851,6 +855,13 @@ window.atlant = (function(){
         }
     }();
 
+    /**
+     *  Use this method to publish routes when 
+     */
+    var _publish = function(){
+        publishStream.push({path: utils.getLocation()});
+    }
+
     return {
         views: _views
         ,defaultView: _defaultView
@@ -870,6 +881,7 @@ window.atlant = (function(){
 //      ,set:set
 //      ,unset:unset
         ,exports:exports
+        ,publish:_publish
     };
 
 })();
