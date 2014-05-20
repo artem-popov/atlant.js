@@ -210,7 +210,11 @@ window.atlant = (function(){
     var clientFuncs = function() {
 
         var convertPromiseD = s.curry(function(promiseProvider, upstream) {
-            return Bacon.fromPromise( promiseProvider( upstream ) );
+            var promise = promiseProvider( upstream );
+            if ( void 0 === promise || void 0 === promise.then )
+                return Bacon.Error('Depend should provide promise,');
+            else    
+                return Bacon.fromPromise( promise );
         });
 
         var safeD = function(fn){
@@ -227,10 +231,7 @@ window.atlant = (function(){
         // Provides last depend data as param for .if command
         var injectParamsD = s.curry(function(lastDepName, fn) {
             return function(upstream) {
-                console.log('in provider:', upstream, lastDepName);
                 var args = [{ params:upstream.params, mask:upstream.route.mask }];
-
-                console.log('ub provider:', lastDepName );
 
                 if (lastDepName && upstream.depends && upstream.depends[lastDepName]) {
                     args.push( upstream.depends[lastDepName] );
@@ -253,9 +254,10 @@ window.atlant = (function(){
             var viewName =  upstream.render.viewId;
 
             var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
-            var data = s.map( s.dot(upstream), injects );
-            var saveData4Childs = s.set(viewName, dataByView)(data);
+            var error = function() { throw Error('Wrong inject accessor.') }
+            var data = s.map( s.compose( s.if(s.empty, error),  s.flipDot(upstream) ), injects );
 
+            var saveData4Childs = s.set(viewName, dataByView)(data);
             s.extend( data, dataByView[prefs.parentOf[viewName]])
 
             s.extend( scope, data );
@@ -304,9 +306,20 @@ window.atlant = (function(){
 
     /* Helpers */
 
+    /* @TODO declare true default render */
+    var defaultRender = function(viewProvider, name, scope) {
+        document.querySelector('#mainView');
+    }
+
+    /**
+     * @TODO move out of main source tree.
+     */
+    var defaultRender = function(viewProvider, name, scope) {
+        return s.promise( React.renderComponent( viewProvider(scope), document.querySelector( '#' + name ) ) );     
+    }
+    
 
     var assignRenders = function(){
-
         var renderStopper = function(upstream) {
             if ( viewRendered[upstream.render.viewName] || isRedirected ) return false;
             else viewRendered[upstream.render.viewName] = true;
@@ -315,16 +328,20 @@ window.atlant = (function(){
 
         // Registering render for view.
         var assignRender = function(stream) {
-            console.log('assigning render for ', stream);
             stream
                 .filter( renderStopper )
-                .onValue( function(upstream){ 
-                    var scope = {}; // @TODO use cached scope
-                    clientFuncs.injectDependsIntoScope(scope, upstream);
-                    clientFuncs.injectInfoIntoScope(scope, upstream);
-
-                    s.dot('.render.renderProvider', upstream)(scope); 
-                })        
+                .onValue( function(upstream){
+                    try{ 
+                        var scope = {}; // @TODO use cached scope
+                        clientFuncs.injectDependsIntoScope(scope, upstream);
+                        clientFuncs.injectInfoIntoScope(scope, upstream);
+                        var viewProvider = s.dot('.render.renderProvider', upstream); 
+                        var viewName = s.dot('.render.viewName', upstream);
+                        defaultRender(viewProvider, viewName, scope);
+                    } catch (e) { 
+                        console.error(e);
+                    }
+                });                
         };
 
         var assignLastRedirect = function() {
@@ -456,13 +473,13 @@ window.atlant = (function(){
 
             var ups = Upstream();
 
-
             masks.forEach(function(mask) {
                 s.push({mask: mask}, routes);
                 s.push({mask: utils.getPossiblePath(mask), redirectTo: mask}, routes);
             });
 
             state.lastWhen = rootStream
+
                 .map(ups.fmap(_.extend))
                 .map( function(upstream) {
                     return masks
@@ -622,6 +639,7 @@ window.atlant = (function(){
         .filter( s.compose( s.empty, s.flip(utils.matchRoutes)(Matching.stop, routes),  s.dot('path') ))
         .map( s.logIt('Otherwise is in work.') );
 
+ 
     /* Base */
 
     /**
@@ -881,7 +899,7 @@ window.atlant = (function(){
 //      ,set:set
 //      ,unset:unset
         ,exports:exports
-        ,publish:_publish
+        ,publish: _publish
     };
 
 })();

@@ -126,12 +126,15 @@ window.s = (function(){
         var mapped = {};
 
         for( var name in obj ) {
-            mapped[name] = fn(obj[name], name);
+            mapped[name] = fn(obj[name]);
         }
 
         return mapped;
 
     });
+
+    // @TODO create mapKeys
+
 
     var fmap = _.curry( function(fn, obj) {
         return obj.fmap(fn);
@@ -174,11 +177,19 @@ window.s = (function(){
     var notEmpty = _.compose( negate, empty );
 
     var simpleDot = function(expression, obj) {
-        return obj[expression];
+        if ( obj ) {
+            return obj[expression];
+        } else {
+            return void 0;
+        }
     }
 
     var flipSimpleDot = function(obj, expression) {
-        return obj[expression];
+        if ( obj ) {
+            return obj[expression];
+        } else {
+            return void 0;
+        }
     }
 
     // expression is ".something" or ".something.something"
@@ -297,6 +308,10 @@ window.s = (function(){
         }
     }
 
+    var _if = _.curry( function(condition, then, value){
+        if( condition( value ) ) return then(value);
+        else return value;
+    });
 
     this.compose      = _.compose;
     this.curry        = _.curry;
@@ -336,10 +351,9 @@ window.s = (function(){
     this.merge = _.curry(_.merge, 2);
     this.unary = unary;
     this.side = side;
-
     // Promises
     this.promise = promise;
-
+    this.if = _if;
     /**
      * Depreated
      *
