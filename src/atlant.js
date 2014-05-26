@@ -212,21 +212,24 @@ window.atlant = (function(){
         };
     }();
 
-var linkDefender = function(event){
-    if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which ) return;
-    var element = event.target;
+    var attachGuardToLinks = function() {
+        
+        var linkDefender = function(event){
+            if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which ) return;
+            var element = event.target;
 
-    while ( 'a' !== element.nodeName.toLowerCase() ){
-        if (element === document || ! (element = element.parentNode) ) return; 
+            while ( 'a' !== element.nodeName.toLowerCase() ){
+                if (element === document || ! (element = element.parentNode) ) return; 
+            }
+            var location = element.getAttribute('href'); 
+            if ( location ) {
+                utils.goTo( location );
+                event.preventDefault();
+            }
+        }
+        document.addEventListener('click', linkDefender );
+        document.addEventListener('keydown', linkDefender );
     }
-    var location = element.getAttribute('href'); 
-    if ( location ) {
-        utils.goTo( location );
-        event.preventDefault();
-    }
-}
-document.addEventListener('click', linkDefender );
-document.addEventListener('keydown', linkDefender );
 
 
 
