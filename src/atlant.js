@@ -146,14 +146,18 @@ window.atlant = (function(){
              * @param upstream
              * @returns {*}
              */
+            goTo: function(url) {
+                history.pushState(null, null, url);
+            },
             redirectTo: function(url, params) {
-                history.replaceState(utils.interpolate(url, params));
+                history.pushState(null, null, '/story/');
             }
             /**
              * @returns interpolation of the redirect path with the parametrs
              */
             ,interpolate: function(template, params) {
                 var result = [];
+                console.log('interpolate', template, params);
                 template.split(':').map( function(segment, i) {
                     if (i == 0) {
                         result.push(segment);
@@ -193,6 +197,7 @@ window.atlant = (function(){
              */
             ,matchRoutes: function(path, routes, matchingBehaviour){
                 matchingBehaviour = matchingBehaviour || Matching.continue;
+                console.log('im here',path, routes, matchingBehaviour);
                 var routes =  routes
                     .map(function(route) {
                         return matchRouteLast( path, matchingBehaviour, route );
@@ -206,6 +211,24 @@ window.atlant = (function(){
             }
         };
     }();
+
+var linkDefender = function(event){
+    if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which ) return;
+    var element = event.target;
+
+    while ( 'a' !== element.nodeName.toLowerCase() ){
+        if (element === document || ! (element = element.parentNode) ) return; 
+    }
+    var location = element.getAttribute('href'); 
+    if ( location ) {
+        utils.goTo( location );
+        event.preventDefault();
+    }
+}
+document.addEventListener('click', linkDefender );
+document.addEventListener('keydown', linkDefender );
+
+
 
     var clientFuncs = function() {
 
@@ -427,6 +450,7 @@ window.atlant = (function(){
             // Append trailing path part.
             regex += when.substr(lastMatchedIndex);
             
+            console.log('regex',mask,path);
             var match = path.match(new RegExp(regex));
             if (match) {
                 params.map(function(name, index) {
@@ -605,28 +629,42 @@ window.atlant = (function(){
    
     var publishStream = new Bacon.Bus();
 
+    /**
+     * Create fake push state
+     **/
+    (function(history){
+        var pushState = history.pushState;
+        history.pushState = function(state, title, url) {
+            console.log('pushing state!', state, title, url);
+            var onpushstate = new CustomEvent('pushstate', { detail: { state: state, title: title, url: url } } );
+            window.dispatchEvent(onpushstate);
+            return pushState.apply(history, arguments);
+        };
+    })(window.history);
+
     var routeChangedStream = Bacon
         .fromBinder(function(sink) {
             // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
-            var routeChanged = function(event, route) { 
-                console.log('Atlant:DOMContentLoaded:', event, route);
-                sink(route); 
+            var routeChanged = function(event, url) { 
+                console.log('Atlant: ', event);
+                var path = ( event.detail ) ? event.detail.url : utils.getLocation();
+                sink( { path: path } ); 
+                event.preventDefault();
             };
-            document.addEventListener("DOMContentLoaded", routeChanged);
-            window.addEventListener("popstate", routeChanged);
+            window.addEventListener( 'popstate', routeChanged );
+            window.addEventListener( 'pushstate', routeChanged );
         })
         .merge(publishStream)        
-        .map(function(route) {
+        .map(function(upstream) { // Nil values.
             isLastWasMatched = false;
             isRedirected = false;
             viewRendered = [];
             scopeAttached = [];
             dataByView = {};
-            return {
-                path: utils.getLocation()
-            };
+            console.log('stream here',upstream);
+            return upstream;
         })
-        .filter( s.compose( s.empty, s.flip(utils.matchRoutes)(Matching.continue, prefs.skipRoutes), s.dot('path')  )) // If route marked as 'skip', then we should not treat it at all.
+        .filter( s.compose( s.empty, s.flip(utils.matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
 
     var rootStream = Bacon.fromBinder(function(sink) {
             routeChangedStream.onValue(function(upstream) {
@@ -636,7 +674,7 @@ window.atlant = (function(){
         }).map(function(upstream){upstream.id = _.uniqueId(); return upstream;})
 
     var otherWiseRootStream = rootStream
-        .filter( s.compose( s.empty, s.flip(utils.matchRoutes)(Matching.stop, routes),  s.dot('path') ))
+        .filter( s.compose( s.empty, s.flip(utils.matchRoutes)(Matching.stop, routes) ) )
         .map( s.logIt('Otherwise is in work.') );
 
  
@@ -877,7 +915,8 @@ window.atlant = (function(){
      *  Use this method to publish routes when 
      */
     var _publish = function(){
-        publishStream.push({path: utils.getLocation()});
+        console.log('pushing location',utils.getLocation());
+        publishStream.push( { path: utils.getLocation() } );
     }
 
     return {
