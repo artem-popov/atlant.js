@@ -212,7 +212,7 @@ window.atlant = (function(){
         };
     }();
 
-    var attachGuardToLinks = function() {
+    utils.attachGuardToLinks = function() {
         
         var linkDefender = function(event){
             if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which ) return;
@@ -230,7 +230,6 @@ window.atlant = (function(){
         document.addEventListener('click', linkDefender );
         document.addEventListener('keydown', linkDefender );
     }
-
 
 
     var clientFuncs = function() {
@@ -629,8 +628,12 @@ window.atlant = (function(){
     // Because we are using the same ng-view with angular, then we need to know when it's filled by ng.
     document.addEventListener("DOMContentLoaded", onRouteChange);
     window.addEventListener("popstate", onRouteChange);
-   
-    var publishStream = new Bacon.Bus();
+
+
+
+    
+    var publishStream = new Bacon.Bus();  // Here we can put init things.
+    publishStream.onValue(utils.attachGuardToLinks);
 
     /**
      * Create fake push state
@@ -644,6 +647,8 @@ window.atlant = (function(){
             return pushState.apply(history, arguments);
         };
     })(window.history);
+
+
 
     var routeChangedStream = Bacon
         .fromBinder(function(sink) {
