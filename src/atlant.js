@@ -157,7 +157,6 @@ window.atlant = (function(){
              */
             ,interpolate: function(template, params) {
                 var result = [];
-                console.log('interpolate', template, params);
                 template.split(':').map( function(segment, i) {
                     if (i == 0) {
                         result.push(segment);
@@ -197,7 +196,6 @@ window.atlant = (function(){
              */
             ,matchRoutes: function(path, routes, matchingBehaviour){
                 matchingBehaviour = matchingBehaviour || Matching.continue;
-                console.log('im here',path, routes, matchingBehaviour);
                 var routes =  routes
                     .map(function(route) {
                         return matchRouteLast( path, matchingBehaviour, route );
@@ -340,6 +338,7 @@ window.atlant = (function(){
      * @TODO move out of main source tree.
      */
     var defaultRender = function(viewProvider, name, scope) {
+        React.unmountComponentAtNode( document.querySelector( '#' + name ) );
         return s.promise( React.renderComponent( viewProvider(scope), document.querySelector( '#' + name ) ) );     
     }
     
@@ -426,10 +425,13 @@ window.atlant = (function(){
         var matchRoute = s.memoize( function(path, mask){ //@TODO add real match, now works only for routes without params
             // TODO(i): this code is convoluted and inefficient, we should construct the route matching
             //   regex only once and then reuse it
-            var negate = '!' == mask[0];
+            var negate = '!' === mask[0];
             if (negate) {
                 mask = mask.slice(1, mask.length-1);
             }
+
+            // Successefully find *
+            if ( '*' === mask[0] ) return {};
 
             // Escape regexp special characters.
             var when = '^' + mask.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&") + '$';
@@ -452,7 +454,6 @@ window.atlant = (function(){
             // Append trailing path part.
             regex += when.substr(lastMatchedIndex);
             
-            console.log('regex',mask,path);
             var match = path.match(new RegExp(regex));
             if (match) {
                 params.map(function(name, index) {
@@ -505,7 +506,6 @@ window.atlant = (function(){
             });
 
             state.lastWhen = rootStream
-
                 .map(ups.fmap(_.extend))
                 .map( function(upstream) {
                     return masks
@@ -641,7 +641,6 @@ window.atlant = (function(){
     (function(history){
         var pushState = history.pushState;
         history.pushState = function(state, title, url) {
-            console.log('pushing state!', state, title, url);
             var onpushstate = new CustomEvent('pushstate', { detail: { state: state, title: title, url: url } } );
             window.dispatchEvent(onpushstate);
             return pushState.apply(history, arguments);
@@ -654,7 +653,6 @@ window.atlant = (function(){
         .fromBinder(function(sink) {
             // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
             var routeChanged = function(event, url) { 
-                console.log('Atlant: ', event);
                 var path = ( event.detail ) ? event.detail.url : utils.getLocation();
                 sink( { path: path } ); 
                 event.preventDefault();
@@ -669,7 +667,6 @@ window.atlant = (function(){
             viewRendered = [];
             scopeAttached = [];
             dataByView = {};
-            console.log('stream here',upstream);
             return upstream;
         })
         .filter( s.compose( s.empty, s.flip(utils.matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
@@ -810,6 +807,22 @@ window.atlant = (function(){
         return _render.bind(this)( s.flip(simpleAttacherProvider).bind(void 0, ''), viewName);
     }
 
+    /**
+     * Just action. receives upstream, transparently pass it through.
+     */
+    var _do = function(actionProvider) {
+        
+        if ( ! state.lastOp ) throw new Error('"do" should nest something');
+
+        type(actionProvider, 'function');
+
+        var thisDo = state.lastOp
+        
+        thisDo.onValue( actionProvider );
+
+        return this;
+    }
+
     var _redirect = function(url){
 
         if ( ! state.lastOp ) throw new Error('"redirect" should nest something');
@@ -828,24 +841,10 @@ window.atlant = (function(){
         return this;
     }
 
-    /**
-     * Set "Global" dependency, which will be included in every stream after "when"
-     * Can be as many dependencies as need
-     */
-//    var set = function() {
-//        return this;
-//    }
-//
-//    /**
-//     * Unset "Global" dependency
-//     */
-//    var unset = function() {
-//        return this;
-//    }
-
     var type = function(item, type) {
         if ( type !== typeof item && item ) throw new Error('Type Error: ' + item + ' should be ' + type);
     }
+
     /* Not ordered commands */
     /**
      * Default route.
@@ -923,7 +922,6 @@ window.atlant = (function(){
      *  Use this method to publish routes when 
      */
     var _publish = function(){
-        console.log('pushing location',utils.getLocation());
         publishStream.push( { path: utils.getLocation() } );
     }
 
@@ -937,6 +935,7 @@ window.atlant = (function(){
         ,and: _and
         ,inject: _inject
         ,if: _if
+        ,do: _do
         ,render: _render
         ,clear: _clear
         ,redirect: _redirect
