@@ -3,7 +3,10 @@
  *
  * @TODO: fast switching generate console.error.
  */
-window.atlant = (function(){
+
+var s = require('./atlant-utils');
+
+var atlant = (function(){
     // Initialization specific vars
     var isRenderApplyed  // Is Render already set OnValue for renders
         ,params = [] // Route mask params parsed
@@ -948,6 +951,6 @@ window.atlant = (function(){
         ,publish: _publish
     };
 
-})();
+});
 
-
+module.exports = atlant;

@@ -1,13 +1,13 @@
 
-var gulp = require('gulp');
-var traceur = require('gulp-traceur');
+var gulp = require('gulp')
+    ,browserify = require('gulp-browserify')
 
 
-gulp.task('traceur', function() {
-    gulp.src('src/**/*.js')
-        .pipe(traceur({sourceMaps: true, experimental: true}))  
+gulp.task('browserify', function() {
+    gulp.src('src/atlant.js')
+        .pipe(browserify({standalone: 'atlant'}))  
         .pipe(gulp.dest('lib/'));
 });
 
-gulp.task('default', ['traceur']);
+gulp.task('default', ['browserify']);
 
