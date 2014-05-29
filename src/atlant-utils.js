@@ -1,7 +1,7 @@
 /**
    Utils library.
  */
-window.s = (function(){
+var s = (function(){
 
     var $s = this;
 
@@ -364,3 +364,5 @@ window.s = (function(){
     return this;
 
 })();
+
+module.exports = s;
