@@ -4,7 +4,9 @@
  * @TODO: fast switching generate console.error.
  */
 
-var s = require('./atlant-utils');
+var s = require('./atlant-utils')
+    ,simpleRender = require('./atlant-render')
+    ,reactRender = require('./atlant-react')
 
 var atlant = (function(){
     // Initialization specific vars
@@ -15,23 +17,12 @@ var atlant = (function(){
         ,renderNames = []
         ,viewNames = [];
 
-    /*
-     * Very simple attacher. uses viewName as attribute name of attribute and installs string inside 
-     */
-    var simpleAttacherProvider = function(viewName, string) {
-        var fragment = document.createDocumentFragment();
-        fragment.appendChild(string);
-
-        var element = document.querySelector('[' + viewName + ']');
-        element.appendChild(fragment);
-
-    }
 
     var prefs = {
             parentOf: {}
             ,defaultView: ''
-            ,attacherProvider: simpleAttacherProvider 
             ,skipRoutes: []  // This routes will be skipped in StreamRoutes
+            ,render: { render: simpleRender.render, clear: simpleRender.clear }
     }
 
 //    var log = s.nop;
@@ -331,39 +322,8 @@ var atlant = (function(){
     }
 
     /* Helpers */
-
-    /* @TODO declare true default render */
-    var defaultRender = function(viewProvider, name, scope) {
-        document.querySelector('#mainView');
-    }
-
-    /**
-     * @TODO move out of main source tree.
-     */
-    var defaultRender = function(viewProvider, name, scope) {
-        React.unmountComponentAtNode( document.querySelector( '#' + name ) );
-        return s.promise( React.renderComponent( viewProvider(scope), document.querySelector( '#' + name ) ) );     
-    }
     
-    var defaultRender = function(viewProvider, name, scope) {
-        React.unmountComponentAtNode( document.querySelector( '#' + name ) );
 
-        var rendered = new Promise( function( resolve, reject ){
-
-            var onRender = function(result) {
-                console.log('react result of rendering:', result);
-                if (false) {
-                    return reject();
-                }
-                return resolve();
-            }
-
-            React.renderComponent( viewProvider(scope), document.querySelector( '#' + name ), onRender );
-        });
-
-
-        return rendered;
-    }
 
     var assignRenders = function(){
         var renderStopper = function(upstream) {
@@ -384,7 +344,7 @@ var atlant = (function(){
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
                         var viewName = s.dot('.render.viewName', upstream);
 
-                        var rendered = defaultRender(viewProvider, viewName, scope);
+                        var rendered = prefs.render.defaultRender(viewProvider, viewName, scope);
                         rendered.then( function() {
                             if (viewReady[viewName]) {
                                 viewReady[viewName].push(upstream);
@@ -801,8 +761,7 @@ var atlant = (function(){
      * @param viewName - directive name which will be used to inject template
      * @returns {*}
      */
-    var _render = function(){
-        return function(renderProvider, viewName) { 
+    var _render = function(renderProvider, viewName){
 
             if ( ! state.lastOp ) throw new Error('"render" should nest something');
             
@@ -829,11 +788,11 @@ var atlant = (function(){
             if (void 0 !== state.lastIf) State.rollback();
             State.print('_____renderStateAfter:', state);
             return this;
-        };
-    }();
+    };
+
 
     var _clear = function(viewName) {
-        return _render.bind(this)( s.flip(simpleAttacherProvider).bind(void 0, ''), viewName);
+        return _render.bind(this)( prefs.render.clear, viewName);
     }
 
     /**
@@ -947,6 +906,11 @@ var atlant = (function(){
         }
     }();
 
+    var _setRender = function(render) {
+        prefs.render.merge(render);
+        return this;
+    }
+
     /**
      *  Use this method to publish routes when 
      */
@@ -957,7 +921,7 @@ var atlant = (function(){
     return {
         views: _views
         ,defaultView: _defaultView
-        ,attacher: _attacher
+        ,setRender: _setRender
         ,when: _when
         ,lastWhen: _lastWhen
         ,depends: _depends
@@ -970,11 +934,9 @@ var atlant = (function(){
         ,redirect: _redirect
         ,otherwise: _otherwise
         ,skip: _skip
-//      ,switchTo:switchTo
-//      ,set:set
-//      ,unset:unset
         ,exports:exports
         ,publish: _publish
+        ,renders: { react: reactRender, simple: simpleRender }
     };
 
 });
