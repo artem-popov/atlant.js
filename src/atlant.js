@@ -979,4 +979,4 @@ var atlant = (function(){
 
 });
 
-module.exports = atlant;
+module.exports = atlant();
