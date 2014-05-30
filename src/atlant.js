@@ -344,7 +344,7 @@ var atlant = (function(){
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
                         var viewName = s.dot('.render.viewName', upstream);
 
-                        var rendered = prefs.render.defaultRender(viewProvider, viewName, scope);
+                        var rendered = prefs.render.render(viewProvider, viewName, scope);
                         rendered.then( function() {
                             if (viewReady[viewName]) {
                                 viewReady[viewName].push(upstream);
@@ -907,7 +907,7 @@ var atlant = (function(){
     }();
 
     var _setRender = function(render) {
-        prefs.render.merge(render);
+        s.merge( prefs.render, render );
         return this;
     }
 

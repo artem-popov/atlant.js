@@ -16,7 +16,7 @@ var simpleRender = {
     }
 }
 
-modules.exports = { 
+module.exports = { 
     name: 'simple'
     ,render: simpleRender.render
     ,clear: simpleRender.clear 

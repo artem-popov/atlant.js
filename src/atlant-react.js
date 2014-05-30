@@ -31,7 +31,7 @@ var reactRender = {
     }
 }
 
-modules.exports = { 
+module.exports = { 
     name: 'react'
     ,render: reactRender.render
     ,clear: reactRender.clear 
