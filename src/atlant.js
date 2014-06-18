@@ -7,6 +7,7 @@
 var s = require('./atlant-utils')
     ,simpleRender = require('./atlant-render')
     ,reactRender = require('./atlant-react')
+//    ,State = require('./state.js')
 
 var atlant = (function(){
     // Initialization specific vars
@@ -31,6 +32,8 @@ var atlant = (function(){
     var state
         ,states
         ,oldStates = [];
+
+
 
     var StateType = function(state) {
         _.extend( this, {lastWhen: void 0, lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastWhenName: void 0, lastInjects: void 0} );
@@ -214,9 +217,10 @@ var atlant = (function(){
                 if (element === document || ! (element = element.parentNode) ) return; 
             }
             var location = element.getAttribute('href'); 
+            console.log('location',location);
             if ( location ) {
-                utils.goTo( location );
                 event.preventDefault();
+                utils.goTo( location );
             }
         }
         document.addEventListener('click', linkDefender );
@@ -632,24 +636,33 @@ var atlant = (function(){
         history.pushState = function(state, title, url) {
             var onpushstate = new CustomEvent('pushstate', { detail: { state: state, title: title, url: url } } );
             window.dispatchEvent(onpushstate);
-            return pushState.apply(history, arguments);
+            var state;
+            try { 
+               state = pushState.apply(history, arguments); 
+               console.log('state is', state );
+            } catch (e) {
+               console.log('Can\'t push state:', e);
+            }
+            return state; 
         };
     })(window.history);
-
 
 
     var routeChangedStream = Bacon
         .fromBinder(function(sink) {
             // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
             var routeChanged = function(event, url) { 
-                var path = ( event.detail ) ? event.detail.url : utils.getLocation();
-                sink( { path: path } ); 
                 event.preventDefault();
+                console.log('route is changed', event.detail.url);
+                sink( { path: event.detail.url } ); 
             };
             window.addEventListener( 'popstate', routeChanged );
             window.addEventListener( 'pushstate', routeChanged );
         })
         .merge(publishStream)        
+        .map(function(upstream){
+            return upstream ? upstream : { path: utils.getLocation() };
+        })
         .map(function(upstream) { // Nil values.
             isLastWasMatched = false;
             isRedirected = false;
