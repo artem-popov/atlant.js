@@ -3,25 +3,31 @@
     <title>AtlantJs static example</title>
     <script src="includes/lodash.min.js"></script>
     <script src="includes/bacon.min.js"></script>
-    <script src="../lib/atlant.js" type='text/javascript'></script>
+    <script src="atlant.js" type='text/javascript'></script>
     <link rel="stylesheet" href="includes/bootstrap.min.css">
 </head>
 <body>
     <div class="row">
-        <div class="col-md-2">
+        <div class="col-md-3">
             <div class="content">
                 <h1>AtlantJs</h1>
-                <a href="test.html">test</a>
+                <a href="route1">route1</a>
+                <a href="route2">route2</a>
                 <div id="view"></div>
             </div>
         </div>
     </div>
     <script>
+        var promise = function( data ) {
+            return new Promise(function(resolve, reject){ 
+                return resolve(data);
+            });
+        }
         atlant
             .defaultView('view')
             .when('/')
                 .do(function(){console.log('route is working');})
-                .render(function(){ console.log('dada'); return s.promise('hoho');})
+                .render(function(){ console.log('dada'); return promise('hoho');})
             .publish();
            
     </script>

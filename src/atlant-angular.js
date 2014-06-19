@@ -15,7 +15,7 @@ angularRender = function(upstream) {
                        return Bacon.constant(upstream.render.template);
                    }
               })
-              .mapError(function() { console.error((new Error('Error rendering template.')).stack); ret    urn ''; })
+              .mapError(function() { console.error((new Error('Error rendering template.')).stack); return ''; })
               .map(ups.join('render', 'template'))
               .onValue( renderStream );
 

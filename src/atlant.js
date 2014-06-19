@@ -33,7 +33,11 @@ var atlant = (function(){
         ,states
         ,oldStates = [];
 
-
+    //Action should be performed at route change.
+    var onRouteChange = function() {
+        scopeAttached = {};
+        lastScopes = {};
+    }
 
     var StateType = function(state) {
         _.extend( this, {lastWhen: void 0, lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastWhenName: void 0, lastInjects: void 0} );
@@ -349,12 +353,19 @@ var atlant = (function(){
                         var viewName = s.dot('.render.viewName', upstream);
 
                         var rendered = prefs.render.render(viewProvider, viewName, scope);
-                        rendered.then( function() {
+
+                        var signal = function() {
                             if (viewReady[viewName]) {
                                 viewReady[viewName].push(upstream);
                             }
-                        });
-                                
+                        };
+
+                        if ( rendered instanceof Promise ) {
+                            rendered.then( signal );
+                        } else { 
+                            signal(); 
+                        }
+                        
                     } catch (e) { 
                         console.error(e);
                     }
@@ -612,40 +623,21 @@ var atlant = (function(){
 
     /* Base and helper streams*/
     log('registering base streams...');
+    // Browser specific actions.
+    if (window) {
+        require( './inc/fakePushState.js')(window);
 
-    var onRouteChange = function() {
-        scopeAttached = {};
-        lastScopes = {};
+        // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
+        // Because we are using the same ng-view with angular, then we need to know when it's filled by ng.
+        document.addEventListener("DOMContentLoaded", onRouteChange);
+        window.addEventListener("popstate", onRouteChange);
     }
-    // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
-    // Because we are using the same ng-view with angular, then we need to know when it's filled by ng.
-    document.addEventListener("DOMContentLoaded", onRouteChange);
-    window.addEventListener("popstate", onRouteChange);
-
 
 
     
     var publishStream = new Bacon.Bus();  // Here we can put init things.
     publishStream.onValue(utils.attachGuardToLinks);
 
-    /**
-     * Create fake push state
-     **/
-    (function(history){
-        var pushState = history.pushState;
-        history.pushState = function(state, title, url) {
-            var onpushstate = new CustomEvent('pushstate', { detail: { state: state, title: title, url: url } } );
-            window.dispatchEvent(onpushstate);
-            var state;
-            try { 
-               state = pushState.apply(history, arguments); 
-               console.log('state is', state );
-            } catch (e) {
-               console.log('Can\'t push state:', e);
-            }
-            return state; 
-        };
-    })(window.history);
 
 
     var routeChangedStream = Bacon
@@ -937,11 +929,13 @@ var atlant = (function(){
         ,setRender: _setRender
         ,when: _when
         ,lastWhen: _lastWhen
+        // Depends execution glued to when
         ,depends: _depends
         ,and: _and
         ,inject: _inject
         ,if: _if
         ,do: _do
+        // Render should return either the Promise either the something. Promise will be threated async.
         ,render: _render
         ,clear: _clear
         ,redirect: _redirect
