@@ -208,6 +208,19 @@ var atlant = (function(){
             ,getLocation: function() {
                 return window.location.pathname;
             }
+            ,parseUrl: function(url) {
+                var urlParseRE = /^(((([^:\/#\?]+:)?(?:(\/\/)((?:(([^:@\/#\?]+)(?:\:([^:@\/#\?]+))?)@)?(([^:\/#\?\]\[]+|\[[^\/\]@#?]+\])(?:\:([0-9]+))?))?)?)?((\/?(?:[^\/\?#]+\/+)*)([^\?#]*)))?(\?[^#]+)?)(#.*)?/;
+                var matches = urlParseRE.exec(url);
+                return {
+                    protocol: matches[4].slice(0, matches[4].length-1)
+                    ,host: matches[10]
+                    ,hostname: matches[11]
+                    ,port: matches[12]
+                    ,pathname: matches[13]
+                    ,search: matches[16] 
+                    ,hashes: matches[17]
+                };
+            }
         };
     }();
 
@@ -279,8 +292,8 @@ var atlant = (function(){
             var viewName =  upstream.render.viewId;
 
             var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
-            var error = function() { throw Error('Wrong inject accessor.') }
-            var data = s.map( s.compose( s.if(s.empty, error),  s.flipDot(upstream) ), injects );
+            var error = function(inject) { throw Error('Wrong inject accessor.' + inject) }
+            var data = s.map( s.compose( /*s.if(s.empty, error),*/  s.flipDot(upstream) ), injects );
 
             var saveData4Childs = s.set(viewName, dataByView)(data);
             s.extend( data, dataByView[prefs.parentOf[viewName]])
@@ -645,6 +658,8 @@ var atlant = (function(){
             // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
             var routeChanged = function(event, url) { 
                 event.preventDefault();
+                var path = ( event.detail ) ?  utils.parseUrl( event.detail.url ).pathname :  utils.getLocation();
+                sink( { path: path } ); 
                 console.log('route is changed', event.detail.url);
                 sink( { path: event.detail.url } ); 
             };
