@@ -1,6 +1,7 @@
+#Atlant.js
 Atlant.js is a micro-routing framework for Angular.js / React.js
 
-It is provides robust routing and dependency injection mechanism. 
+It provides robust routing and dependency injection mechanism. 
 
 It uses bacon.js streams to work.
 
@@ -10,18 +11,20 @@ The slides folder have slides of April 10 of 2014.
 The talk was about previous version of atlant.js named routeStreams.js.
 DSL is a little obsolete.
 
-#Where is the angular.js version?
+##Where is the angular.js version?
 
-src/angular/ng-s-atlant-route.js - main service, which accepts routes declarations.
-src/angular/ng-s-atlant-params.js - service, which publish route params info
-src/angular/ng-s-atlant-utils.js - internal utilities (do not use :)
+```js
+src/angular/ng-s-atlant-route.js // main service, which accepts routes declarations.
+src/angular/ng-s-atlant-params.js // service, which publish route params info
+src/angular/ng-s-atlant-utils.js // internal utilities (do not use :)
+```
 
-#Which renders available?
+##Which renders available?
 
 - the angular render (obsolete yet)
 - react render
 
-#Install
+##Installation
 
 ```sh
 bower install atlant.js
