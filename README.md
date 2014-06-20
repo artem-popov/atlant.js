@@ -38,3 +38,15 @@ add to you index.html:
 <script src="bacon.min.js" type="text/javascipt"></script>
 <script src="atlant.js" type="text/javascipt"></script>
 ```
+
+## Use
+
+### render(fn)
+
+```js
+render :: fn -> promise
+var fn = function(info, scope) {
+    console.log('I have rendered!');
+    return promise();
+}
+```
