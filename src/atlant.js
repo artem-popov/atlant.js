@@ -212,7 +212,7 @@ var atlant = (function(){
                 var urlParseRE = /^(((([^:\/#\?]+:)?(?:(\/\/)((?:(([^:@\/#\?]+)(?:\:([^:@\/#\?]+))?)@)?(([^:\/#\?\]\[]+|\[[^\/\]@#?]+\])(?:\:([0-9]+))?))?)?)?((\/?(?:[^\/\?#]+\/+)*)([^\?#]*)))?(\?[^#]+)?)(#.*)?/;
                 var matches = urlParseRE.exec(url);
                 return {
-                    protocol: matches[4].slice(0, matches[4].length-1)
+                    protocol: matches[4] ? matches[4].slice(0, matches[4].length-1) : undefined
                     ,host: matches[10]
                     ,hostname: matches[11]
                     ,port: matches[12]
