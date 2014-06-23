@@ -43,7 +43,6 @@ var atlant = (function(){
         _.extend( this, {lastWhen: void 0, lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastWhenName: void 0, lastInjects: void 0} );
         _.merge( this, state );
     };
-
     var State = function(){
         return {
             first: function(){
@@ -413,7 +412,7 @@ var atlant = (function(){
 
             isRenderApplyed = true
             for(var viewName in renders) {
-                var orderedStreams = s.map(getOrderedStreams.bind(this, viewName), renders[viewName])
+                var orderedStreams = s.map(getOrderedStreams.bind(this, viewName), renders[viewName]);
                 s.map(assignRender, orderedStreams);
             }
 

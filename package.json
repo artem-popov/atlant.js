@@ -11,7 +11,8 @@
     "react": "~0.10.0",
     "connect": "~2.19.6",
     "gulp-plumber": "~0.6.3",
-    "gulp-watch": "~0.6.6-1"
+    "gulp-watch": "~0.6.6-1" 
+    "gulp-if": "~1.2.1",
   },
   "engines": {
     "node": ">=0.10.0"
