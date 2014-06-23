@@ -302,7 +302,7 @@ var atlant = (function(){
             Object.keys(data).filter(simpleType.bind(this, data)).map(function(key){
                 Object.defineProperty(scope, key, {
                     get: function () {
-                        return s.parse( upstream, injects[key] );
+                        return s.flipDot( upstream, injects[key] );
                     }
                 });
             });
@@ -950,8 +950,10 @@ var atlant = (function(){
         ,inject: _inject
         ,if: _if
         ,do: _do
+        // Render methods:
         // Render should return either the Promise either the something. Promise will be threated async.
         ,render: _render
+        // Clears view. Simply alias to render with empty view
         ,clear: _clear
         ,redirect: _redirect
         ,otherwise: _otherwise
