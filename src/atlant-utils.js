@@ -139,9 +139,24 @@ var s = (function(){
     var fmap = _.curry( function(fn, obj) {
         return obj.fmap(fn);
     });
+    
+    // @TODO check immutability/mutability
     var filter = _.curry( function(fn, obj) {
-        return obj.filter(fn);
+        if ( ! obj ) return [];
+        if (obj && obj.map) return obj.filter(unary(fn));
+
+        var filtered = {};
+
+        for( var name in obj ) {
+            if ( fn(obj[name]) ) { 
+                filtered[name] = obj[name];
+            }
+        }
+
+        return filtered;
+
     });
+
     var reduce = _.curry( function(fn, startValue, obj) {
         if(obj) {
             return obj.reduce(fn, startValue);
