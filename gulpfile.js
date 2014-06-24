@@ -7,12 +7,6 @@ var browserify = require('browserify')
 var browOpt = {standalone: 'atlant'};
 var dest = 'lib/';
 
-gulp.task('browserify', function() {
-    gulp.src('src/atlant.js')
-        .pipe( browserify(browOpt) )  
-        .pipe( gulp.dest(dest) );
-});
-
 gulp.task('watch', function() {
     return gulp
         .src('src/**/*.js')
@@ -28,5 +22,5 @@ gulp.task('watch', function() {
         }))
 });
 
-gulp.task('default', ['browserify']);
+gulp.task('default', ['watch']);
 

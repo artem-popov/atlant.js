@@ -305,7 +305,7 @@ angular.module('atlant', []).service('$atlant', ['$http', '$templateCache', '$co
 
             isRenderApplyed = true;
             for(var viewId in renders) {
-                var orderedStreams = $s.map(getOrderedStreams.bind(this, viewId), renders[viewId])
+                var orderedStreams = $s.map(getOrderedStreams.bind(this, viewId), renders[viewId]);
                 $s.map(assignRender, orderedStreams);
             }
 
