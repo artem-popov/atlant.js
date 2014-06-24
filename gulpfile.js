@@ -1,10 +1,10 @@
-var browserify = require('gulp-browserify')
+var browserify = require('browserify')
     ,plumber = require('gulp-plumber')
     ,watch = require('gulp-watch')
     ,gulp = require('gulp')
-    ,gulpIf = require('gulp-if')
+    ,source = require('vinyl-source-stream')
 
-var browOpt = {standalone: 'atlant', ignore: ['react']};
+var browOpt = {standalone: 'atlant'};
 var dest = 'lib/';
 
 gulp.task('browserify', function() {
@@ -14,12 +14,18 @@ gulp.task('browserify', function() {
 });
 
 gulp.task('watch', function() {
-    gulp
+    return gulp
         .src('src/**/*.js')
         .pipe( plumber() )
-        .pipe( watch() )
-        .pipe( gulpIf( /src\/atlant\.js/, browserify(browOpt) ) )
-        .pipe( gulpIf( /src\/atlant\.js/ , gulp.dest(dest) ) )
+        .pipe( watch( function(){ 
+            console.log('hohoho');
+            var b = browserify( './src/atlant.js' );
+            b.ignore('react');
+        
+            b.bundle({ standalone: 'atlant' }).pipe(source('./atlant.js'))
+                .pipe( gulp.dest(dest) )
+                .on('data', function() {console.log('aaaaaa');})
+        }))
 });
 
 gulp.task('default', ['browserify']);

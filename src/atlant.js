@@ -938,8 +938,17 @@ var atlant = (function(){
         publishStream.push( { path: utils.getLocation() } );
     }
 
-    return {
-        views: _views
+    var _set = function( properties ) {
+        var goodProps = [ 'render', 'cache' ]; var wrongProps = s.compose( s.notEq( -1, goodProps.indexOf ) ); 
+        properties = s.filter( wrongProps, properties );
+        console.log('will set properties:', properties);
+    }
+
+return {
+        // Set atlant preferencies
+        set:_set
+        ,views: _views
+        // Deprecated, sets defaultView name
         ,defaultView: _defaultView
         ,setRender: _setRender
         ,when: _when
