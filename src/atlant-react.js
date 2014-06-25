@@ -1,12 +1,13 @@
 var React = require('react');
 
 var reactRender = { 
-    render: function(viewProvider, name, scope) {
-        React.unmountComponentAtNode( document.querySelector( '#' + name ) );
+    render: function(viewProvider, element, scope ) {
+        React.unmountComponentAtNode( element );
 
         var rendered = new Promise( function( resolve, reject ){
 
             var onRender = function(result) {
+                
                 console.log('react result of rendering:', result);
                 if (false) {
                     return reject();
@@ -14,15 +15,15 @@ var reactRender = {
                 return resolve();
             }
 
-            React.renderComponent( viewProvider(scope), document.querySelector( '#' + name ), onRender );
+            React.renderComponent( viewProvider(scope), element, onRender );
         });
 
 
         return rendered;
     }
-    ,clear: function(viewProvider, name, scope) {
+    ,clear: function(viewProvider, element, scope) {
         return new Promise( function( resolve, reject ){
-            if (React.unmountComponentAtNode( document.querySelector( '#' + name ) )) {
+            if (React.unmountComponentAtNode( element )) {
                 resolve();
             } else {
                 reject();
