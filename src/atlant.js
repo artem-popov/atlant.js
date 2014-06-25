@@ -352,6 +352,19 @@ var atlant = (function(){
             return true;
         };
 
+        var animate = s.curry( function( prev, newly, renderedResult ) {
+            return new Promise( function( resolve, reject ) {
+                console.log('animating', renderedResult);
+                resolve();
+            });
+        });
+
+        var signal = function() {
+            if (viewReady[viewName]) {
+                viewReady[viewName].push(upstream);
+            }
+        };
+
         // Registering render for view.
         var assignRender = function(stream) {
             stream
@@ -364,19 +377,16 @@ var atlant = (function(){
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
                         var viewName = s.dot('.render.viewName', upstream);
 
-                        var rendered = prefs.render.render(viewProvider, viewName, scope);
+                        var newly = document.createElement('div');
+                        var prev = document.querySelector( '#' + viewName );
 
-                        var signal = function() {
-                            if (viewReady[viewName]) {
-                                viewReady[viewName].push(upstream);
-                            }
-                        };
+                        var rendered = prefs.render.render(viewProvider, prev   , scope);
+                        if ( ! ( rendered instanceof Promise ) ) throw new Error('Atlant: render should return Promise.'); 
 
-                        if ( rendered instanceof Promise ) {
-                            rendered.then( signal );
-                        } else { 
-                            signal(); 
-                        }
+                        var animated = rendered.then( animate( prev, newly ) );
+                        if ( ! ( animated instanceof Promise ) ) throw new Error('Atlant: animate should return Promise.'); 
+
+                        animated.then( signal );
                         
                     } catch (e) { 
                         console.error(e);
