@@ -13,7 +13,8 @@
     "gulp-plumber": "~0.6.3",
     "gulp-watch": "~0.6.6-1",
     "gulp-if": "~1.2.1",
-    "vinyl-source-stream": "~0.1.1"
+    "vinyl-source-stream": "~0.1.1",
+    "literalify": "~0.3.0"
   },
   "engines": {
     "node": ">=0.10.0"
