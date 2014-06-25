@@ -9,6 +9,7 @@ var s = (function(){
     var nop = function() { return void 0; }
 
     var pass = function() { return function(promise) { return promise; } }
+    var inject = function(data) { return function() { return data; } }
     /**
      *
      * @param fn - promise callback
@@ -149,6 +150,21 @@ var s = (function(){
 
         for( var name in obj ) {
             if ( fn(obj[name]) ) { 
+                filtered[name] = obj[name];
+            }
+        }
+
+        return filtered;
+
+    });
+
+    var filterKeys = _.curry( function(fn, obj) {
+        if ( ! obj ) return obj;
+
+        var filtered = {};
+
+        for( var name in obj ) {
+            if ( fn(name) ) { 
                 filtered[name] = obj[name];
             }
         }
@@ -334,11 +350,13 @@ var s = (function(){
     this.then   = then;
     this.sync   = sync;
     this.id     = id;
+    this.inject = inject;
     this.nop = nop;
 
     this.log    = log;
     this.logIt    = logIt;
     this.map    = map;
+    this.filterKeys = filterKeys;
     this.filter = filter;
     this.reduce = reduce;
     this.dot 	= dot;

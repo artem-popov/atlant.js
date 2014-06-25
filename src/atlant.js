@@ -21,7 +21,7 @@ var atlant = (function(){
 
     var prefs = {
             parentOf: {}
-            ,defaultView: ''
+            ,view: ''
             ,skipRoutes: []  // This routes will be skipped in StreamRoutes
             ,render: { render: simpleRender.render, clear: simpleRender.clear }
     }
@@ -787,7 +787,7 @@ var atlant = (function(){
             type(renderProvider, 'function');
             type(viewName, 'string');
 
-            viewName = viewName || prefs.defaultView;
+            viewName = viewName || prefs.view;
 
             if ( !viewName ) throw new Error('Default render name is not provided.');
         
@@ -864,7 +864,7 @@ var atlant = (function(){
         type(renderProvider, 'function');
         type(viewName, 'string');
 
-        viewName = viewName || prefs.defaultView;
+        viewName = viewName || prefs.view;
 
         if ( !viewName ) throw new Error('Default render name is not provided.');
 
@@ -885,18 +885,12 @@ var atlant = (function(){
      * @returns atlant 
      */
     var _defaultView = function( defaultViewName ) {
-        prefs.defaultView = defaultViewName;
+        console.log('atlant.defaultView is deprecated. use atlant.set( { view: view }) instead.');
+        prefs.view = defaultViewName;
         return this;
     }
 
-    /**
-     * Attacher attach view to html
-     */
-    var _attacher = function( attacherProvider ) {
-         prefs.attacherProvider = attacherProvider;
-         return this; 
-    }
-    
+    /* @TODO: deprecate */
     var _views = function(hirearchyObject) {
         prefs.parentOf = s.merge( prefs.parentOf, hirearchyObject );
         return this;
@@ -926,6 +920,7 @@ var atlant = (function(){
     }();
 
     var _setRender = function(render) {
+        console.log('atlant.setRender is deprecated. use atlant.set( { render: render }) instead.');
         s.merge( prefs.render, render );
         return this;
     }
@@ -938,16 +933,21 @@ var atlant = (function(){
     }
 
     var _set = function( properties ) {
-        var goodProps = [ 'render', 'cache' ]; var wrongProps = s.compose( s.notEq( -1, goodProps.indexOf ) ); 
-        properties = s.filter( wrongProps, properties );
-        console.log('will set properties:', properties);
+        var allowedProps = [ 'view', 'render', 'cache' ];
+        var wrongProps = s.compose( s.notEq( -1 ), allowedProps.indexOf.bind(allowedProps) ); 
+        var propsGuard = s.filterKeys( wrongProps );
+        var fillProps = s.compose( s.inject(this), s.merge( prefs ), propsGuard );
+            
+        fillProps(properties);
+        
+        return this;
     }
 
 return {
         // Set atlant preferencies
         set:_set
         ,views: _views
-        // Deprecated, sets defaultView name
+        // Deprecated, use .set( { 'view': defaultViewName } )
         ,defaultView: _defaultView
         ,setRender: _setRender
         ,when: _when
