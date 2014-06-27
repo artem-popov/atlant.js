@@ -352,14 +352,34 @@ var atlant = (function(){
             return true;
         };
 
-        var animate = s.curry( function( prev, newly, renderedResult ) {
-            return new Promise( function( resolve, reject ) {
-                console.log('animating', renderedResult);
-                resolve();
-            });
-        });
+        var animate = {
+            before: function( clone, targetElement) {
+                return new Promise( function( resolve, reject ) {
+                    console.log('animating', clone, targetElement);
+   /*                 
+                    console.log( 'props:', prev.offsetTop, prev.offsetLeft );
+                    cloned.style.position = 'absolute';
+                    cloned.style.top = 10;
+                    cloned.style.left = 10;
+                    cloned.classList.add("disappearedClass");
+    
+                    prev.innerHtml = ''; // innerHtml is the fastest, prove: http://jsperf.com/innerhtml-vs-removechild/167
+                    prev.appendChild(newly);
+                    prev.classList.add("appearedClass");
+                    resolve();
+                    */
+                })
+            }
+            /* If after returns the Promise, then the signal to render childView will be chined to that promise. */
+            ,after: function( clone, targetElement) {
+                return new Promise( function( resolve, reject) {
+                    clone.parentNode.removeChild(clone);
+                    resolve();
+                })
+            }
+        };
 
-        var signal = function() {
+        var finishSignal = function() {
             if (viewReady[viewName]) {
                 viewReady[viewName].push(upstream);
             }
@@ -377,17 +397,30 @@ var atlant = (function(){
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
                         var viewName = s.dot('.render.viewName', upstream);
 
-                        var newly = document.createElement('div');
-                        var prev = document.querySelector( '#' + viewName );
+                        var targetElement = document.querySelector( '#' + viewName );
 
-                        var rendered = prefs.render.render(viewProvider, prev   , scope);
-                        if ( ! ( rendered instanceof Promise ) ) throw new Error('Atlant: render should return Promise.'); 
+                        if ( !animate ) {
+                            var rendered = prefs.render.render(viewProvider, targetElement, scope);
+                            if ( ! ( rendered instanceof Promise ) ) throw new Error('Atlant: render should return Promise.'); 
+                            rendered.then( finishSignal );
+                        } else {
+                            var cloned = targetElement.cloneNode(true);
+                            animate.before(cloned, targetElement);
 
-                        var animated = rendered.then( animate( prev, newly ) );
-                        if ( ! ( animated instanceof Promise ) ) throw new Error('Atlant: animate should return Promise.'); 
+                            var rendered = prefs.render.render(viewProvider, targetElement, scope);
+                            if ( ! ( rendered instanceof Promise ) ) throw new Error('Atlant: render should return Promise.'); 
 
-                        animated.then( signal );
-                        
+                            var animated;
+                            rendered.then( function() {
+                                animated = animate.after( cloned, targetElement );
+                            });
+
+                            if ( animated instanceof Promise ) {
+                                animated.then( finishSignal );
+                            } else {
+                                rendered.then( finishSignal );
+                            }
+                        } 
                     } catch (e) { 
                         console.error(e);
                     }
