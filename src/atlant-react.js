@@ -15,7 +15,11 @@ var reactRender = {
                 return resolve();
             }
 
-            React.renderComponent( viewProvider(scope), element, onRender );
+            try{
+                var instance = React.renderComponent( viewProvider(scope), element, onRender );
+            } catch(e) {
+                console.error( 'Atlantjs: React doesn\'t rendered component', e );
+            }
         });
 
 
