@@ -2,6 +2,7 @@
 
  *
  * @TODO: fast switching generate console.error.
+ * @TODO: #hashes are ignored
  */
 
 var s = require('./atlant-utils')
@@ -211,13 +212,13 @@ var atlant = (function(){
                 var urlParseRE = /^(((([^:\/#\?]+:)?(?:(\/\/)((?:(([^:@\/#\?]+)(?:\:([^:@\/#\?]+))?)@)?(([^:\/#\?\]\[]+|\[[^\/\]@#?]+\])(?:\:([0-9]+))?))?)?)?((\/?(?:[^\/\?#]+\/+)*)([^\?#]*)))?(\?[^#]+)?)(#.*)?/;
                 var matches = urlParseRE.exec(url);
                 return {
-                    protocol: matches[4] ? matches[4].slice(0, matches[4].length-1) : undefined
-                    ,host: matches[10]
-                    ,hostname: matches[11]
-                    ,port: matches[12]
-                    ,pathname: matches[13]
-                    ,search: matches[16] 
-                    ,hashes: matches[17]
+                    protocol: matches[4] ? matches[4].slice(0, matches[4].length-1) : ''
+                    ,host: matches[10] || ''
+                    ,hostname: matches[11] || ''
+                    ,port: matches[12] || ''
+                    ,pathname: matches[13] || ''
+                    ,search: matches[16] || '' 
+                    ,hashes: matches[17] || ''
                 };
             }
         };
@@ -232,11 +233,18 @@ var atlant = (function(){
             while ( 'a' !== element.nodeName.toLowerCase() ){
                 if (element === document || ! (element = element.parentNode) ) return; 
             }
-            var location = element.getAttribute('href'); 
-            console.log('location',location);
-            if ( location ) {
+
+            var loc = element.getAttribute('href'); 
+            // In case of it is the same link with hash - the browser will not refresh page by itself, so we do not need to involve atlant here.
+            // Still, the atlant WILL be called, because listens the link write.
+            if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {
+                console.log('the same link with hash');
+                return false;
+            }
+
+            if ( loc ) {
                 event.preventDefault();
-                utils.goTo( location );
+                utils.goTo( loc );
             }
         }
         document.addEventListener('click', linkDefender );
@@ -398,6 +406,7 @@ var atlant = (function(){
                         var viewName = s.dot('.render.viewName', upstream);
 
                         var targetElement = document.querySelector( '#' + viewName );
+                        if ( !targetElement ) throw Error('The view "' + viewName + '" is not found. Please place html element before use.')
 
                         if ( !animate ) {
                             var rendered = prefs.render.render(viewProvider, targetElement, scope);
@@ -702,6 +711,7 @@ var atlant = (function(){
                 event.preventDefault();
                 var path = ( event.detail ) ?  utils.parseUrl( event.detail.url ).pathname :  utils.getLocation();
                 sink( { path: path } ); 
+
                 console.log('route is changed', event.detail.url);
                 sink( { path: event.detail.url } ); 
             };
@@ -718,6 +728,7 @@ var atlant = (function(){
             viewRendered = [];
             scopeAttached = [];
             dataByView = {};
+            console.log('nilling values');
             return upstream;
         })
         .filter( s.compose( s.empty, s.flip(utils.matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
