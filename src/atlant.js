@@ -276,13 +276,12 @@ var atlant = (function(){
         // Provides last depend data as param for .if command
         var injectParamsD = s.curry(function(lastDepName, fn) {
             return function(upstream) {
-                var args = [{ params:upstream.params, mask:upstream.route.mask }];
+                var args = [{ params:upstream.params, route: { mask:upstream.route.mask, path: upstream.path } }];
 
                 if (lastDepName && upstream.depends && upstream.depends[lastDepName]) {
                     args.push( upstream.depends[lastDepName] );
                 }
 
-                args.push( upstream );
                 return fn.apply(this, args);
             }
         });
