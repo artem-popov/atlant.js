@@ -71,7 +71,6 @@ var atlant = (function(){
     // Streams specific vars
     var viewRendered = {}  // Flag that this view is rendered. Stops other streams to perform render then.
         ,dependViews = {}  // Set the views hirearchy. Both for streams and for render.
-        ,defaultRoutes = {}
         ,isLastWasMatched = false // Allow lastWhen to stop other when's execution/
         ,renders = {}  // Each view has it's own item in "renders" ender which is a merge of renders into this view. OnValue will catch once for lastRender.view
  		,lastRedirect
@@ -318,7 +317,7 @@ var atlant = (function(){
             scope.__info = { 
                 params: upstream.params
                 ,route: {
-                    mask: upstream.route.mask    
+                    mask: (upstream.route) ? upstream.route.mask : void 0    
                     ,path: upstream.path
                 }
             }
@@ -467,10 +466,6 @@ var atlant = (function(){
                 s.map(assignRender, orderedStreams);
             }
 
-            for(var viewName in defaultRoutes) {
-                assignRender(defaultRoutes[viewName]);
-            }
-
             assignLastRedirect();
         };
     }();
@@ -520,7 +515,7 @@ var atlant = (function(){
             }
             // Append trailing path part.
             regex += when.substr(lastMatchedIndex);
-            
+
             var match = path.match(new RegExp(regex));
             if (match) {
                 params.map(function(name, index) {
@@ -546,74 +541,6 @@ var atlant = (function(){
         });
     }();
 
-
-    /**
-     * When
-     */
-    var when = function(){
-        var sanitizeName = s.compose( s.replace(/:/g, 'By_'), s.replace(/\//g,'_') );
-        var maskValidation = function(mask) {
-            if ('string' != typeof mask) throw new Error('Route mask should be string.');
-            if ('' == mask) throw new Error('Route mask should not be empty.');
-            return mask;
-        }
-        var createNameFromMasks = s.compose( s.reduce(s.plus, ''), s.map(sanitizeName), s.map(maskValidation));
-
-        return function(masks, matchingBehaviour) {
-            if ( 0 === masks.length ) throw new Error('At least one route mask should be specified.');
-            State.first();
-
-            var name = createNameFromMasks(masks);
-
-            var ups = Upstream();
-
-            masks.forEach(function(mask) {
-                s.push({mask: mask}, routes);
-                s.push({mask: utils.getPossiblePath(mask), redirectTo: mask}, routes);
-            });
-
-            state.lastWhen = rootStream
-                .map(ups.fmap(_.extend))
-                .map( function(upstream) {
-                    return masks
-                        .filter(function() { return ! isLastWasMatched; }) // do not let stream go further if other is already matched.
-                        .map( matchRouteLast( upstream.path, matchingBehaviour ) )
-                        .filter( s.notEmpty )                              // empty params means fails of route identity.
-                } )
-                .map(s.head)
-                .filter( s.notEmpty )
-                .map(ups.join(void 0, void 0))
-
-            state.lastWhen
-                .onValue( function(upstream) {
-                    if( upstream.redirectTo) {  // If the route is a "bad clone", then redirecting.
-                        log('----------------Redirect:',upstream);
-                        utils.redirectTo(upstream.redirectTo, upstream.params);
-                    }
-                });
-
-
-            state.lastWhen
-                .onValue(function(upstream) {
-                    log('Matched route!', upstream);
-                    exports.info = upstream;
-                    // Temporary turned off the exporing of params     
-                    //$.extend( $atlantParams, upstream.params );
-                });
-
-            state.lastIf = void 0;
-            state.lastDep = void 0;
-            state.lastDepName = void 0;
-            state.lastWhenName = name;
-            state.lastOp = state.lastWhen;
-
-            State.print('___When:'+JSON.stringify(masks), state);
-
-            add(state.lastWhenName, state.lastWhen)
-
-            return this;
-        };
-    }();
 
     /* depends */
     var depends = function() {
@@ -740,11 +667,84 @@ var atlant = (function(){
         }).map(function(upstream){upstream.id = _.uniqueId(); return upstream;})
 
     var otherWiseRootStream = rootStream
-        .filter( s.compose( s.empty, s.flip(utils.matchRoutes)(Matching.stop, routes) ) )
+        .filter( s.compose( s.empty, s.flip(utils.matchRoutes)(Matching.stop, routes), s.dot('path') ) )
         .map( s.logIt('Otherwise is in work.') );
 
  
     /* Base */
+
+    /**
+     * When
+     */
+    var when = function(){
+        var sanitizeName = s.compose( s.replace(/:/g, 'By_'), s.replace(/\//g,'_') );
+        var maskValidation = function(mask) {
+            if ('string' != typeof mask) throw new Error('Route mask should be string.');
+            if ('' == mask) throw new Error('Route mask should not be empty.');
+            return mask;
+        }
+        var createNameFromMasks = s.compose( s.reduce(s.plus, ''), s.map(sanitizeName), s.map(maskValidation));
+
+        return function(masks, matchingBehaviour) {
+            if ( 0 === masks.length ) throw new Error('At least one route mask should be specified.');
+            State.first();
+
+            var name = createNameFromMasks(masks);
+
+            var ups = Upstream();
+
+            masks.forEach(function(mask) {
+                s.push({mask: mask}, routes);
+                s.push({mask: utils.getPossiblePath(mask), redirectTo: mask}, routes);
+            });
+
+            state.lastWhen = rootStream
+                .map(ups.fmap(_.extend))
+                .map( function(upstream) {
+                    //console.log('iiiiii?')
+                    return masks
+                        .filter(function() { return ! isLastWasMatched; }) // do not let stream go further if other is already matched.
+                        .map( matchRouteLast( upstream.path, matchingBehaviour ) )
+                        .filter( s.notEmpty )                              // empty params means fails of route identity.
+                } )
+                .map(s.head)
+                .filter( s.notEmpty )
+                .map(ups.join(void 0, void 0))
+                .map(function (upstream) { upstream.route.when = masks; return upstream; } )
+                .map(s.logIt('hohoho:'))
+
+            // if there any other match will happend in route - start new stream.
+
+            state.lastWhen
+                .onValue( function(upstream) {
+                    if( upstream.redirectTo) {  // If the route is a "bad clone", then redirecting.
+                        log('----------------Redirect:',upstream);
+                        utils.redirectTo(upstream.redirectTo, upstream.params);
+                    }
+                });
+
+
+            state.lastWhen
+                .onValue(function(upstream) {
+                    log('Matched route!', upstream);
+                    exports.info = upstream;
+                    // Temporary turned off the exporing of params     
+                    //$.extend( $atlantParams, upstream.params );
+                });
+
+            state.lastIf = void 0;
+            state.lastDep = void 0;
+            state.lastDepName = void 0;
+            state.lastWhenName = name;
+            state.lastOp = state.lastWhen;
+
+            State.print('___When:'+JSON.stringify(masks), state);
+
+            add(state.lastWhenName, state.lastWhen)
+
+            return this;
+        };
+    }();
 
     /**
      * Creates route stream by route expression which will prevent other matches after.
@@ -762,6 +762,28 @@ var atlant = (function(){
      */
     var _when = function() {
         return when.bind(this)(s.a2a( arguments ), Matching.continue);
+    }
+
+    var _otherwise = function(){
+            State.first();
+
+            state.lastWhen = otherWiseRootStream;
+
+            state.lastIf = void 0;
+            state.lastDep = void 0;
+            state.lastDepName = void 0;
+            state.lastWhenName = 'otherwise';
+            state.lastOp = state.lastWhen;
+
+            State.print('___Otherwise:', state);
+
+            add(state.lastWhenName, state.lastWhen)
+
+            return this;
+    };
+
+    var _finally = function() {
+        return this;
     }
 
     /**
@@ -912,25 +934,6 @@ var atlant = (function(){
      * @param route
      * @returns {otherwise}
      */
-    var _otherwise = function(renderProvider, viewName) {
-        
-        type(renderProvider, 'function');
-        type(viewName, 'string');
-
-        viewName = viewName || prefs.view;
-
-        if ( !viewName ) throw new Error('Default render name is not provided.');
-
-        var ups = Upstream();
-
-        defaultRoutes[viewName] = otherWiseRootStream
-            .map(ups.fmap(_.extend))
-            .map(function() { return { renderProvider: renderProvider, viewName:viewName }; })
-            .map(ups.join('render', void 0))
-
-        add('defaultOf'+viewName, defaultRoutes[viewName])
-        return this;
-    }
 
     /**
      * Set default view
@@ -1005,6 +1008,8 @@ return {
         ,setRender: _setRender
         ,when: _when
         ,lastWhen: _lastWhen
+        ,otherwise: _otherwise
+        ,finally: _finally
         // Depends execution glued to when
         ,depends: _depends
         ,and: _and
@@ -1017,7 +1022,6 @@ return {
         // Clears view. Simply alias to render with empty view
         ,clear: _clear
         ,redirect: _redirect
-        ,otherwise: _otherwise
         ,skip: _skip
         ,exports:exports
         ,publish: _publish
