@@ -709,8 +709,10 @@ var atlant = (function(){
             finallyStream.onValue(function(upstream) { console.log('finally stream', upstream);});
 
             if ( WhenFinally.when === whenOrFinally ) {
+                var additionalMasks = [];
                 masks.forEach(function(mask) {
                     s.push({mask: mask}, routes);
+                    s.push(utils.getPossiblePath(mask), additionalMasks);
                     s.push({mask: utils.getPossiblePath(mask), redirectTo: mask}, routes);
                 });
 
@@ -718,6 +720,7 @@ var atlant = (function(){
                     .map(ups.fmap(_.extend))
                     .map( function(upstream) {
                         return masks
+                            .concat(additionalMasks)
                             .filter(function() { return ! isLastWasMatched; }) // do not let stream go further if other is already matched.
                             .map( matchRouteLast( upstream.path, matchingBehaviour ) )
                             .filter( s.notEmpty )                              // empty params means fails of route identity.
