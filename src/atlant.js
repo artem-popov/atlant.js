@@ -154,9 +154,6 @@ var atlant = (function(){
              */
             goTo: function(url) {
                 history.pushState(null, null, url);
-            },
-            redirectTo: function(url, params) {
-                history.pushState(null, null, '/story/');
             }
             /**
              * @returns interpolation of the redirect path with the parametrs
@@ -249,6 +246,7 @@ var atlant = (function(){
 
             if ( loc ) {
                 event.preventDefault();
+                console.log("will go to next route!");
                 utils.goTo( loc );
             }
         }
@@ -367,8 +365,8 @@ var atlant = (function(){
         var animate = {
             before: function( clone, targetElement) {
                 return new Promise( function( resolve, reject ) {
-                    console.log('animating', clone, targetElement);
    /*                 
+                    console.log('animating', clone, targetElement);
                     console.log( 'props:', prev.offsetTop, prev.offsetLeft );
                     cloned.style.position = 'absolute';
                     cloned.style.top = 10;
@@ -391,7 +389,12 @@ var atlant = (function(){
             }
         };
 
-        var finishSignal = function() {
+        var finishSignal = function( upstream ) {
+            if ( !upstream.isFinally ) {
+                console.log( "sending request for finally stream", upstream )
+                upstream.finallyStream.push(upstream);
+            }
+
             if (viewReady[viewName]) {
                 viewReady[viewName].push(upstream);
             }
@@ -408,6 +411,7 @@ var atlant = (function(){
                         clientFuncs.injectInfoIntoScope(scope, upstream);
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
                         var viewName = s.dot('.render.viewName', upstream);
+                        finishSignal = finishSignal.bind( this, upstream );
 
                         var targetElement = document.querySelector( '#' + viewName );
                         if ( !targetElement ) throw Error('The view "' + viewName + '" is not found. Please place html element before use.')
@@ -443,9 +447,10 @@ var atlant = (function(){
         var assignLastRedirect = function() {
             if (!lastRedirect) return;
             lastRedirect.onValue(function(upstream){
-                log('Redirecting!', utils.interpolate(upstream.redirectUrl, upstream.params));
+                var redirectUrl = utils.interpolate(upstream.redirectUrl, upstream.params);
+                log('Redirecting!', redirectUrl);
                 isRedirected = true;
-                utils.redirectTo(upstream.redirectUrl, upstream.params);
+                utils.goTo(upstream.redirectUrl);
             });
         };
 
@@ -635,35 +640,33 @@ var atlant = (function(){
     publishStream.onValue(utils.attachGuardToLinks);
 
 
-
+    var restoreAfterPublish;
     var routeChangedStream = Bacon
         .fromBinder(function(sink) {
             // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
-            var routeChanged = function(event, url) { 
+            var routeChanged = function(event) { 
                 event.preventDefault();
                 var path = ( event.detail ) ?  utils.parseUrl( event.detail.url ).pathname :  utils.getLocation();
                 sink( { path: path } ); 
-
-                console.log('route is changed', event.detail.url);
-                sink( { path: event.detail.url } ); 
             };
             window.addEventListener( 'popstate', routeChanged );
             window.addEventListener( 'pushstate', routeChanged );
         })
+        .map(function(upstream) { restoreAfterPublish = upstream; return upstream; })
         .merge(publishStream)        
-        .map(function(upstream){
+        .map(function() { return restoreAfterPublish; })
+        .map(function(upstream){ // Publish stream does not provide any information
             return upstream ? upstream : { path: utils.getLocation() };
         })
+        .filter( s.compose( s.empty, s.flip(utils.matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
         .map(function(upstream) { // Nil values.
             isLastWasMatched = false;
             isRedirected = false;
             viewRendered = [];
             scopeAttached = [];
             dataByView = {};
-            console.log('nilling values');
             return upstream;
         })
-        .filter( s.compose( s.empty, s.flip(utils.matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
 
     var rootStream = Bacon.fromBinder(function(sink) {
             routeChangedStream.onValue(function(upstream) {
@@ -699,7 +702,11 @@ var atlant = (function(){
 
             var name = ( whenOrFinally === WhenFinally.finally ? 'finally_' : '' )  + createNameFromMasks(masks);
 
+            var whenId = _.uniqueId();        
+
             var ups = Upstream();
+            var finallyStream = new Bacon.Bus();
+            finallyStream.onValue(function(upstream) { console.log('finally stream', upstream);});
 
             if ( WhenFinally.when === whenOrFinally ) {
                 masks.forEach(function(mask) {
@@ -718,11 +725,18 @@ var atlant = (function(){
                     .map(s.head)
                     .filter( s.notEmpty )
                     .map(ups.join(void 0, void 0))
-                    .map(function (upstream) { upstream.route.when = masks; return upstream; } )
-                    .map(s.logIt('hohoho:'))
+                    .map(function (upstream) { 
+                        upstream.whenId = whenId;
+                        upstream.route.when = masks;
+                        upstream.isFinally = false; 
+                        upstream.finallyStream = finallyStream;
+                        return upstream; 
+                    })
+                    .map(s.logIt('one of routes were matched:'))
             } else {
-                console.log('there is somewhere the finally');
                 state.lastWhen = rootStream
+                //.zip( finallyStream, function(x, y) { console.log("there is the zip on horizong", x, y); return x; } )
+                    .map(logIt('finally=after rootStream'))
                     .map(ups.fmap(_.extend))
                     .map( function(upstream) {
                         var result = masks
@@ -732,15 +746,17 @@ var atlant = (function(){
                     })
                     .filter(function(x) { return x; })
                     .map(s.logIt('after all', masks))
-
-                    state.lastWhen.onValue(function(){console.log('finally')});
+                    .map(function() {
+                        return { whenId: whenId, route: { when: masks }, isFinally:true }; 
+                    })
+                    state.lastWhen.onValue(s.logIt('ahoaooahoah'));
             }
 
             state.lastWhen
                 .onValue( function(upstream) {
                     if( upstream.redirectTo) {  // If the route is a "bad clone", then redirecting.
                         log('----------------Redirect:',upstream);
-                        utils.redirectTo(upstream.redirectTo, upstream.params);
+                        utils.goTo(upstream.redirectTo);
                     }
                 });
 
@@ -1007,7 +1023,7 @@ var atlant = (function(){
      *  Use this method to publish routes when 
      */
     var _publish = function(){
-        publishStream.push( { path: utils.getLocation() } );
+        publishStream.push();
     }
 
     var _set = function( properties ) {
