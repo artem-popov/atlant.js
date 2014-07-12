@@ -20,6 +20,7 @@ var atlant = (function(){
         ,viewNames = [];
 
     var lastMasks;
+    var lastFinallyStream;
 
     var prefs = {
             parentOf: {}
@@ -411,7 +412,7 @@ var atlant = (function(){
                         clientFuncs.injectInfoIntoScope(scope, upstream);
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
                         var viewName = s.dot('.render.viewName', upstream);
-                        finishSignal = finishSignal.bind( this, upstream );
+                        var endSignal = finishSignal.bind( this, upstream );
 
                         var targetElement = document.querySelector( '#' + viewName );
                         if ( !targetElement ) throw Error('The view "' + viewName + '" is not found. Please place html element before use.')
@@ -419,7 +420,7 @@ var atlant = (function(){
                         if ( !animate ) {
                             var rendered = prefs.render.render(viewProvider, targetElement, scope);
                             if ( ! ( rendered instanceof Promise ) ) throw new Error('Atlant: render should return Promise.'); 
-                            rendered.then( finishSignal );
+                            rendered.then( endSignal );
                         } else {
                             var cloned = targetElement.cloneNode(true);
                             animate.before(cloned, targetElement);
@@ -433,9 +434,9 @@ var atlant = (function(){
                             });
 
                             if ( animated instanceof Promise ) {
-                                animated.then( finishSignal );
+                                animated.then( endSignal );
                             } else {
-                                rendered.then( finishSignal );
+                                rendered.then( endSignal );
                             }
                         } 
                     } catch (e) { 
@@ -697,19 +698,21 @@ var atlant = (function(){
         return function(masks, matchingBehaviour, whenOrFinally) {
             if ( !masks ) masks = lastMasks;
             if ( !masks || 0 === masks.length ) throw new Error('At least one route mask should be specified.');
-            lastMasks = masks;
             State.first();
+            lastMasks = masks;
 
             var name = ( whenOrFinally === WhenFinally.finally ? 'finally_' : '' )  + createNameFromMasks(masks);
 
             var whenId = _.uniqueId();        
-
             var ups = Upstream();
-            var finallyStream = new Bacon.Bus();
-            finallyStream.onValue(function(upstream) { console.log('finally stream', upstream);});
+            var additionalMasks = [];
+            var finallyStream = ( WhenFinally.when === whenOrFinally ) ? new Bacon.Bus() : lastFinallyStream;
+            
+            console.log('createing finallyStream', finallyStream.id, masks);
 
             if ( WhenFinally.when === whenOrFinally ) {
-                var additionalMasks = [];
+                lastFinallyStream = finallyStream;
+
                 masks.forEach(function(mask) {
                     s.push({mask: mask}, routes);
                     s.push(utils.getPossiblePath(mask), additionalMasks);
@@ -737,20 +740,27 @@ var atlant = (function(){
                     })
                     .map(s.logIt('one of routes were matched:'))
             } else {
+                lastFinallyStream = void 0;
+                
                 state.lastWhen = rootStream
-                //.zip( finallyStream, function(x, y) { console.log("there is the zip on horizong", x, y); return x; } )
-                    .map(logIt('finally=after rootStream'))
+                    .doAction(s.logIt('debug:' ,JSON.stringify(finallyStream)))
+                    .log('befire check')
                     .map(ups.fmap(_.extend))
                     .map( function(upstream) {
                         var result = masks
+                            .concat(additionalMasks)
                             .map( s.compose( s.negate, matchRouteLast( upstream.path, matchingBehaviour ) ) )
                             .reduce( function(x, y) { return x && y; }, true )
                         return result;
                     })
                     .filter(function(x) { return x; })
-                    .map(s.logIt('after all', masks))
+                    .filter(function() {})
+                    .log('after check')
+                    //.awaiting( finallyStream )
+                    .zip( finallyStream, function(x, y) { console.log("there is the zip on horizont", x, y); return x; } )
+                    .map(s.logIt('after all ! of', masks))
                     .map(function() {
-                        return { whenId: whenId, route: { when: masks }, isFinally:true }; 
+                        return { whenId: whenId, route: { whenNot: masks }, isFinally:true }; 
                     })
                     state.lastWhen.onValue(s.logIt('ahoaooahoah'));
             }
@@ -934,7 +944,6 @@ var atlant = (function(){
      * Just action. receives upstream, transparently pass it through.
      */
     var _do = function(actionProvider) {
-        
         if ( ! state.lastOp ) throw new Error('"do" should nest something');
 
         type(actionProvider, 'function');
