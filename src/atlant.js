@@ -241,13 +241,11 @@ var atlant = (function(){
             // In case of it is the same link with hash - the browser will not refresh page by itself, so we do not need to involve atlant here.
             // Still, the atlant WILL be called, because listens the link write.
             if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {
-                console.log('the same link with hash');
                 return false;
             }
 
             if ( loc ) {
                 event.preventDefault();
-                console.log("will go to next route!");
                 utils.goTo( loc );
             }
         }
@@ -392,7 +390,6 @@ var atlant = (function(){
 
         var finishSignal = function( upstream ) {
             if ( !upstream.isFinally ) {
-                console.log( "sending request for finally stream", upstream )
                 upstream.finallyStream.push(upstream);
             }
 
@@ -708,8 +705,6 @@ var atlant = (function(){
             var additionalMasks = [];
             var finallyStream = ( WhenFinally.when === whenOrFinally ) ? new Bacon.Bus() : lastFinallyStream;
             
-            console.log('createing finallyStream', finallyStream.id, masks);
-
             if ( WhenFinally.when === whenOrFinally ) {
                 lastFinallyStream = finallyStream;
 
@@ -753,9 +748,8 @@ var atlant = (function(){
                             .reduce( function(x, y) { return x && y; }, true )
                         return result;
                     })
-                    .merge( finallyStream/* , function(x, y) { console.log("-----there is the zip on horizont", x, y); return y; } */ )
+                    .merge( finallyStream )
                     .scan ( void 0, function(previous, current) {
-                        console.log('fold::::::::::',previous, current) 
                         if ( void 0 === previous ) return current;
 
                         var isRouteChanged = function(event){ return "boolean" === typeof event }

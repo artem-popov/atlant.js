@@ -1,0 +1,2 @@
+0.2.0 introduce the .finally for declaring "destructing" tree and begin changelog.
+
