@@ -1,2 +1,3 @@
+0.2.1 current page hash links now just jump to element (past behaviour: reloads streams)
 0.2.0 introduce the .finally for declaring "destructing" tree and begin changelog.
 
