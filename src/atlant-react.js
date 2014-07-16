@@ -7,11 +7,6 @@ var reactRender = {
         var rendered = new Promise( function( resolve, reject ){
 
             var onRender = function(result) {
-                
-                console.log('react result of rendering:', result);
-                if (false) {
-                    return reject();
-                }
                 return resolve();
             }
 
@@ -28,10 +23,17 @@ var reactRender = {
     }
     ,clear: function(viewProvider, element, scope) {
         return new Promise( function( resolve, reject ){
-            if (React.unmountComponentAtNode( element )) {
-                resolve();
-            } else {
-                reject();
+            try{
+                console.log('prepare to clear: ', element)
+                if (React.unmountComponentAtNode( element )) {
+                    console.log('successefully unmounted component')
+                    resolve();
+                } else {
+                    console.log('failed unmount component')
+                    reject();
+                }
+            } catch(e) {
+                console.error( 'Atlantjs: React doesn\'t cleared component', e );
             }
         });
     }
