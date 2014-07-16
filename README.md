@@ -39,14 +39,40 @@ add to you index.html:
 <script src="atlant.js" type="text/javascipt"></script>
 ```
 
-## Use
+## API
 
-### render(fn)
+### atlant.render:
 
 ```js
-render :: fn -> promise
-var fn = function(info, scope) {
-    console.log('I have rendered!');
-    return promise();
+atlant.render(renderFn [, view]) // renders renderFn to default view or mentioned view if defined.
+```
+
+#### renderFn:
+
+```js
+renderFn :: ( info, scope ) -> promise
+var renderFn = ( info, scope ) => {
+    return new Promise((resolve) => resolve());
 }
 ```
+
+### atlant.if:
+
+```js
+atlant.if( ifFn ) // bifurcates flow. the first render/clean/redirect after if will end created leaf of stream
+```
+
+```js
+ifFn :: ( lastDep ) -> boolean
+var ifFn = ( lastDep ) => {
+    return 404 === lastDep.status ? false : true;
+}
+```
+
+### atlant.when:
+
+```js
+atlant.when( string ) // adds leaf with route mask 
+```
+
+

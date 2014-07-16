@@ -5,9 +5,10 @@
  * @TODO: #hashes are ignored
  */
 
-var s = require('./atlant-utils')
-    ,simpleRender = require('./atlant-render')
-    ,reactRender = require('./atlant-react')
+var s = require('./utils')
+    ,simpleRender = require('./renders/simple')
+    ,reactRender = require('./renders/react')
+    ,animate = require('./animations/simple')
 //    ,State = require('./state.js')
 
 var atlant = (function(){
@@ -17,11 +18,11 @@ var atlant = (function(){
         ,routes = []  // Routes collected
         ,streams = {} // Streams collected
         ,renderNames = []
-        ,viewNames = [];
+        ,viewNames = []
+        ,rCount = {}
 
     var lastMasks;
     var lastFinallyStream;
-
     var prefs = {
             parentOf: {}
             ,view: ''
@@ -364,34 +365,14 @@ var atlant = (function(){
             return true;
         };
 
-        var animate = {
-            before: function( clone, targetElement) {
-                return new Promise( function( resolve, reject ) {
-   /*                 
-                    console.log('animating', clone, targetElement);
-                    console.log( 'props:', prev.offsetTop, prev.offsetLeft );
-                    cloned.style.position = 'absolute';
-                    cloned.style.top = 10;
-                    cloned.style.left = 10;
-                    cloned.classList.add("disappearedClass");
-    
-                    prev.innerHtml = ''; // innerHtml is the fastest, prove: http://jsperf.com/innerhtml-vs-removechild/167
-                    prev.appendChild(newly);
-                    prev.classList.add("appearedClass");
-                    resolve();
-                    */
-                })
-            }
-            /* If after returns the Promise, then the signal to render childView will be chined to that promise. */
-            ,after: function( clone, targetElement) {
-                return new Promise( function( resolve, reject) {
-                    clone.parentNode.removeChild(clone);
-                    resolve();
-                })
-            }
-        };
 
         var finishSignal = function( upstream ) {
+            console.log('finishSignal upstream:', upstream, rCount, rCount[upstream.whenId])
+            rCount[upstream.whenId]--;
+            if ( 0 === rCount[upstream.whenId]) {
+                finishStream.push();
+            }
+
             if ( !upstream.isFinally ) {
                 upstream.finallyStream.push(upstream);
             }
@@ -640,6 +621,8 @@ var atlant = (function(){
     var publishStream = new Bacon.Bus();  // Here we can put init things.
     publishStream.onValue(utils.attachGuardToLinks);
 
+    var finishStream = new Bacon.Bus(); // Stream for finishing purposes
+    finishStream.onValue( function(){ console.log('ALL FINISHED !')});
 
     var restoreAfterPublish;
     var routeChangedStream = Bacon
@@ -787,6 +770,7 @@ var atlant = (function(){
             state.lastDepName = void 0;
             state.lastWhenName = name;
             state.lastOp = state.lastWhen;
+            state.lastConditionId = state.lastOp.id;
 
             State.print('___When:'+JSON.stringify(masks), state);
 
@@ -828,6 +812,7 @@ var atlant = (function(){
             state.lastDepName = void 0;
             state.lastWhenName = 'otherwise';
             state.lastOp = state.lastWhen;
+            state.lastConditionId = state.lastOp.id;
 
             State.print('___Otherwise:', state);
 
@@ -884,9 +869,10 @@ var atlant = (function(){
         if ( ! state.lastOp ) { throw new Error('"if" should nest something.'); }
 
         State.divide();
-
         state.lastIf = state.lastOp.filter( clientFuncs.safeD( clientFuncs.injectParamsD( state.lastDepName ) ) (fn) );
         state.lastOp = state.lastIf;
+        state.lastConditionId = state.lastOp.id;
+        console.log('lastconfitionid:', state.lastConditionId)
 
         var name = name ? name : _.uniqueId();
         add( name, state.lastIf );
@@ -910,13 +896,16 @@ var atlant = (function(){
 
             if ( ! state.lastOp ) throw new Error('"render" should nest something');
             
-            type(renderProvider, 'function');
-            type(viewName, 'string');
+            s.type(renderProvider, 'function');
+            s.type(viewName, 'string');
 
             viewName = viewName || prefs.view;
 
             if ( !viewName ) throw new Error('Default render name is not provided.');
-        
+            
+            if ( !rCount ) rCount = {};
+            rCount[state.lastConditionId] = ( rCount.hasOwnProperty(state.lastConditionId) ? rCount[state.lastConditionId] : 0 ) + 1; // increase the render counter for current When/If
+
             var ups = Upstream();
 
             var thisRender = state.lastOp
@@ -946,7 +935,7 @@ var atlant = (function(){
     var _do = function(actionProvider) {
         if ( ! state.lastOp ) throw new Error('"do" should nest something');
 
-        type(actionProvider, 'function');
+        s.type(actionProvider, 'function');
 
         var thisDo = state.lastOp
         
@@ -961,6 +950,9 @@ var atlant = (function(){
 
         var ups = Upstream();
 
+        if ( !rCount ) rCount = {};
+        rCount[state.lastConditionId] = ( rCount.hasOwnProperty(state.lastConditionId) ? rCount[state.lastConditionId] : 0 ) + 1; // increase the render counter for current When/If
+
         var thisRedirect = (state.lastIf || state.lastDep || state.lastWhen)
             .map(ups.fmap(_.extend))
             .map(function() { return url; })
@@ -973,9 +965,6 @@ var atlant = (function(){
         return this;
     }
 
-    var type = function(item, type) {
-        if ( type !== typeof item && item ) throw new Error('Type Error: ' + item + ' should be ' + type);
-    }
 
     /* Not ordered commands */
     /**
