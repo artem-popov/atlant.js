@@ -244,7 +244,7 @@ var atlant = (function(){
                 return false;
             }
 
-            if ( loc ) {
+            if ( loc && event.target.host === location.host ) {
                 event.preventDefault();
                 utils.goTo( loc );
             }
@@ -1008,8 +1008,8 @@ var atlant = (function(){
      */
     var _skip = function(){
         var pushSkipVariants = function(path) {
-                prefs.skipRoutes.push( {mask: path} );
-                prefs.skipRoutes.push( {mask: utils.getPossiblePath(path)} );
+            prefs.skipRoutes.push( {mask: path} );
+            prefs.skipRoutes.push( {mask: utils.getPossiblePath(path)} );
         };
 
         return function (path){
@@ -1046,7 +1046,7 @@ var atlant = (function(){
         return this;
     }
 
-return {
+    return {
         // Set atlant preferencies
         set:_set
         ,views: _views
