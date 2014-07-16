@@ -238,9 +238,11 @@ var atlant = (function(){
             }
 
             var loc = element.getAttribute('href'); 
-            // In case of it is the same link with hash - the browser will not refresh page by itself, so we do not need to involve atlant here.
-            // Still, the atlant WILL be called, because listens the link write.
+            // In case of it is the same link with hash - do not involve the atlant, just scroll to id. 
             if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {
+                var begin = loc.indexOf('#');  
+                document.getElementById( loc.slice( -1 === begin ? 1 : begin + 1, loc.length )).scrollIntoView();
+                event.preventDefault();
                 return false;
             }
 
