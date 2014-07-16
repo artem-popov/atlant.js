@@ -344,6 +344,10 @@ var s = (function(){
         else return value;
     });
 
+    var type = function(item, type) {
+        if ( type !== typeof item && item ) throw new Error('Type Error: ' + item + ' should be ' + type);
+    }
+
     this.compose      = _.compose;
     this.curry        = _.curry;
     this.pass   = pass;
@@ -394,6 +398,7 @@ var s = (function(){
     this.guardWithTrue = guardWithTrue;
     this.resolveGuard = resolveGuard;
     this.Herald = Herald;
+    this.type = type;
     return this;
 
 })();
