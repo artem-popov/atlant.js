@@ -246,6 +246,10 @@ var s = (function(){
         return item1 + item2;
     });
 
+    var trim = function(string) {
+        return string.trim();
+    }
+
     var flip = function(fn) {
         return _.curry(function() {
             return fn.apply(this, a2a(arguments).reverse());
@@ -374,6 +378,7 @@ var s = (function(){
     this.notEmpty = notEmpty;
     this.negate = negate;
     this.plus   = plus;
+    this.trim   = trim;
     this.a2a    = a2a;
     this.replace = replace;
     this.head   = head;
