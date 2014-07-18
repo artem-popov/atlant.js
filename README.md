@@ -44,6 +44,7 @@ add to you index.html:
 ### atlant.render:
 
 ```js
+atlant.render :: function, string
 atlant.render(renderFn [, view]) // renders renderFn to default view or mentioned view if defined.
 ```
 
@@ -59,6 +60,7 @@ var renderFn = ( info, scope ) => {
 ### atlant.if:
 
 ```js
+atlant.if :: function -> atlant
 atlant.if( ifFn ) // bifurcates flow. the first render/clean/redirect after if will end created leaf of stream
 ```
 
@@ -72,7 +74,8 @@ var ifFn = ( lastDep ) => {
 ### atlant.when:
 
 ```js
-atlant.when( string ) // adds leaf with route mask 
+atlant.when :: string -> atlant
+atlant.when( routes ) // adds leaf with route mask 
 ```
-
+"routes" are conditional like '/faq || /about', the "&&" and brackets not yet supported.
 

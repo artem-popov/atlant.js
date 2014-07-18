@@ -21,7 +21,7 @@ var atlant = (function(){
         ,viewNames = []
         ,rCount = {}
 
-    var lastMasks;
+    var lastMasks = [];
     var lastFinallyStream;
     var prefs = {
             parentOf: {}
@@ -671,27 +671,20 @@ var atlant = (function(){
      */
     var when = function(){
         var sanitizeName = s.compose( s.replace(/:/g, 'By_'), s.replace(/\//g,'_') );
-        var maskValidation = function(mask) {
-            if ('string' != typeof mask) throw new Error('Route mask should be string.');
-            if ('' == mask) throw new Error('Route mask should not be empty.');
-            return mask;
-        }
-        var createNameFromMasks = s.compose( s.reduce(s.plus, ''), s.map(sanitizeName), s.map(maskValidation));
+        var createNameFromMasks = s.compose( s.reduce(s.plus, ''), s.map(sanitizeName) );
 
         return function(masks, matchingBehaviour, whenOrFinally) {
-
             s.type(masks, 'string');
-            if (-1 !== masks.indexOF('&&')) throw new Error('&& declarations not yet supported.') 
+            if ( -1 !== masks.indexOf('&&')) throw new Error('&& declarations not yet supported.') 
 
-            masks = masks.split('||');
+            masks = masks.split('||').map(s.trim);
 
-            if ( !masks.length ) masks = lastMasks;
-            if ( !masks.length ) throw new Error('At least one route mask should be specified.');
+            if ( 0 === masks.length || 1 === masks.length && '' === masks[0] ) masks = lastMasks; 
+            lastMasks = masks; 
 
+            if ( 0 === masks.length || 1 === masks.length && '' === masks[0] ) throw new Error('At least one route mask should be specified.');
             State.first();
-            lastMasks = masks;
-
-            var name = ( whenOrFinally === WhenFinally.finally ? 'finally_' : '' )  + createNameFromMasks(masks);
+            var name = ( whenOrFinally === WhenFinally.finally ? 'finally' : '' )  + createNameFromMasks(masks);
 
             var whenId = _.uniqueId();        
             var ups = Upstream();
@@ -806,7 +799,7 @@ var atlant = (function(){
     }
 
     var _finally = function() {
-        return when.bind(this)(void 0, Matching.continue, WhenFinally.finally );
+        return when.bind(this)( '', Matching.continue, WhenFinally.finally );
     }
 
     var _otherwise = function(){
