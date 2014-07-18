@@ -1,4 +1,8 @@
-0.2.2 (unreleased yet) 'when' now accepts a string (not an array) and it is possible to use conditionals inside like "/faq || /about" ('&&' currently not supported )
+0.2.2 (unreleased yet) 
+	- 'when' now accepts a string (not an array) and it is possible to use conditionals inside like "/faq || /about" ('&&' currently not supported )
+	- fixed finally worked even if condition not finally
+	- works for an .onEnd(fn)
+	- code cleanup (remove 'name' param of if)
 0.2.1 current page hash links now just jump to element (past behaviour: route reloads)
 0.2.0 introduce the .finally for declaring "destructing" tree and begin changelog.
 

@@ -20,6 +20,7 @@ var atlant = (function(){
         ,renderNames = []
         ,viewNames = []
         ,rCount = {}
+        ,rCountCopy
 
     var lastMasks = [];
     var lastFinallyStream;
@@ -340,19 +341,14 @@ var atlant = (function(){
     }();
 
 
+    var streams = {}; 
     var add = function(name, value) {
-        if (exports.streams[name]) throw new Error('This stream is already defined!:', name);
+        if (streams[name]) throw new Error('This stream is already defined!:', name);
         state.lastName = name;
         streams[name] = { name:name, stream: value }
     }
 
 
-    /* Exports */
-    var exports = {
-        streams:streams
-        ,info:[]
-        ,routes:{}
-    }
 
     /* Helpers */
     
@@ -366,11 +362,14 @@ var atlant = (function(){
         };
 
 
-        var finishSignal = function( upstream ) {
-            console.log('finishSignal upstream:', upstream, rCount, rCount[upstream.whenId])
-            rCount[upstream.whenId]--;
-            if ( 0 === rCount[upstream.whenId]) {
-                finishStream.push();
+        var whenRenderedSignal = function( upstream ) {
+            if ( !rCountCopy ) rCountCopy = {};
+            if ( !rCountCopy[upstream.whenId] ) rCountCopy[upstream.whenId] = rCount[upstream.whenId];
+            rCountCopy[upstream.whenId]--;
+            
+            console.log('whenRenderedSignal upstream:', upstream, rCountCopy, rCountCopy[upstream.whenId])
+            if ( 0 === rCountCopy[upstream.whenId]) {
+                whenRenderedStream.push();
             }
 
             if ( !upstream.isFinally ) {
@@ -393,7 +392,7 @@ var atlant = (function(){
                         clientFuncs.injectInfoIntoScope(scope, upstream);
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
                         var viewName = s.dot('.render.viewName', upstream);
-                        var endSignal = finishSignal.bind( this, upstream );
+                        var endSignal = whenRenderedSignal.bind( this, upstream );
 
                         var targetElement = document.querySelector( '#' + viewName );
                         if ( !targetElement ) throw Error('The view "' + viewName + '" is not found. Please place html element before use.')
@@ -621,8 +620,15 @@ var atlant = (function(){
     var publishStream = new Bacon.Bus();  // Here we can put init things.
     publishStream.onValue(utils.attachGuardToLinks);
 
-    var finishStream = new Bacon.Bus(); // Stream for finishing purposes
-    finishStream.onValue( function(){ console.log('ALL FINISHED !')});
+    var whenRenderedStream = new Bacon.Bus(); // Stream for finishing purposes
+    var whenCount = 0;
+    whenRenderedStream
+        .filter( function() { console.log('aaaaaa', whenCount); return 0 === --whenCount; } )
+        .onValue( function(){
+            rCountCopy = void 0; // each when/if has count of render/clear inside. Copy is used to reuse this thing on route change.
+            whenCount = 0; 
+            console.log('ALL FINISHED !')
+        });
 
     var restoreAfterPublish;
     var routeChangedStream = Bacon
@@ -735,7 +741,7 @@ var atlant = (function(){
                     .scan ( void 0, function(previous, current) {
                         if ( void 0 === previous ) return current;
 
-                        var isRouteChanged = function(event){ return "boolean" === typeof event }
+                        var isRouteChanged = function(event){ return "boolean" === typeof event && event }
                         var isRouteRendered = function(event){ return event.hasOwnProperty('id') } // route with declared finally tree.
 
                         if ( isRouteRendered( previous ) && isRouteChanged( current ) ) return 'orly';
@@ -748,6 +754,8 @@ var atlant = (function(){
                     })
             }
 
+            state.lastWhen.map( function(stream) { stream.conditionId = whenId; })
+
             state.lastWhen
                 .onValue( function(upstream) {
                     if( upstream.redirectTo) {  // If the route is a "bad clone", then redirecting.
@@ -756,13 +764,10 @@ var atlant = (function(){
                     }
                 });
 
-
-            state.lastWhen
+            state.lastWhen // counter for whens and Informational message. 
                 .onValue(function(upstream) {
+                    whenCount++;
                     log('Matched route!', upstream);
-                    exports.info = upstream;
-                    // Temporary turned off the exporing of params     
-                    //$.extend( $atlantParams, upstream.params );
                 });
 
             state.lastIf = void 0;
@@ -770,7 +775,7 @@ var atlant = (function(){
             state.lastDepName = void 0;
             state.lastWhenName = name;
             state.lastOp = state.lastWhen;
-            state.lastConditionId = state.lastOp.id;
+            state.lastConditionId = whenId;
 
             State.print('___When:'+JSON.stringify(masks), state);
 
@@ -804,15 +809,17 @@ var atlant = (function(){
 
     var _otherwise = function(){
             State.first();
-
-            state.lastWhen = otherWiseRootStream;
+            
+            var otherwiseId = _.uniqueId(); 
+            state.lastWhen = otherWiseRootStream
+                .map( function(stream) { stream.conditionId = otherwiseId; })
 
             state.lastIf = void 0;
             state.lastDep = void 0;
             state.lastDepName = void 0;
             state.lastWhenName = 'otherwise';
             state.lastOp = state.lastWhen;
-            state.lastConditionId = state.lastOp.id;
+            state.lastConditionId = otherwiseId; 
 
             State.print('___Otherwise:', state);
 
@@ -820,6 +827,35 @@ var atlant = (function(){
 
             return this;
     };
+
+
+    /**
+    	if Function
+     * Adds filter into dependency/when
+     * @param fn
+     */
+    var _if = function(fn) {
+
+        if ( ! state.lastOp ) { throw new Error('"if" should nest something.'); }
+
+        State.divide();
+        var ifId = _.uniqueId();
+
+        var thisIf = state
+            .lastOp
+            .filter( clientFuncs.safeD( clientFuncs.injectParamsD( state.lastDepName ) ) (fn) )
+            .map( function(stream) { stream.conditionId = ifId; })
+
+        state.lastIf = thisIf; 
+        state.lastOp = state.lastIf;
+        state.lastConditionId = ifId;
+
+        add( 'if_' + ifId, state.lastIf );
+
+        State.print('_if__After:', state);
+
+        return this;
+    }
 
 
     /**
@@ -844,44 +880,6 @@ var atlant = (function(){
         state.lastInjects[key] = '.depends.' + state.lastDepName + (expression ? expression : '' );
         return this;
     }
-    /**
-     * Turn the mode when "depends" will chain flatmap to the "dependencyStream" and not to the "when"/route stream.
-     * @param dependencyStream
-     * @returns {attachTo}
-     */
-//    var switchTo = function(dependencyStream) {
-//
-//        state.lastDep = streams[dependencyStream];
-//        state.lastIf = void 0;
-//
-//        return this;
-//    }
-
-
-
-    /**
-    	if Function
-     * Adds filter into dependency/when
-     * @param fn
-     */
-    var _if = function(fn, name) {
-
-        if ( ! state.lastOp ) { throw new Error('"if" should nest something.'); }
-
-        State.divide();
-        state.lastIf = state.lastOp.filter( clientFuncs.safeD( clientFuncs.injectParamsD( state.lastDepName ) ) (fn) );
-        state.lastOp = state.lastIf;
-        state.lastConditionId = state.lastOp.id;
-        console.log('lastconfitionid:', state.lastConditionId)
-
-        var name = name ? name : _.uniqueId();
-        add( name, state.lastIf );
-
-        State.print('_if__After:', state);
-
-        return this;
-    }
-
 
     /**
      * render Function	
@@ -967,12 +965,6 @@ var atlant = (function(){
 
 
     /* Not ordered commands */
-    /**
-     * Default route.
-     * @param name
-     * @param route
-     * @returns {otherwise}
-     */
 
     /**
      * Set default view
@@ -1062,7 +1054,6 @@ var atlant = (function(){
         ,clear: _clear
         ,redirect: _redirect
         ,skip: _skip
-        ,exports:exports
         ,publish: _publish
         ,renders: { react: reactRender, simple: simpleRender }
     };
