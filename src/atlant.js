@@ -364,11 +364,11 @@ var atlant = (function(){
 
         var whenRenderedSignal = function( upstream ) {
             if ( !rCountCopy ) rCountCopy = {};
-            if ( !rCountCopy[upstream.whenId] ) rCountCopy[upstream.whenId] = rCount[upstream.whenId];
-            rCountCopy[upstream.whenId]--;
+            if ( !rCountCopy[upstream.conditionId] ) rCountCopy[upstream.conditionId] = rCount[upstream.conditionId];
+            rCountCopy[upstream.conditionId]--;
             
-            console.log('whenRenderedSignal upstream:', upstream, rCountCopy, rCountCopy[upstream.whenId])
-            if ( 0 === rCountCopy[upstream.whenId]) {
+            console.log('whenRenderedSignal upstream:', upstream, rCount, rCountCopy, rCountCopy[upstream.conditionId])
+            if ( 0 === rCountCopy[upstream.conditionId]) {
                 whenRenderedStream.push();
             }
 
@@ -667,6 +667,7 @@ var atlant = (function(){
 
     var otherWiseRootStream = rootStream
         .filter( s.compose( s.empty, s.flip(utils.matchRoutes)(Matching.stop, routes), s.dot('path') ) )
+        .map( function(upstream) { whenCount++; return upstream; })
         .map( s.logIt('Otherwise is in work.') );
 
  
@@ -754,7 +755,7 @@ var atlant = (function(){
                     })
             }
 
-            state.lastWhen.map( function(stream) { stream.conditionId = whenId; })
+            state.lastWhen = state.lastWhen.map( function(stream) { stream.conditionId = whenId; return stream; })
 
             state.lastWhen
                 .onValue( function(upstream) {
@@ -808,24 +809,24 @@ var atlant = (function(){
     }
 
     var _otherwise = function(){
-            State.first();
-            
-            var otherwiseId = _.uniqueId(); 
-            state.lastWhen = otherWiseRootStream
-                .map( function(stream) { stream.conditionId = otherwiseId; })
+        State.first();
 
-            state.lastIf = void 0;
-            state.lastDep = void 0;
-            state.lastDepName = void 0;
-            state.lastWhenName = 'otherwise';
-            state.lastOp = state.lastWhen;
-            state.lastConditionId = otherwiseId; 
+        var otherwiseId = _.uniqueId(); 
+        state.lastWhen = otherWiseRootStream
+            .map( function(stream) { stream.conditionId = otherwiseId; return stream; })
 
-            State.print('___Otherwise:', state);
+        state.lastIf = void 0;
+        state.lastDep = void 0;
+        state.lastDepName = void 0;
+        state.lastWhenName = 'otherwise';
+        state.lastOp = state.lastWhen;
+        state.lastConditionId = otherwiseId; 
 
-            add(state.lastWhenName, state.lastWhen)
+        State.print('___Otherwise:', state);
 
-            return this;
+        add(state.lastWhenName, state.lastWhen)
+
+        return this;
     };
 
 
@@ -844,7 +845,7 @@ var atlant = (function(){
         var thisIf = state
             .lastOp
             .filter( clientFuncs.safeD( clientFuncs.injectParamsD( state.lastDepName ) ) (fn) )
-            .map( function(stream) { stream.conditionId = ifId; })
+            .map( function(stream) { stream.conditionId = ifId; return stream; })
 
         state.lastIf = thisIf; 
         state.lastOp = state.lastIf;
