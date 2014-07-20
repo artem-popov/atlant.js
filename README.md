@@ -79,3 +79,11 @@ atlant.when( routes ) // adds leaf with route mask
 ```
 "routes" are conditional like '/faq || /about', the "&&" and brackets not yet supported.
 
+## Examples
+
+This command will start examples server available at http://localhost:9500
+```sh
+gulp examples
+```
+
+For now it's not big deal.
