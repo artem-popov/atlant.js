@@ -557,7 +557,6 @@ var atlant = (function(){
 
         /**
          * Join 2 streams into 1
-         * @type {*|Function}
          */
         var zippersJoin = s.curry( function(prevDepName, currDepName, x, y) {
             x.depends = s.extend( x.depends, y.depends );
@@ -967,17 +966,6 @@ var atlant = (function(){
 
     /* Not ordered commands */
 
-    /**
-     * Set default view
-     * @param view - is a directive for injecting template
-     * @returns atlant 
-     */
-    var _defaultView = function( defaultViewName ) {
-        console.log('atlant.defaultView is deprecated. use atlant.set( { view: view }) instead.');
-        prefs.view = defaultViewName;
-        return this;
-    }
-
     /* @TODO: deprecate */
     var _views = function(hirearchyObject) {
         prefs.parentOf = s.merge( prefs.parentOf, hirearchyObject );
@@ -1007,12 +995,6 @@ var atlant = (function(){
         }
     }();
 
-    var _setRender = function(render) {
-        console.log('atlant.setRender is deprecated. use atlant.set( { render: render }) instead.');
-        s.merge( prefs.render, render );
-        return this;
-    }
-
     /**
      *  Use this method to publish routes when 
      */
@@ -1035,9 +1017,6 @@ var atlant = (function(){
         // Set atlant preferencies
         set:_set
         ,views: _views
-        // Deprecated, use .set( { 'view': defaultViewName } )
-        ,defaultView: _defaultView
-        ,setRender: _setRender
         ,when: _when
         ,lastWhen: _lastWhen
         ,otherwise: _otherwise
