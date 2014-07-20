@@ -1,11 +1,11 @@
 <html>
 <head>
     <title>AtlantJs static example</title>
-    <script src="includes/lodash.min.js" type="text/javascipt"></script>
-    <script src="includes/bacon.min.js" type="text/javascipt"></script>
-    <script src="atlant.js" type='text/javascript'></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.4.1/lodash.js" type='text/javascript"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/bacon.js/0.7.18/Bacon.min.js" type="text/javascipt"></script>
+    <script src="/atlant.js" type='text/javascript'></script>
     <!--    <script src="http://fb.me/react-0.10.0.js"></script>-->
-    <link rel="stylesheet" href="includes/bootstrap.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="row">
@@ -37,7 +37,7 @@
             });
         }
         atlant
-            .defaultView('view')
+            .set({ 'view': 'view')
           //  .defaultRender(atlant.render.react)
             .when('/')
                 .depends(function(){ return promise({data})})

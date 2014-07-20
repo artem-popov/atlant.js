@@ -4,9 +4,26 @@ var browserify = require('browserify')
     ,gulp = require('gulp')
     ,source = require('vinyl-source-stream')
     ,literalify = require('literalify')
-
+    ,connect = require('connect')
+    ,fs = require('fs')
+    ,serveStatic = require('serve-static')
+    
 var browOpt = {standalone: 'atlant'};
 var dest = 'lib/';
+
+var getLocalIndex = function(req, res, next){
+    return fs.createReadStream('examples/index.html', {encoding: 'utf8'})
+        .pipe(res);
+}
+
+/** Examples local server */
+gulp.task('examples', function() {
+    return connect()
+        .use(serveStatic('examples/'))
+        .use(serveStatic('lib/'))
+        .use(getLocalIndex)
+        .listen(9500);
+});
 
 gulp.task('watch', function() {
     return gulp
@@ -22,5 +39,5 @@ gulp.task('watch', function() {
         }))
 });
 
-gulp.task('default', ['watch']);
+gulp.task('default', ['watch', 'examples']);
 
