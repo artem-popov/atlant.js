@@ -17,10 +17,14 @@ var getLocalIndex = function(req, res, next){
 }
 
 /** Examples local server */
+// not in use actually
 gulp.task('examples', function() {
     return connect()
         .use(serveStatic('examples/'))
         .use(serveStatic('lib/'))
+        .use(serveStatic('/bower_components/bacon/dist/'))
+        .use(serveStatic('/bower_components/lodash/dist/'))
+        .use(serveStatic('/bower_components/react/'))
         .use(getLocalIndex)
         .listen(9500);
 });
@@ -39,5 +43,5 @@ gulp.task('watch', function() {
         }))
 });
 
-gulp.task('default', ['watch', 'examples']);
+gulp.task('default', ['watch']);
 
