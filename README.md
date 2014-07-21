@@ -81,9 +81,9 @@ atlant.when( routes ) // adds leaf with route mask
 
 ## Examples
 
-This command will start examples server available at http://localhost:9500
+Just install dependencies and open examples/index.html in browser.
 ```sh
-gulp examples
+bower install
 ```
 
-For now it's not big deal.
+Actually, no examples inside yet.
