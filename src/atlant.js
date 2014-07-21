@@ -899,7 +899,7 @@ var atlant = (function(){
 
             viewName = viewName || prefs.view;
 
-            if ( !viewName ) throw new Error('Default render name is not provided.');
+            if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             
             if ( !rCount ) rCount = {};
             rCount[state.lastConditionId] = ( rCount.hasOwnProperty(state.lastConditionId) ? rCount[state.lastConditionId] : 0 ) + 1; // increase the render counter for current When/If
@@ -1041,3 +1041,4 @@ var atlant = (function(){
 });
 
 module.exports = atlant();
+
