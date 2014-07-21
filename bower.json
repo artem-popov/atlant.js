@@ -21,5 +21,11 @@
     "bower_components",
     "test",
     "tests"
-  ]
+  ],
+  "dependencies": {
+    "lodash": "~2.4.1",
+    "bacon": "~0.7.18",
+    "react": "~0.11.0",
+    "native-promise-only": "~0.7.5-e"
+  }
 }
