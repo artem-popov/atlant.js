@@ -79,6 +79,11 @@ atlant.when( routes ) // adds leaf with route mask
 ```
 "routes" are conditional like '/faq || /about', the "&&" and brackets not yet supported.
 
+
+
+### atlant.onRenderEnd(callback)
+works out when route fully rendered.
+
 ## Examples
 
 Just install dependencies and open examples/index.html in browser.
@@ -87,3 +92,5 @@ bower install
 ```
 
 Actually, no examples inside yet.
+
+

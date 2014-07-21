@@ -22,6 +22,8 @@ var atlant = (function(){
         ,rCount = {}
         ,rCountCopy
 
+    var onRenderEnd; // callback which will be called on finishing when rendering
+
     var lastMasks = [];
     var lastFinallyStream;
     var prefs = {
@@ -88,19 +90,24 @@ var atlant = (function(){
 
     // Matching enum for when.
     var Matching = {
-        stop: _.uniqueId(),
-        continue: _.uniqueId()
+        stop: _.uniqueId()
+        ,continue: _.uniqueId()
     }
 
     var WhenFinally = {
-        when: _.uniqueId(),
-        finally: _.uniqueId(),
+        when: _.uniqueId()
+        ,finally: _.uniqueId()
     }
 
     // Depends enum
     var Depends = {
-        parallel: _.uniqueId(),
-        continue: _.uniqueId()
+        parallel: _.uniqueId()
+        ,continue: _.uniqueId()
+    }
+
+    var RenderOperation = {
+        render: parseInt(_.uniqueId())
+        ,clear: parseInt(_.uniqueId())
     }
 
     // Save/restore state of the stream.
@@ -361,17 +368,18 @@ var atlant = (function(){
             return true;
         };
 
-
         var whenRenderedSignal = function( upstream ) {
+            // Here we are decrementing the counter of happened renders for current rendering "when".
             if ( !rCountCopy ) rCountCopy = {};
             if ( !rCountCopy[upstream.conditionId] ) rCountCopy[upstream.conditionId] = rCount[upstream.conditionId];
             rCountCopy[upstream.conditionId]--;
             
-            console.log('whenRenderedSignal upstream:', upstream, rCount, rCountCopy, rCountCopy[upstream.conditionId])
+            // if it is a last render of "when" then signalling of it.
             if ( 0 === rCountCopy[upstream.conditionId]) {
                 whenRenderedStream.push();
             }
 
+            // signal for finally construct
             if ( !upstream.isFinally ) {
                 upstream.finallyStream.push(upstream);
             }
@@ -397,15 +405,18 @@ var atlant = (function(){
                         var targetElement = document.querySelector( '#' + viewName );
                         if ( !targetElement ) throw Error('The view "' + viewName + '" is not found. Please place html element before use.')
 
+                        var render = ( RenderOperation.render === upstream.render.renderOperation ) ? prefs.render.render : prefs.render.clear;
+
                         if ( !animate ) {
-                            var rendered = prefs.render.render(viewProvider, targetElement, scope);
+                            var rendered = render(viewProvider, targetElement, scope);
+
                             if ( ! ( rendered instanceof Promise ) ) throw new Error('Atlant: render should return Promise.'); 
                             rendered.then( endSignal );
                         } else {
                             var cloned = targetElement.cloneNode(true);
                             animate.before(cloned, targetElement);
 
-                            var rendered = prefs.render.render(viewProvider, targetElement, scope);
+                            var rendered = render(viewProvider, targetElement, scope);
                             if ( ! ( rendered instanceof Promise ) ) throw new Error('Atlant: render should return Promise.'); 
 
                             var animated;
@@ -622,11 +633,11 @@ var atlant = (function(){
     var whenRenderedStream = new Bacon.Bus(); // Stream for finishing purposes
     var whenCount = 0;
     whenRenderedStream
-        .filter( function() { console.log('aaaaaa', whenCount); return 0 === --whenCount; } )
+        .filter( function() { return 0 === --whenCount; } )
         .onValue( function(){
             rCountCopy = void 0; // each when/if has count of render/clear inside. Copy is used to reuse this thing on route change.
             whenCount = 0; 
-            console.log('ALL FINISHED !')
+            setTimeout( onRenderEnd, 0);
         });
 
     var restoreAfterPublish;
@@ -890,12 +901,13 @@ var atlant = (function(){
      * @param viewName - directive name which will be used to inject template
      * @returns {*}
      */
-    var _render = function(renderProvider, viewName){
+    var render = function(renderProvider, viewName, renderOperation){
 
             if ( ! state.lastOp ) throw new Error('"render" should nest something');
             
             s.type(renderProvider, 'function');
             s.type(viewName, 'string');
+            s.type(renderOperation, 'number')
 
             viewName = viewName || prefs.view;
 
@@ -908,7 +920,7 @@ var atlant = (function(){
 
             var thisRender = state.lastOp
                 .map(ups.fmap(_.extend))
-                .map(function() { return { renderProvider: renderProvider, viewName:viewName }; })
+                .map(function() { return { renderProvider: renderProvider, viewName:viewName, renderOperation:renderOperation}; })
                 .map(ups.join('render', void 0));
 
             // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewName.
@@ -922,9 +934,12 @@ var atlant = (function(){
             return this;
     };
 
+    var _render = function(renderProvider, viewName) {
+        return render.bind(this)(renderProvider, viewName, RenderOperation.render);
+    }
 
     var _clear = function(viewName) {
-        return _render.bind(this)( prefs.render.clear, viewName);
+        return render.bind(this)(function(){}, viewName, RenderOperation.clear);
     }
 
     /**
@@ -1013,6 +1028,11 @@ var atlant = (function(){
         return this;
     }
 
+    var _onRenderEnd = function(callback) {
+        onRenderEnd = callback; 
+        return this;
+    }
+
     return {
         // Set atlant preferencies
         set:_set
@@ -1036,6 +1056,7 @@ var atlant = (function(){
         ,skip: _skip
         ,publish: _publish
         ,renders: { react: reactRender, simple: simpleRender }
+        ,onRenderEnd: _onRenderEnd
     };
 
 });

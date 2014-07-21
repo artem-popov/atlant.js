@@ -2,9 +2,9 @@ var React = require('react');
 
 var reactRender = { 
     render: function(viewProvider, element, scope ) {
-        React.unmountComponentAtNode( element );
-
         var rendered = new Promise( function( resolve, reject ){
+
+            React.unmountComponentAtNode( element );
 
             var onRender = function(result) {
                 return resolve();
@@ -27,10 +27,10 @@ var reactRender = {
                 console.log('prepare to clear: ', element)
                 if (React.unmountComponentAtNode( element )) {
                     console.log('successefully unmounted component')
-                    resolve();
+                    return resolve();
                 } else {
                     console.log('failed unmount component')
-                    reject();
+                    return reject();
                 }
             } catch(e) {
                 console.error( 'Atlantjs: React doesn\'t cleared component', e );

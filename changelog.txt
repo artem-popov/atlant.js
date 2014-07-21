@@ -1,3 +1,6 @@
+0.2.3 (unreleased)
+	- new method .onRenderEnd(callback) - called when everything is rendered
+	after route(state) change.
 0.2.2 
 	- 'when' now accepts a string (not an array) and it is possible to use conditionals inside like "/faq || /about" ('&&' currently not supported )
 	- fixed "finally" worked even if condition not "finally"
