@@ -1,4 +1,4 @@
-0.2.3 (unreleased)
+0.2.3 
 	- new method .onRenderEnd(callback) - called when everything is rendered
 	after route(state) change.
 0.2.2 
