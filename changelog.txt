@@ -1,3 +1,4 @@
+0.2.4 fixed double render at page load in Safari
 0.2.3 
 	- new method .onRenderEnd(callback) - called when everything is rendered
 	after route(state) change.
