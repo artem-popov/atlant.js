@@ -257,7 +257,7 @@ var atlant = (function(){
                 return false;
             }
 
-            if ( loc && event.target.host === location.host ) {
+            if ( loc && element.host === location.host ) {
                 event.preventDefault();
                 utils.goTo( loc );
             }
