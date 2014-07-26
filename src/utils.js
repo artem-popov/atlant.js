@@ -175,7 +175,7 @@ var s = (function(){
 
     var reduce = _.curry( function(fn, startValue, obj) {
         if(obj) {
-            return obj.reduce(fn, startValue);
+            return Array.prototype.reduce.call(obj, fn, startValue);
         } else {
             return startValue;
         }
