@@ -282,7 +282,7 @@ var atlant = (function(){
                 try {
                     return fn.apply(this, arguments);
                 } catch(e) {
-                    console.error('"User function wasn\'t successefull: ', e.message, e.stack);
+                    console.error(e.stack);
                     return Bacon.Error('Exception');;
                 }
             }
@@ -295,7 +295,7 @@ var atlant = (function(){
                 if (lastDepName && upstream.depends && upstream.depends[lastDepName]) {
                     args.push( upstream.depends[lastDepName] );
                 }
-
+                //var scope = clientFuncs.injectDependsIntoScope({}, upstream);
 
                 return fn.apply(this, args);
             }
@@ -310,17 +310,20 @@ var atlant = (function(){
          * Injects depend values from upstream into object which is supplyed first.
          */
         var injectDependsIntoScope = function ( scope, upstream ) {
-
             var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
             var error = function(inject) { throw Error('Wrong inject accessor.' + inject) }
             var data = s.map( s.compose( /*s.if(s.empty, error),*/  s.flipDot(upstream) ), injects );
+
+            var params = s.reduce(function(result, item) { result[':' + item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
+            params[':mask'] = (upstream.route) ? upstream.route.mask : void 0;    
+            params[':path'] = upstream.path;
 
             if( upstream.render ) { 
                 var viewName =  upstream.render.viewId;
                 var saveData4Childs = s.set(viewName, dataByView)(data);
                 s.extend( data, dataByView[prefs.parentOf[viewName]])
             }
-            s.extend( scope, data );
+            s.extend( scope, params, data );
             Object.keys(data).filter(simpleType.bind(this, data)).map(function(key){
                 Object.defineProperty(scope, key, {
                     get: function () {
@@ -331,22 +334,11 @@ var atlant = (function(){
             return scope;
         };
 
-        var injectInfoIntoScope = function(scope, upstream) {
-            scope.__info = { 
-                params: upstream.params
-                ,route: {
-                    mask: (upstream.route) ? upstream.route.mask : void 0    
-                    ,path: upstream.path
-                }
-            }
-        }
-
         return { 
             convertPromiseD: convertPromiseD
             ,safeD: safeD
             ,injectParamsD: injectParamsD
             ,injectDependsIntoScope: injectDependsIntoScope
-            ,injectInfoIntoScope: injectInfoIntoScope
        };
     }();
 
@@ -400,7 +392,6 @@ var atlant = (function(){
                     try{ 
                         var scope = {}; // @TODO use cached scope
                         clientFuncs.injectDependsIntoScope(scope, upstream);
-                        clientFuncs.injectInfoIntoScope(scope, upstream);
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
                         var viewName = s.dot('.render.viewName', upstream);
                         var endSignal = whenRenderedSignal.bind( this, upstream );
@@ -434,7 +425,7 @@ var atlant = (function(){
                             }
                         } 
                     } catch (e) { 
-                        console.error(e);
+                        console.error(e.stack);
                     }
                 });                
         };
