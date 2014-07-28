@@ -310,15 +310,16 @@ var atlant = (function(){
          * Injects depend values from upstream into object which is supplyed first.
          */
         var injectDependsIntoScope = function ( scope, upstream ) {
-            var viewName =  upstream.render.viewId;
 
             var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
             var error = function(inject) { throw Error('Wrong inject accessor.' + inject) }
             var data = s.map( s.compose( /*s.if(s.empty, error),*/  s.flipDot(upstream) ), injects );
 
-            var saveData4Childs = s.set(viewName, dataByView)(data);
-            s.extend( data, dataByView[prefs.parentOf[viewName]])
-
+            if( upstream.render ) { 
+                var viewName =  upstream.render.viewId;
+                var saveData4Childs = s.set(viewName, dataByView)(data);
+                s.extend( data, dataByView[prefs.parentOf[viewName]])
+            }
             s.extend( scope, data );
             Object.keys(data).filter(simpleType.bind(this, data)).map(function(key){
                 Object.defineProperty(scope, key, {
@@ -327,6 +328,7 @@ var atlant = (function(){
                     }
                 });
             });
+            return scope;
         };
 
         var injectInfoIntoScope = function(scope, upstream) {
@@ -555,7 +557,7 @@ var atlant = (function(){
 
             return stream
                 .map( ups.fmap(_.extend) )
-                .flatMap( s.compose( clientFuncs.convertPromiseD, clientFuncs.safeD, clientFuncs.injectParamsD(state.lastDepName))( dep) )
+                .flatMap( s.compose( clientFuncs.convertPromiseD, clientFuncs.safeD, clientFuncs.injectParamsD(state.lastDepName))( dep ) )
                 .mapError(s.id)
                 .map( ups.join('depends', depName) )
                 .map(function(upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
@@ -967,12 +969,29 @@ var atlant = (function(){
      */
     var _do = function(actionProvider) {
         if ( ! state.lastOp ) throw new Error('"do" should nest something');
-
         s.type(actionProvider, 'function');
+        var doId = _.uniqueId();
 
         var thisDo = state.lastOp
-        
-        thisDo.onValue( actionProvider );
+            .flatMap( function(upstream) { 
+                var injects = {};
+                try{
+                    clientFuncs.injectDependsIntoScope(injects,  upstream) 
+                    var result = actionProvider(injects);
+                    if ( 'promise' === typeof result) {
+                        return Bacon.fromPromise( result ).map( function() { return upstream; } );
+                    } else {
+                        return upstream;
+                    }
+                } catch(e){
+                    console.error(e.stack)
+                }
+            }.bind(this));
+
+        add( 'do_' + doId, thisDo );
+
+        state.lastOp = thisDo;
+        State.print('_do__After:', state);
 
         return this;
     }
@@ -1053,6 +1072,13 @@ var atlant = (function(){
         return this;
     }
 
+    var _log = function() {
+        var arr = s.a2a(arguments).slice();
+        var action = s.reduce( function( fn, argument) { console.log('reduce:', argument); return fn.bind(console, argument); }, console.log.bind(console, arr.shift() ));
+        _do.call(this, action(arr));
+        return this;
+    }   
+
     return {
         // Set atlant preferencies
         set:_set
@@ -1066,7 +1092,9 @@ var atlant = (function(){
         ,and: _and
         ,inject: _inject
         ,if: _if
+        ,filter: _if
         ,do: _do
+        ,map: _do
         // Render methods:
         // Render should return either the Promise either the something. Promise will be threated async.
         ,render: _render
@@ -1077,6 +1105,7 @@ var atlant = (function(){
         ,publish: _publish
         ,renders: { react: reactRender, simple: simpleRender }
         ,onRenderEnd: _onRenderEnd
+        ,log: _log
     };
 
 });
