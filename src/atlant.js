@@ -248,6 +248,8 @@ var atlant = (function(){
             }
 
             var loc = element.getAttribute('href'); 
+            if ( !loc ) return;
+
             // In case of it is the same link with hash - do not involve the atlant, just scroll to id. 
             // @TODO? don't prevent default and understand that route not changed at routeChanged state?
             if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {
@@ -291,13 +293,9 @@ var atlant = (function(){
         // Provides last depend data as param for .if command
         var injectParamsD = s.curry(function(lastDepName, fn) {
             return function(upstream) {
-                var args = [{ params:upstream.params, route: { mask:upstream.route.mask, path: upstream.path } }];
-                if (lastDepName && upstream.depends && upstream.depends[lastDepName]) {
-                    args.push( upstream.depends[lastDepName] );
-                }
-                //var scope = clientFuncs.injectDependsIntoScope({}, upstream);
+                var scope = clientFuncs.injectDependsIntoScope({}, upstream);
 
-                return fn.apply(this, args);
+                return fn.call(this, scope);
             }
         });
 
@@ -314,16 +312,18 @@ var atlant = (function(){
             var error = function(inject) { throw Error('Wrong inject accessor.' + inject) }
             var data = s.map( s.compose( /*s.if(s.empty, error),*/  s.flipDot(upstream) ), injects );
 
-            var params = s.reduce(function(result, item) { result[':' + item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
-            params[':mask'] = (upstream.route) ? upstream.route.mask : void 0;    
-            params[':path'] = upstream.path;
+            var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
+            params['mask'] = (upstream.route) ? upstream.route.mask : void 0;    
+            params['location'] = upstream.path;
 
             if( upstream.render ) { 
                 var viewName =  upstream.render.viewId;
                 var saveData4Childs = s.set(viewName, dataByView)(data);
                 s.extend( data, dataByView[prefs.parentOf[viewName]])
             }
+
             s.extend( scope, params, data );
+
             Object.keys(data).filter(simpleType.bind(this, data)).map(function(key){
                 Object.defineProperty(scope, key, {
                     get: function () {

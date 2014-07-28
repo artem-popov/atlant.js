@@ -1,7 +1,9 @@
 0.2.5 
 	- fix that catched links which has inner elements
+	- fix links with no href
 	- implement .do() and .log()
-	- add :params, :path, :mask from route mask into do()/render() scopes
+	- add all :params, "path", "mask" from route mask into
+	do()/render()/depends()/if scopes
 	- more fine error catching
 0.2.4 fixed double render at page load in Safari
 0.2.3 
