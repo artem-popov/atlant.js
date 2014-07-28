@@ -11,7 +11,6 @@ var reactRender = {
             }
 
             try{
-                console.log('prepare to render:', scope, viewProvider(scope), element);
                 var instance = React.renderComponent( viewProvider(scope), element, onRender );
             } catch(e) {
                 console.error( 'Atlantjs: React doesn\'t rendered component', e );
@@ -24,7 +23,6 @@ var reactRender = {
     ,clear: function(viewProvider, element, scope) {
         return new Promise( function( resolve, reject ){
             try{
-                console.log('prepare to clear: ', element)
                 if (React.unmountComponentAtNode( element )) {
                     console.log('successefully unmounted component')
                     return resolve();
