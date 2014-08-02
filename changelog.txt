@@ -1,3 +1,5 @@
+0.2.6
+	- verbose erorrs
 0.2.5 
 	- fix that catched links which has inner elements
 	- fix links with no href

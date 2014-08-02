@@ -13,7 +13,7 @@ var reactRender = {
             try{
                 var instance = React.renderComponent( viewProvider(scope), element, onRender );
             } catch(e) {
-                console.error( 'Atlantjs: React doesn\'t rendered component', e );
+                console.error( e.stack );
             }
         });
 
@@ -31,7 +31,7 @@ var reactRender = {
                     return reject();
                 }
             } catch(e) {
-                console.error( 'Atlantjs: React doesn\'t cleared component', e );
+                console.error( e.stack );
             }
         });
     }

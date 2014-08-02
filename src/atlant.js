@@ -273,10 +273,13 @@ var atlant = (function(){
 
         var convertPromiseD = s.curry(function(promiseProvider, upstream) {
             var promise = promiseProvider( upstream );
-            if ( void 0 === promise || void 0 === promise.then )
-                return Bacon.Error('Depend should provide promise,');
-            else    
+            if ( promise instanceof Promise ){
+                promise
+                    .catch( clientFuncs.catchError )
                 return Bacon.fromPromise( promise );
+            } else {
+                return Bacon.constant(promise);
+            }
         });
 
         var safeD = function(fn){
@@ -334,11 +337,20 @@ var atlant = (function(){
             return scope;
         };
 
+        var catchError = function(e) {
+            if (e.stack)
+                console.error(e.stack);
+            else 
+                console.error('Error:', e)
+            return e;
+        }
+
         return { 
             convertPromiseD: convertPromiseD
             ,safeD: safeD
             ,injectParamsD: injectParamsD
             ,injectDependsIntoScope: injectDependsIntoScope
+            ,catchError: catchError
        };
     }();
 
@@ -416,12 +428,12 @@ var atlant = (function(){
                             var animated;
                             rendered.then( function() {
                                 animated = animate.after( cloned, targetElement );
-                            });
+                            }).catch( clientFuncs.catchError );
 
                             if ( animated instanceof Promise ) {
-                                animated.then( endSignal );
+                                animated.then( endSignal ).catch( clientFuncs.catchError );
                             } else {
-                                rendered.then( endSignal );
+                                rendered.then( endSignal ).catch( clientFuncs.catchError );
                             }
                         } 
                     } catch (e) { 
@@ -549,7 +561,6 @@ var atlant = (function(){
             return stream
                 .map( ups.fmap(_.extend) )
                 .flatMap( s.compose( clientFuncs.convertPromiseD, clientFuncs.safeD, clientFuncs.injectParamsD(state.lastDepName))( dep ) )
-                .mapError(s.id)
                 .map( ups.join('depends', depName) )
                 .map(function(upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
                     if (!upstream.injects) upstream.injects = [];
@@ -969,8 +980,8 @@ var atlant = (function(){
                 try{
                     clientFuncs.injectDependsIntoScope(injects,  upstream) 
                     var result = actionProvider(injects);
-                    if ( 'promise' === typeof result) {
-                        return Bacon.fromPromise( result ).map( function() { return upstream; } );
+                    if ( result instanceof Promise ) {
+                        return result.then( function() { return upstream; } ).catch( clientFuncs.catchError );
                     } else {
                         return upstream;
                     }
@@ -1065,7 +1076,7 @@ var atlant = (function(){
 
     var _log = function() {
         var arr = s.a2a(arguments).slice();
-        var action = s.reduce( function( fn, argument) { console.log('reduce:', argument); return fn.bind(console, argument); }, console.log.bind(console, arr.shift() ));
+        var action = s.reduce( function( fn, argument) { return fn.bind(console, argument); }, console.log.bind(console, arr.shift() ));
         _do.call(this, action(arr));
         return this;
     }   
