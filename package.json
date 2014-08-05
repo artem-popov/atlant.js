@@ -3,6 +3,7 @@
   "version": "0.2.7",
   "description": "",
   "homepage": "",
+  "main": "src/atlant.js",
   "devDependencies": {
     "gulp-traceur": "~0.4.0",
     "gulp-browserify": "~0.5.0",
