@@ -10,28 +10,19 @@ var reactRender = {
                 return resolve();
             }
 
-            try{
-                var instance = React.renderComponent( viewProvider(scope), element, onRender );
-            } catch(e) {
-                console.error( e.stack );
-            }
+            var instance = React.renderComponent( viewProvider(scope), element, onRender );
         });
-
 
         return rendered;
     }
     ,clear: function(viewProvider, element, scope) {
         return new Promise( function( resolve, reject ){
-            try{
-                if (React.unmountComponentAtNode( element )) {
-                    console.log('successefully unmounted component')
-                    return resolve();
-                } else {
-                    console.log('failed unmount component')
-                    return reject();
-                }
-            } catch(e) {
-                console.error( e.stack );
+            if (React.unmountComponentAtNode( element )) {
+                console.log('successefully unmounted component')
+                return resolve();
+            } else {
+                console.log('failed unmount component')
+                return reject();
             }
         });
     }
