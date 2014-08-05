@@ -19,8 +19,6 @@ var atlant = (function(){
         ,streams = {} // Streams collected
         ,renderNames = []
         ,viewNames = []
-        ,rCount = {}
-        ,rCountCopy
 
     var onRenderEnd; // callback which will be called on finishing when rendering
     var cache = [];
@@ -34,7 +32,7 @@ var atlant = (function(){
             ,render: { render: simpleRender.render, clear: simpleRender.clear }
     }
 
-//    var log = s.nop;
+    // var log = s.nop;
     var log = console.log.bind(console, '--');
 
     var state
@@ -249,7 +247,6 @@ var atlant = (function(){
 
             var loc = element.getAttribute('href'); 
             if ( !loc ) return;
-
             // In case of it is the same link with hash - do not involve the atlant, just scroll to id. 
             // @TODO? don't prevent default and understand that route not changed at routeChanged state?
             if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {
@@ -274,8 +271,8 @@ var atlant = (function(){
         var convertPromiseD = s.curry(function(promiseProvider, upstream) {
             var promise = promiseProvider( upstream );
             if ( promise instanceof Promise ){
-                promise
-                    .catch( clientFuncs.catchError )
+                promise = promise
+                    .catch( function(e) {  if (!e.stack) return e; else clientFuncs.catchError(e) } )
                 return Bacon.fromPromise( promise );
             } else {
                 return Bacon.constant(promise);
@@ -338,10 +335,11 @@ var atlant = (function(){
         };
 
         var catchError = function(e) {
-            if (e.stack)
+            if (e.stack) {
                 console.error(e.stack);
-            else 
-                console.error('Error:', e)
+            } else {
+                console.error(e);
+            }
             return e;
         }
 
@@ -362,7 +360,28 @@ var atlant = (function(){
         streams[name] = { name:name, stream: value }
     }
 
+    var counter = (function() {
+        var rCount = {}
+        ,rCountCopy
 
+        return {
+           increase:function(state) {
+               // @TODO check if state
+               if ( !rCount ) rCount = {};
+               rCount[state.lastConditionId] = ( rCount.hasOwnProperty(state.lastConditionId) ? rCount[state.lastConditionId] : 0 ) + 1; // increase the render counter for current When/If
+           }
+           ,decrease:function(upstream) {
+               // @TODO check if upstream
+               if ( !rCountCopy ) rCountCopy = {};
+               if ( !rCountCopy[upstream.conditionId] ) rCountCopy[upstream.conditionId] = rCount[upstream.conditionId];
+               rCountCopy[upstream.conditionId]--;
+               return rCountCopy[upstream.conditionId]
+           }
+           ,reset: function() {
+               rCountCopy = void 0; 
+           }
+       }
+    })();
 
     /* Helpers */
     
@@ -370,19 +389,21 @@ var atlant = (function(){
 
     var assignRenders = function(){
         var renderStopper = function(upstream) {
-            if ( viewRendered[upstream.render.viewName] || isRedirected ) return false;
-            else viewRendered[upstream.render.viewName] = true;
-            return true;
+            if ( viewRendered[upstream.render.viewName] || isRedirected ) { 
+                counter.decrease(upstream);
+                return false; 
+            } else { 
+                viewRendered[upstream.render.viewName] = true;
+                return true;
+            }
         };
 
         var whenRenderedSignal = function( upstream ) {
             // Here we are decrementing the counter of happened renders for current rendering "when".
-            if ( !rCountCopy ) rCountCopy = {};
-            if ( !rCountCopy[upstream.conditionId] ) rCountCopy[upstream.conditionId] = rCount[upstream.conditionId];
-            rCountCopy[upstream.conditionId]--;
+            var count = counter.decrease(upstream);
             
             // if it is a last render of "when" then signalling of it.
-            if ( 0 === rCountCopy[upstream.conditionId]) {
+            if ( 0 === count ) {
                 whenRenderedStream.push();
             }
 
@@ -391,8 +412,8 @@ var atlant = (function(){
                 upstream.finallyStream.push(upstream);
             }
 
-            if (viewReady[viewName]) {
-                viewReady[viewName].push(upstream);
+            if (viewReady[upstream.render.viewName]) {
+                viewReady[upstream.render.viewName].push(upstream);
             }
         };
 
@@ -421,19 +442,19 @@ var atlant = (function(){
                         } else {
                             var cloned = targetElement.cloneNode(true);
                             animate.before(cloned, targetElement);
-
                             var rendered = render(viewProvider, targetElement, scope);
                             if ( ! ( rendered instanceof Promise ) ) throw new Error('Atlant: render should return Promise.'); 
+                            rendered = rendered.catch( clientFuncs.catchError );
 
                             var animated;
                             rendered.then( function() {
                                 animated = animate.after( cloned, targetElement );
-                            }).catch( clientFuncs.catchError );
+                            })
 
                             if ( animated instanceof Promise ) {
-                                animated.then( endSignal ).catch( clientFuncs.catchError );
+                                animated.catch( clientFuncs.catchError ).then( endSignal )
                             } else {
-                                rendered.then( endSignal ).catch( clientFuncs.catchError );
+                                rendered.then( endSignal )
                             }
                         } 
                     } catch (e) { 
@@ -644,7 +665,6 @@ var atlant = (function(){
 
     renderEndStream
         .onValue( function(){
-            rCountCopy = void 0; // each when/if has count of render/clear inside. Copy is used to reuse this thing on route change.
             whenCount = 0; 
             setTimeout( onRenderEnd, 0);
         })
@@ -676,12 +696,13 @@ var atlant = (function(){
         .map(function(upstream) { restoreAfterPublish = upstream; return upstream; })
         .merge(publishStream)        
         .map(function() { return restoreAfterPublish; })
-        .filter(function() { return !isRendering} ) // Do not allow routeChangedStream propagation if already rendering.
+        .filter(function(upstream) { return !isRendering } ) // Do not allow routeChangedStream propagation if already rendering.
         .map(function(upstream){ // Publish stream does not provide any information
             return upstream ? upstream : { path: utils.getLocation() };
         })
         .filter( s.compose( s.empty, s.flip(utils.matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
         .map(function(upstream) { // Nil values.
+            counter.reset(); // reset to default values the counter of render/clear. 
             isLastWasMatched = false;
             isRedirected = false;
             viewRendered = [];
@@ -937,8 +958,7 @@ var atlant = (function(){
 
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             
-            if ( !rCount ) rCount = {};
-            rCount[state.lastConditionId] = ( rCount.hasOwnProperty(state.lastConditionId) ? rCount[state.lastConditionId] : 0 ) + 1; // increase the render counter for current When/If
+            counter.increase(state);
 
             var ups = Upstream();
 
@@ -1004,8 +1024,7 @@ var atlant = (function(){
 
         var ups = Upstream();
 
-        if ( !rCount ) rCount = {};
-        rCount[state.lastConditionId] = ( rCount.hasOwnProperty(state.lastConditionId) ? rCount[state.lastConditionId] : 0 ) + 1; // increase the render counter for current When/If
+        counter.increase(state);
 
         var thisRedirect = (state.lastIf || state.lastDep || state.lastWhen)
             .map(ups.fmap(_.extend))

@@ -13,7 +13,6 @@ var fakePushState = function(window){
         var state;
         try { 
            state = pushState.apply(window.history, arguments); 
-           console.log('state is', state );
         } catch (e) {
            console.log('Can\'t push state:', e);
         }
