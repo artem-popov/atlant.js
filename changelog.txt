@@ -1,7 +1,6 @@
-0.2.7 
-	- verbose promises erorrs, fix counter when render stopped.
-0.2.6
-	- verbose errors
+0.2.8 fix crash on "bad" json
+0.2.7 verbose promises errors, fix counter when render stopped.
+0.2.6 verbose errors
 0.2.5 
 	- fix that catched links which has inner elements
 	- fix links with no href
