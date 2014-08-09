@@ -433,7 +433,6 @@ var atlant = (function(){
                         if ( !targetElement ) throw Error('The view "' + viewName + '" is not found. Please place html element before use.')
 
                         var render = ( RenderOperation.render === upstream.render.renderOperation ) ? prefs.render.render : prefs.render.clear;
-
                         if ( !animate ) {
                             var rendered = render(viewProvider, targetElement, scope);
 
@@ -480,10 +479,9 @@ var atlant = (function(){
         var getOrderedStreams = function(name, stream) {
             if (! prefs.parentOf[name] ) return stream;
 
-            log('View dependentions:', name, JSON.stringify(stream), 'are depends on', prefs.parentOf[name], JSON.stringify(renders[prefs.parentOf[name]]));
+            log('View dependentions:', name, 'are depends on', prefs.parentOf[name]) 
             var parentStream = viewReady[prefs.parentOf[name]];
             stream = Bacon.combineWith(yC, parentStream, stream).changes().filter(function(x){return x});
-
             return stream;
         };
 
@@ -965,7 +963,7 @@ var atlant = (function(){
             var thisRender = state.lastOp
                 .map(ups.fmap(_.extend))
                 .map(function() { return { renderProvider: renderProvider, viewName:viewName, renderOperation:renderOperation}; })
-                .map(ups.join('render', void 0));
+                .map(ups.join('render', void 0))
 
             // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewName.
             if ( ! renders[viewName] ) renders[viewName] = [];
