@@ -5,7 +5,7 @@
  * @TODO: #hashes are ignored
  */
 
-var s = require('./utils')
+var s = require('./lib')
     ,simpleRender = require('./renders/simple')
     ,reactRender = require('./renders/react')
     ,animate = require('./animations/simple')
@@ -335,7 +335,7 @@ var atlant = (function(){
         };
 
         var catchError = function(e) {
-            if (e.stack) {
+            if (e && e.stack) {
                 console.error(e.stack);
             } else {
                 console.error(e);
@@ -420,7 +420,7 @@ var atlant = (function(){
         // Registering render for view.
         var assignRender = function(stream) {
             stream
-                .filter( renderStopper )
+                // .filter( renderStopper )
                 .onValue( function(upstream){
                     try{ 
                         var scope = {}; // @TODO use cached scope
@@ -433,29 +433,28 @@ var atlant = (function(){
                         if ( !targetElement ) throw Error('The view "' + viewName + '" is not found. Please place html element before use.')
 
                         var render = ( RenderOperation.render === upstream.render.renderOperation ) ? prefs.render.render : prefs.render.clear;
-                        if ( !animate ) {
-                            var rendered = render(viewProvider, targetElement, scope);
 
-                            if ( ! ( rendered instanceof Promise ) ) throw new Error('Atlant: render should return Promise.'); 
-                            rendered.then( endSignal );
+                        var cloned = targetElement.cloneNode(true);
+                        animate.before(cloned, targetElement);
+                        var rendered = render(viewProvider, targetElement, scope);
+
+                        if ( ! ( rendered instanceof Promise ) ) { 
+                            rendered = new Promise( function(resolve, reject) { throw new Error('Atlant: render should return Promise.'); } );
+                        }
+
+                        rendered = rendered.catch( clientFuncs.catchError );
+
+                        var animated;
+                        rendered.then( function() {
+                            animated = animate.after( cloned, targetElement );
+                        })
+
+                        if ( animated instanceof Promise ) {
+                            animated.catch( clientFuncs.catchError ).then( endSignal )
                         } else {
-                            var cloned = targetElement.cloneNode(true);
-                            animate.before(cloned, targetElement);
-                            var rendered = render(viewProvider, targetElement, scope);
-                            if ( ! ( rendered instanceof Promise ) ) throw new Error('Atlant: render should return Promise.'); 
-                            rendered = rendered.catch( clientFuncs.catchError );
+                            rendered.then( endSignal )
+                        }
 
-                            var animated;
-                            rendered.then( function() {
-                                animated = animate.after( cloned, targetElement );
-                            })
-
-                            if ( animated instanceof Promise ) {
-                                animated.catch( clientFuncs.catchError ).then( endSignal )
-                            } else {
-                                rendered.then( endSignal )
-                            }
-                        } 
                     } catch (e) { 
                         console.error(e.stack);
                     }
@@ -519,7 +518,7 @@ var atlant = (function(){
             if (negate) {
                 mask = mask.slice(1, mask.length-1);
             }
-
+            path = unescape(path);
             // Successefully find *
             if ( '*' === mask[0] ) return {};
 

@@ -1,5 +1,9 @@
+0.2.9 
+	- fix internal error piping of render errors 
+	- renders now can render same view several times 
 0.2.8 fix crash on "bad" json
-0.2.7 verbose promises errors, fix counter when render stopped.
+0.2.7 verbose promises errors, fix counter when render stopped, set common.js
+main point.
 0.2.6 verbose errors
 0.2.5 
 	- fix that catched links which has inner elements

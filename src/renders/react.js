@@ -18,11 +18,9 @@ var reactRender = {
     ,clear: function(viewProvider, element, scope) {
         return new Promise( function( resolve, reject ){
             if (React.unmountComponentAtNode( element )) {
-                console.log('successefully unmounted component')
                 return resolve();
             } else {
-                console.log('failed unmount component')
-                return reject();
+                return reject('failed to unmount component');
             }
         });
     }
