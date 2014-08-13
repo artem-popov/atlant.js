@@ -134,7 +134,7 @@ var atlant = (function(){
 
                 if (containerName,propertyName && data[containerName][propertyName] && upstream !== data[containerName][propertyName]) {
                     var e = new Error('E001: Upstream join equality test failed! ');
-                    console.error(e.stack)
+                    console.error(e.message, e.stack)
                     throw e;
                 }
 
@@ -284,7 +284,7 @@ var atlant = (function(){
                 try {
                     return fn.apply(this, arguments);
                 } catch(e) {
-                    console.error(e.stack);
+                    console.error(e.message, e.stack);
                     return Bacon.Error('Exception');;
                 }
             }
@@ -336,7 +336,7 @@ var atlant = (function(){
 
         var catchError = function(e) {
             if (e && e.stack) {
-                console.error(e.stack);
+                console.error(e.message, e.stack);
             } else {
                 console.error(e);
             }
@@ -394,6 +394,7 @@ var atlant = (function(){
                 return false; 
             } else { 
                 viewRendered[upstream.render.viewName] = true;
+                console.log('allow render', upstream.render.viewName)
                 return true;
             }
         };
@@ -456,7 +457,7 @@ var atlant = (function(){
                         }
 
                     } catch (e) { 
-                        console.error(e.stack);
+                        console.error(e.message, e.stack);
                     }
                 });                
         };
@@ -578,6 +579,7 @@ var atlant = (function(){
 
             return stream
                 .map( ups.fmap(_.extend) )
+                .map(s.logIt('we here', dep, depName))
                 .flatMap( s.compose( clientFuncs.convertPromiseD, clientFuncs.safeD, clientFuncs.injectParamsD(state.lastDepName))( dep ) )
                 .map( ups.join('depends', depName) )
                 .map(function(upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
@@ -679,8 +681,8 @@ var atlant = (function(){
         .onValue();
     
     var restoreAfterPublish;
-    var routeChangedStream = Bacon
-        .fromBinder(function(sink) {
+    var routeChangedStream = publishStream
+        .merge( Bacon.fromBinder(function(sink) {
             // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
             var routeChanged = function(event) { 
                 event.preventDefault();
@@ -689,13 +691,18 @@ var atlant = (function(){
             };
             window.addEventListener( 'popstate', routeChanged );
             window.addEventListener( 'pushstate', routeChanged );
+        }))
+        .scan(void 0, function(previous, current){
+            if ((previous && previous.hasOwnProperty('published')) || current.hasOwnProperty('published')) {
+                current.published = true;
+            }
+            return current;
         })
-        .map(function(upstream) { restoreAfterPublish = upstream; return upstream; })
-        .merge(publishStream)        
-        .map(function() { return restoreAfterPublish; })
+        .filter(function(upstream) { console.log('im, here!:', upstream); return upstream && upstream.hasOwnProperty('published') })
         .filter(function(upstream) { return !isRendering } ) // Do not allow routeChangedStream propagation if already rendering.
-        .map(function(upstream){ // Publish stream does not provide any information
-            return upstream ? upstream : { path: utils.getLocation() };
+        .map(s.logIt('go go go!'))
+        .map(function(upstream){ 
+            return upstream && upstream.path ? upstream : { path: utils.getLocation() };
         })
         .filter( s.compose( s.empty, s.flip(utils.matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
         .map(function(upstream) { // Nil values.
@@ -1003,7 +1010,7 @@ var atlant = (function(){
                         return upstream;
                     }
                 } catch(e){
-                    console.error(e.stack)
+                    console.error(e.message, e.stack)
                 }
             }.bind(this));
 
@@ -1070,8 +1077,9 @@ var atlant = (function(){
     /**
      *  Use this method to publish routes when 
      */
-    var _publish = function(){
-        publishStream.push();
+    var _publish = function(path){
+        if (path) s.type(path, 'string');
+        publishStream.push({published:true, path:path});
     }
 
     var _set = function( properties ) {
