@@ -5,9 +5,10 @@
   "authors": [
     "Artem Popov <artem.popov@frumatic.com>"
   ],
-  "description": "Atlant.js is a micro-routing framework for (yet) Angular.js. It is provides robust routing and dependency injection mechanism. It uses bacon.js streams to rule all out.",
-  "main": "src/ng/ng-s-atlant-route.js",
+  "description": "Atlant.js is an application flow/routing framework for React.js. It provides robust routing and dependency injection mechanism. It uses bacon.js streams to rule all out.",
+  "main": "lib/atlant.js",
   "keywords": [
+    "react",
     "angular",
     "route",
     "routes",

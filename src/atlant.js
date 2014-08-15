@@ -579,7 +579,6 @@ var atlant = (function(){
 
             return stream
                 .map( ups.fmap(_.extend) )
-                .map(s.logIt('we here', dep, depName))
                 .flatMap( s.compose( clientFuncs.convertPromiseD, clientFuncs.safeD, clientFuncs.injectParamsD(state.lastDepName))( dep ) )
                 .map( ups.join('depends', depName) )
                 .map(function(upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
@@ -644,7 +643,7 @@ var atlant = (function(){
     log('registering base streams...');
     // Browser specific actions.
     if (window) {
-        require( './inc/fakePushState.js')(window);
+        require( './inc/wrapPushState.js')(window);
 
         // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
         // Because we are using the same ng-view with angular, then we need to know when it's filled by ng.
@@ -698,9 +697,8 @@ var atlant = (function(){
             }
             return current;
         })
-        .filter(function(upstream) { console.log('im, here!:', upstream); return upstream && upstream.hasOwnProperty('published') })
+        .filter(function(upstream) { return upstream && upstream.hasOwnProperty('published') })
         .filter(function(upstream) { return !isRendering } ) // Do not allow routeChangedStream propagation if already rendering.
-        .map(s.logIt('go go go!'))
         .map(function(upstream){ 
             return upstream && upstream.path ? upstream : { path: utils.getLocation() };
         })
