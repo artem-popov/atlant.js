@@ -584,7 +584,6 @@ var atlant = (function(){
         })
         .onValue();
     
-    var restoreAfterPublish;
     var routeChangedStream = publishStream
         .merge( Bacon.fromBinder(function(sink) {
             // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
