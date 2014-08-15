@@ -9,6 +9,7 @@ var s = require('./lib')
     ,simpleRender = require('./renders/simple')
     ,reactRender = require('./renders/react')
     ,animate = require('./animations/simple')
+    ,utils = require('./utils')
 //    ,State = require('./state.js')
 
 var atlant = (function(){
@@ -154,116 +155,6 @@ var atlant = (function(){
         }
     };
 
-    var utils = function() {
-        return {
-            /**
-             * Redirect to the other path using $location
-             * @param upstream
-             * @returns {*}
-             */
-            goTo: function(url) {
-                history.pushState(null, null, url);
-            }
-            /**
-             * @returns interpolation of the redirect path with the parametrs
-             */
-            ,interpolate: function(template, params) {
-                var result = [];
-                template.split(':').map( function(segment, i) {
-                    if (i == 0) {
-                        result.push(segment);
-                    } else {
-                        var segmentMatch = segment.match(/(\w+)(.*)/);
-                        var key = segmentMatch[1];
-                        result.push(params[key]);
-                        result.push(segmentMatch[2] || '');
-                        delete params[key];
-                    }
-                });
-                return result.join('');
-            }
-            ,getPossiblePath: function (route) {
-                return (route[route.length-1] == '/')
-                    ? route.substr(0, route.length-1)
-                    : route +'/';
-            }
-            /**
-             *  URL query parser for old links to post and story
-             * */
-            ,parseURLQuery: function(){
-                var query = location.search.substring(1);
-                var params = query.split('&');
-                var result = {};
-                for(var i = 0; i < params.length; i++){
-                    var item = params[i].split('=');
-                    result[item[0]] = item[1];
-                }
-                return result;
-            }
-
-            /**
-             * Main function for parse new path
-             * @param path
-             * @returns {bool} false | {*}
-             */
-            ,matchRoutes: function(path, routes, matchingBehaviour){
-                matchingBehaviour = matchingBehaviour || Matching.continue;
-                var routes =  routes
-                    .map(function(route) {
-                        return matchRouteLast( path, matchingBehaviour, route );
-                    })
-                    .filter(s.notEmpty)
-
-                return s.head(routes);
-            }
-            ,getLocation: function() {
-                return window.location.pathname;
-            }
-            ,parseUrl: function(url) {
-                var urlParseRE = /^(((([^:\/#\?]+:)?(?:(\/\/)((?:(([^:@\/#\?]+)(?:\:([^:@\/#\?]+))?)@)?(([^:\/#\?\]\[]+|\[[^\/\]@#?]+\])(?:\:([0-9]+))?))?)?)?((\/?(?:[^\/\?#]+\/+)*)([^\?#]*)))?(\?[^#]+)?)(#.*)?/;
-                var matches = urlParseRE.exec(url);
-                return {
-                    protocol: matches[4] ? matches[4].slice(0, matches[4].length-1) : ''
-                    ,host: matches[10] || ''
-                    ,hostname: matches[11] || ''
-                    ,port: matches[12] || ''
-                    ,pathname: matches[13] || ''
-                    ,search: matches[16] || '' 
-                    ,hashes: matches[17] || ''
-                };
-            }
-        };
-    }();
-
-    utils.attachGuardToLinks = function() {
-        
-        var linkDefender = function(event){
-            if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which ) return;
-            var element = event.target;
-
-            while ( 'a' !== element.nodeName.toLowerCase() ){
-                if (element === document || ! (element = element.parentNode) ) return; 
-            }
-
-            var loc = element.getAttribute('href'); 
-            if ( !loc ) return;
-            // In case of it is the same link with hash - do not involve the atlant, just scroll to id. 
-            // @TODO? don't prevent default and understand that route not changed at routeChanged state?
-            if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {
-                var begin = loc.indexOf('#');  
-                document.getElementById( loc.slice( -1 === begin ? 1 : begin + 1, loc.length )).scrollIntoView();
-                event.preventDefault();
-                return false;
-            }
-
-            if ( loc && element.host === location.host ) {
-                event.preventDefault();
-                utils.goTo( loc );
-            }
-        }
-        document.addEventListener('click', linkDefender );
-        document.addEventListener('keydown', linkDefender );
-    }
 
 
     var clientFuncs = function() {
@@ -394,7 +285,6 @@ var atlant = (function(){
                 return false; 
             } else { 
                 viewRendered[upstream.render.viewName] = true;
-                console.log('allow render', upstream.render.viewName)
                 return true;
             }
         };
@@ -569,6 +459,21 @@ var atlant = (function(){
         });
     }();
 
+    /**
+     * Main function for parse new path
+     * @param path
+     * @returns {bool} false | {*}
+     */
+    var matchRoutes = function(path, routes, matchingBehaviour){
+        matchingBehaviour = matchingBehaviour || Matching.continue;
+        var routes =  routes
+            .map(function(route) {
+                return matchRouteLast( path, matchingBehaviour, route );
+            })
+            .filter(s.notEmpty)
+
+        return s.head(routes);
+    }
 
     /* depends */
     var depends = function() {
@@ -702,7 +607,7 @@ var atlant = (function(){
         .map(function(upstream){ 
             return upstream && upstream.path ? upstream : { path: utils.getLocation() };
         })
-        .filter( s.compose( s.empty, s.flip(utils.matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
+        .filter( s.compose( s.empty, s.flip(matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
         .map(function(upstream) { // Nil values.
             counter.reset(); // reset to default values the counter of render/clear. 
             isLastWasMatched = false;
@@ -723,7 +628,7 @@ var atlant = (function(){
         }).map(function(upstream){upstream.id = _.uniqueId(); return upstream;})
 
     var otherWiseRootStream = rootStream
-        .filter( s.compose( s.empty, s.flip(utils.matchRoutes)(Matching.stop, routes), s.dot('path') ) )
+        .filter( s.compose( s.empty, s.flip(matchRoutes)(Matching.stop, routes), s.dot('path') ) )
         .map( function(upstream) { whenCount++; return upstream; })
         .map( s.logIt('Otherwise is in work.') );
 
