@@ -5,14 +5,17 @@
  * @TODO: #hashes are ignored
  */
 
-var s = require('./lib')
-    ,simpleRender = require('./renders/simple')
-    ,reactRender = require('./renders/react')
-    ,animate = require('./animations/simple')
-    ,utils = require('./utils')
-//    ,State = require('./state.js')
-
 var atlant = (function(){
+
+    var s = require('./lib')
+        ,simpleRender = require('./renders/simple')
+        ,reactRender = require('./renders/react')
+        ,animate = require('./animations/simple')
+        ,utils = require('./utils')
+        ,Upstream = require('./upstream.js')
+        ,Counter = require('./counter.js')()
+    //    ,State = require('./state.js')
+
     // Initialization specific vars
     var isRenderApplyed  // Is Render already set OnValue for renders
         ,params = [] // Route mask params parsed
@@ -110,52 +113,6 @@ var atlant = (function(){
         ,clear: parseInt(_.uniqueId())
     }
 
-    // Save/restore state of the stream.
-    var Upstream = function() {
-        var data = {};
-        return {
-            // join :: containerName -> propertyName -> upstream
-            join: s.curry( function(containerName, propertyName, upstream) {
-
-                if ( containerName && propertyName ) {
-                    if ( ! data[containerName] ) data[containerName] = {};
-                    if ( ! data[containerName][propertyName] ) data[containerName][propertyName] = {};
-
-                    data[containerName][propertyName] = upstream;
-                }
-
-                if ( ! containerName && ! propertyName ){
-                    s.merge(data, upstream);
-                }
-
-                if ( containerName && ! propertyName ){
-                    if ( ! data[containerName] ) data[containerName] = {};
-                    s.merge(data[containerName], upstream);
-                }
-
-                if (containerName,propertyName && data[containerName][propertyName] && upstream !== data[containerName][propertyName]) {
-                    var e = new Error('E001: Upstream join equality test failed! ');
-                    console.error(e.message, e.stack)
-                    throw e;
-                }
-
-                upstream = data;
-                data = {};
-                return upstream;
-            })
-            // fmap :: fn -> obj
-            ,fmap: s.curry(function(fn, obj) {
-                data = fn.call(this, data, obj);
-                return data;
-            })
-            ,clear: function(upstream){
-                data = {};
-                return upstream;
-            }
-        }
-    };
-
-
 
     var clientFuncs = function() {
 
@@ -251,38 +208,13 @@ var atlant = (function(){
         streams[name] = { name:name, stream: value }
     }
 
-    var counter = (function() {
-        var rCount = {}
-        ,rCountCopy
-
-        return {
-           increase:function(state) {
-               // @TODO check if state
-               if ( !rCount ) rCount = {};
-               rCount[state.lastConditionId] = ( rCount.hasOwnProperty(state.lastConditionId) ? rCount[state.lastConditionId] : 0 ) + 1; // increase the render counter for current When/If
-           }
-           ,decrease:function(upstream) {
-               // @TODO check if upstream
-               if ( !rCountCopy ) rCountCopy = {};
-               if ( !rCountCopy[upstream.conditionId] ) rCountCopy[upstream.conditionId] = rCount[upstream.conditionId];
-               rCountCopy[upstream.conditionId]--;
-               return rCountCopy[upstream.conditionId]
-           }
-           ,reset: function() {
-               rCountCopy = void 0; 
-           }
-       }
-    })();
-
     /* Helpers */
-    
-
 
     var assignRenders = function(){
 
         var whenRenderedSignal = function( upstream ) {
             // Here we are decrementing the counter of happened renders for current rendering "when".
-            var count = counter.decrease(upstream);
+            var count = Counter.decrease(upstream);
 
             // if it is a last render of "when" then signalling of it.
             if ( 0 === count ) {
@@ -609,7 +541,7 @@ var atlant = (function(){
         })
         .filter( s.compose( s.empty, s.flip(matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
         .map(function(upstream) { // Nil values.
-            counter.reset(); // reset to default values the counter of render/clear. 
+            Counter.reset(); // reset to default values the counter of render/clear. 
             isLastWasMatched = false;
             isRedirected = false;
             viewRendered = [];
@@ -864,7 +796,7 @@ var atlant = (function(){
 
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             
-            counter.increase(state);
+            Counter.increase(state);
 
             var ups = Upstream();
 
@@ -930,7 +862,7 @@ var atlant = (function(){
 
         var ups = Upstream();
 
-        counter.increase(state);
+        Counter.increase(state);
 
         var thisRedirect = (state.lastIf || state.lastDep || state.lastWhen)
             .map(ups.fmap(_.extend))
