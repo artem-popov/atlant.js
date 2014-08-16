@@ -279,20 +279,11 @@ var atlant = (function(){
 
 
     var assignRenders = function(){
-        var renderStopper = function(upstream) {
-            if ( viewRendered[upstream.render.viewName] || isRedirected ) { 
-                counter.decrease(upstream);
-                return false; 
-            } else { 
-                viewRendered[upstream.render.viewName] = true;
-                return true;
-            }
-        };
 
         var whenRenderedSignal = function( upstream ) {
             // Here we are decrementing the counter of happened renders for current rendering "when".
             var count = counter.decrease(upstream);
-            
+
             // if it is a last render of "when" then signalling of it.
             if ( 0 === count ) {
                 whenRenderedStream.push();
@@ -308,10 +299,20 @@ var atlant = (function(){
             }
         };
 
+        var renderStopper = function(upstream) {
+            if ( viewRendered[upstream.render.viewName] || isRedirected ) { 
+                whenRenderedSignal(upstream);
+                return false; 
+            } else { 
+                viewRendered[upstream.render.viewName] = true;
+                return true;
+            }
+        };
+
         // Registering render for view.
         var assignRender = function(stream) {
             stream
-                // .filter( renderStopper )
+                .filter( renderStopper )
                 .onValue( function(upstream){
                     try{ 
                         var scope = {}; // @TODO use cached scope
@@ -564,7 +565,7 @@ var atlant = (function(){
     var whenRenderedStream = new Bacon.Bus(); // Stream for finishing purposes
     var whenCount = 0;
     var renderEndStream = whenRenderedStream
-        .filter( function() { return 0 === --whenCount; } )
+        .filter( function(upstream) { return 0 === --whenCount; } )
 
     renderEndStream
         .onValue( function(){
@@ -574,12 +575,12 @@ var atlant = (function(){
 
     var renderBeginStream = new Bacon.Bus();
 
-    var isRendering = false; // Show state of rendering
+    var stateR = { isRendering: false }; // Show state of rendering 
     renderEndStream
         .map( function() { return false; } ) 
         .merge(renderBeginStream.map( function() { return true }))
         .scan(false, function(oldVal, newVal){
-            isRendering = newVal;
+            stateR.isRendering = newVal;
             return newVal; 
         })
         .onValue();
@@ -602,7 +603,7 @@ var atlant = (function(){
             return current;
         })
         .filter(function(upstream) { return upstream && upstream.hasOwnProperty('published') })
-        .filter(function(upstream) { return !isRendering } ) // Do not allow routeChangedStream propagation if already rendering.
+        .filter(function(upstream) { return !stateR.isRendering } ) // Do not allow routeChangedStream propagation if already rendering.
         .map(function(upstream){ 
             return upstream && upstream.path ? upstream : { path: utils.getLocation() };
         })
@@ -644,7 +645,6 @@ var atlant = (function(){
         return function(masks, matchingBehaviour, whenOrFinally) {
             s.type(masks, 'string');
             if ( -1 !== masks.indexOf('&&')) throw new Error('&& declarations not yet supported.') 
-
             masks = masks.split('||').map(s.trim);
 
             if ( 0 === masks.length || 1 === masks.length && '' === masks[0] ) masks = lastMasks; 
