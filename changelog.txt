@@ -1,8 +1,9 @@
+0.2.11 fix rendering same view several times - now first will stop this.
 0.2.10 all route change events will work only after publish(). publish() now
 accept "/route/:routeParam" argument
 0.2.9 
 	- fix internal error piping of render errors 
-	- renders now can render same view several times 
+	- (bug) 'view' can be rendered several times 
 0.2.8 fix crash on "bad" json
 0.2.7 verbose promises errors, fix counter when render stopped, set common.js
 main point.
