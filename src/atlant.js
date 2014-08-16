@@ -218,7 +218,7 @@ var atlant = (function(){
 
             // if it is a last render of "when" then signalling of it.
             if ( 0 === count ) {
-                whenRenderedStream.push();
+                whenRenderedStream.push(upstream);
             }
 
             // signal for finally construct
@@ -932,6 +932,18 @@ var atlant = (function(){
         return this;
     }
 
+    var _attach = function(view, element) {
+        renderEndStream
+            .onValue(function(upstream){
+                if ( prefs.parentOf[view] ) throw new Error('Cannot attach inner view');
+
+                console.log('attachTo:', view, upstream)
+               // upstream.render.attach(component, element);
+            });
+
+        return this;
+    }
+
     var _log = function() {
         var arr = s.a2a(arguments).slice();
         var action = s.reduce( function( fn, argument) { return fn.bind(console, argument); }, console.log.bind(console, arr.shift() ));
@@ -966,6 +978,7 @@ var atlant = (function(){
         ,renders: { react: reactRender, simple: simpleRender }
         ,onRenderEnd: _onRenderEnd
         ,log: _log
+        ,attach: _attach
     };
 
 });
