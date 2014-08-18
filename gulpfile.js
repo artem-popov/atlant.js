@@ -7,6 +7,7 @@ var browserify = require('browserify')
     ,connect = require('connect')
     ,fs = require('fs')
     ,serveStatic = require('serve-static')
+    ,livescript = require('browserify-livescript')
     
 var browOpt = {standalone: 'atlant'};
 var dest = 'lib/';
@@ -31,11 +32,12 @@ gulp.task('examples', function() {
 
 gulp.task('watch', function() {
     return gulp
-        .src('src/**/*.js')
+        .src(['src/**/*.js', 'src/**/*.ls'])
         .pipe( plumber() )
         .pipe( watch( function(){ 
             var b = browserify( './src/atlant.js' );
             b.ignore('react');
+            b.transform(livescript);
             b.transform(literalify.configure({react: 'window.React'}));
 
             b.bundle({ standalone: 'atlant' }).pipe(source('./atlant.js'))
