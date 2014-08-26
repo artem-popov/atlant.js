@@ -24,10 +24,24 @@ var reactRender = {
             }
         });
     }
+    ,attach: function(component, element) {
+        console.log('will attach ', elementId, ' to ', component) 
+        var rendered = new Promise( function( resolve, reject ){
+
+            var onRender = function(result) {
+                return resolve();
+            }
+
+            var instance = React.renderComponent( component, element, onRender );
+        });
+
+        return rendered;
+    }
 }
 
 module.exports = { 
     name: 'react'
     ,render: reactRender.render
     ,clear: reactRender.clear 
+    ,attach: reactRender.attach
 }
