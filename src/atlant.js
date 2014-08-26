@@ -1,3 +1,4 @@
+// "use strict"
 /**
 
  *
@@ -6,7 +7,6 @@
  */
 
 var atlant = (function(){
-
     var s = require('./lib')
         ,simpleRender = require('./renders/simple')
         ,reactRender = require('./renders/react')
@@ -115,7 +115,6 @@ var atlant = (function(){
 
 
     var clientFuncs = function() {
-
         var convertPromiseD = s.curry(function(promiseProvider, upstream) {
             var promise = promiseProvider( upstream );
             if ( promise instanceof Promise ){
@@ -209,17 +208,11 @@ var atlant = (function(){
     }
 
     /* Helpers */
-
     var assignRenders = function(){
 
         var whenRenderedSignal = function( upstream ) {
-            // Here we are decrementing the counter of happened renders for current rendering "when".
-            var count = Counter.decrease(upstream);
-
-            // if it is a last render of "when" then signalling of it.
-            if ( 0 === count ) {
-                whenRenderedStream.push(upstream);
-            }
+            // Signalling that view renders
+            whenRenderedStream.push(upstream);
 
             // signal for finally construct
             if ( !upstream.isFinally ) {
@@ -413,7 +406,7 @@ var atlant = (function(){
 
         var createDepStream = function(stream, depName, dep, injects) {
 
-            var ups = Upstream();
+            var ups = new Upstream();
 
             return stream
                 .map( ups.fmap(_.extend) )
@@ -489,25 +482,47 @@ var atlant = (function(){
         window.addEventListener("popstate", onRouteChange);
     }
 
-
-    
     var publishStream = new Bacon.Bus();  // Here we can put init things.
     publishStream.onValue(utils.attachGuardToLinks);
 
     var whenRenderedStream = new Bacon.Bus(); // Stream for finishing purposes
+    var nullifyScan = new Bacon.Bus();
+
+    var ups = new Upstream();
     var whenCount = 0;
     var renderEndStream = whenRenderedStream
+        .map( s.compose( ups.push, ups.clear ) )
+        .map( Counter.decrease )
+        .filter(function(value) {
+            return 0 === value;
+        })
+        .map( ups.pop ) 
+        .merge(nullifyScan)
+        .scan({}, function(oldVal, newVal) {
+            if (newVal == 'nullify') {
+                oldVal = {};
+            } else {
+                oldVal[newVal.render.viewName] = newVal;
+                console.log('oldVal', oldVal);
+            }
+            return oldVal;
+        })
+        .changes()
         .filter( function(upstream) { return 0 === --whenCount; } )
 
     renderEndStream
         .onValue( function(){
             whenCount = 0; 
+            console.log('nullify!')
+            nullifyScan.push('nullify');
             setTimeout( onRenderEnd, 0);
         })
 
     var renderBeginStream = new Bacon.Bus();
 
     var stateR = { isRendering: false }; // Show state of rendering 
+
+    /* marking StateR.isRendering to show is in the process of rendering or not*/
     renderEndStream
         .map( function() { return false; } ) 
         .merge(renderBeginStream.map( function() { return true }))
@@ -516,8 +531,15 @@ var atlant = (function(){
             return newVal; 
         })
         .onValue();
-    
-    var routeChangedStream = publishStream
+
+    var firstRender = renderEndStream 
+        .onValue(function(value) { 
+            if ( prefs.root && prefs.parentOf[prefs.root] ) throw new Error('Cannot attach inner view');
+            console.log('firstRender:value', value)
+            prefs.render.attach(prefs.rootElement, renderedComponent)
+        });
+        
+    var routeChangedStream =  publishStream
         .merge( Bacon.fromBinder(function(sink) {
             // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
             var routeChanged = function(event) { 
@@ -587,7 +609,7 @@ var atlant = (function(){
             var name = ( whenOrFinally === WhenFinally.finally ? 'finally' : '' )  + createNameFromMasks(masks);
 
             var whenId = _.uniqueId();        
-            var ups = Upstream();
+            var ups = new Upstream();
             var additionalMasks = [];
             var finallyStream = ( WhenFinally.when === whenOrFinally ) ? new Bacon.Bus() : lastFinallyStream;
             
@@ -798,7 +820,7 @@ var atlant = (function(){
             
             Counter.increase(state);
 
-            var ups = Upstream();
+            var ups = new Upstream();
 
             var thisRender = state.lastOp
                 .map(ups.fmap(_.extend))
@@ -860,7 +882,7 @@ var atlant = (function(){
 
         if ( ! state.lastOp ) throw new Error('"redirect" should nest something');
 
-        var ups = Upstream();
+        var ups = new Upstream();
 
         Counter.increase(state);
 
@@ -917,7 +939,7 @@ var atlant = (function(){
     }
 
     var _set = function( properties ) {
-        var allowedProps = [ 'view', 'render', 'cache' ];
+        var allowedProps = [ 'view', 'render' ];
         var wrongProps = s.compose( s.notEq( -1 ), allowedProps.indexOf.bind(allowedProps) ); 
         var propsGuard = s.filterKeys( wrongProps );
         var fillProps = s.compose( s.inject(this), s.merge( prefs ), propsGuard );
@@ -932,15 +954,13 @@ var atlant = (function(){
         return this;
     }
 
-    var _attach = function(view, element) {
-        renderEndStream
-            .onValue(function(upstream){
-                if ( prefs.parentOf[view] ) throw new Error('Cannot attach inner view');
+    var _attachTo = function(element) {
+        prefs.rootElement = element;
+        return this;
+    }
 
-                console.log('attachTo:', view, upstream)
-               // upstream.render.attach(component, element);
-            });
-
+    var _root = function(root) {
+        prefs.root = root;
         return this;
     }
 
@@ -977,8 +997,12 @@ var atlant = (function(){
         ,publish: _publish
         ,renders: { react: reactRender, simple: simpleRender }
         ,onRenderEnd: _onRenderEnd
+
         ,log: _log
-        ,attach: _attach
+        /* attach calls .attach method of Render.render once the first time everything is rendered. */
+        ,attachTo: _attachTo
+        /* parameter which will be send to Render.render.attach on attach() execution */
+        ,root: _root
     };
 
 });
