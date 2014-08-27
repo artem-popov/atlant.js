@@ -1,38 +1,30 @@
+"use strict";
 var React = require('react');
 
 var reactRender = { 
-    render: function(viewProvider, element, scope ) {
+    render: function(viewProvider, scope ) {
         var rendered = new Promise( function( resolve, reject ){
-
-            React.unmountComponentAtNode( element );
-
-            var onRender = function(result) {
-                return resolve();
-            }
-
-            var instance = React.renderComponent( viewProvider(scope), element, onRender );
+            var component = viewProvider(scope); 
+            //@TODO: check type of returned value; 
+            return resolve(component);
         });
 
         return rendered;
     }
     ,clear: function(viewProvider, element, scope) {
         return new Promise( function( resolve, reject ){
-            if (React.unmountComponentAtNode( element )) {
-                return resolve();
-            } else {
-                return reject('failed to unmount component');
-            }
+            return resolve(React.DOM.div(null));
         });
     }
-    ,attach: function(component, element) {
-        console.log('will attach ', elementId, ' to ', component) 
+    ,attach: function(component, selector) {
         var rendered = new Promise( function( resolve, reject ){
 
-            var onRender = function(result) {
-                return resolve();
-            }
+            var element = document.querySelector(selector);
+            if ( !element )   throw Error('AtlantJs, React render: can\'t find the selector' + selector )
+            if ( !component ) throw Error('AtlantJs, React render: no component provided. ')
 
-            var instance = React.renderComponent( component, element, onRender );
+            React.renderComponent( component, element, resolve );
+
         });
 
         return rendered;
