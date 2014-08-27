@@ -247,7 +247,7 @@ var atlant = (function(){
                         var render = ( RenderOperation.render === upstream.render.renderOperation ) ? prefs.render.render : prefs.render.clear;
                         var render = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
 
-                        render(viewProvider, scope)
+                        render(viewProvider, viewName, scope)
                             .catch( clientFuncs.catchError )
                             .then(function(component){ upstream.render.component = component; return upstream })
                             .then( whenRenderedSignal );
@@ -492,8 +492,10 @@ var atlant = (function(){
         .take(1)
         .onValue(function(value) { // value contains all rendered upstreams. 
             if ( prefs.root && prefs.parentOf[prefs.root] ) throw new Error('Cannot attach inner view');
-            console.log('firstRender:value', value)
-            prefs.render.attach(value[prefs.root].render.component, prefs.rootElement );
+            prefs
+                .render.attach(value[prefs.root].render.component, prefs.root, prefs.rootSelector )
+                .then(function(upstrean){ console.log('attached ', prefs.root, ' to ', prefs.rootSelector, 'the value is ', value)})
+                .catch(function(e) { console.error(e.message, e.stack) })
         });
         
     var routeChangedStream =  publishStream
@@ -912,7 +914,7 @@ var atlant = (function(){
     }
 
     var _attachTo = function(element) {
-        prefs.rootElement = element;
+        prefs.rootSelector = element;
         return this;
     }
 

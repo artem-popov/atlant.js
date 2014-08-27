@@ -1,33 +1,54 @@
 "use strict";
 var React = require('react');
 
+var updateComponent = [];
+var views = [];
+var wrappers = [];
+
 var reactRender = { 
-    render: function(viewProvider, scope ) {
+    render: function(viewProvider, name, scope ) {
         var rendered = new Promise( function( resolve, reject ){
-            var component = viewProvider(scope); 
+            views[name] = viewProvider(scope);  
+            if( updateComponent[name] ) updateComponent[name]();
             //@TODO: check type of returned value; 
-            return resolve(component);
+            return resolve(views[name]);
         });
 
         return rendered;
     }
-    ,clear: function(viewProvider, element, scope) {
+    ,clear: function(viewProvider, name, scope) {
         return new Promise( function( resolve, reject ){
-            return resolve(React.DOM.div(null));
+            views[name] = React.DOM.div(null);
+            if( updateComponent[name] ) updateComponent[name]();
+            return resolve(views[name]);
         });
     }
-    ,attach: function(component, selector) {
-        var rendered = new Promise( function( resolve, reject ){
+    ,attach: function(component, name, selector) {
+        var attached = new Promise( function( resolve, reject ){
+            if ( !window ) throw Error('AtlantJs, React render: not in browser.')
 
             var element = document.querySelector(selector);
             if ( !element )   throw Error('AtlantJs, React render: can\'t find the selector' + selector )
             if ( !component ) throw Error('AtlantJs, React render: no component provided. ')
 
-            React.renderComponent( component, element, resolve );
+            var wrapper = React.createClass({
+                getInitialState: function() {
+                    updateComponent[name] = function(){
+                        this.forceUpdate() 
+                    }.bind(this);
+                    return {}
+                }
+                ,render: function(){
+                    return views[name];
+                }
+            })
+            views[name] = component;
+            wrappers[name] = wrapper;
+            React.renderComponent(wrappers[name](), element, resolve );
 
         });
 
-        return rendered;
+        return attached;
     }
 }
 
