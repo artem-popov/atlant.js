@@ -342,7 +342,7 @@ var atlant = (function(){
             if (negate) {
                 mask = mask.slice(1, mask.length-1);
             }
-            path = unescape(path);
+            path = decodeURIComponent(path);
             // Successefully find *
             if ( '*' === mask[0] ) return {};
 
