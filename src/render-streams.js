@@ -12,7 +12,6 @@ module.exports = function(Counter, whenCount)  {
     /* Counting all renders of all whens. When zero => everything is rendered. */
     var ups = new Upstream();
     var renderEndStream = whenRenderedStream
-        .map(s.logIt('hoho?'))
         .map( s.compose( ups.push, ups.clear ) )
         .map( Counter.decrease )
         .filter(function(value) {
@@ -30,7 +29,7 @@ module.exports = function(Counter, whenCount)  {
         })
         .filter(s.notEmpty)
         .changes()
-        .filter( function(upstream) { console.log('minus:', whenCount); return 0 === --whenCount.value; } )
+        .filter( function(upstream) { return 0 === --whenCount.value; } )
 
     return { 
         renderEndStream: renderEndStream 
