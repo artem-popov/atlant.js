@@ -203,7 +203,7 @@ var s = (function(){
     });
 
     var empty = function(obj) {
-        return obj === null || obj === void 0 || obj === '' || ( (obj instanceof Array) && 0 === obj.length );
+        return obj === null || obj === void 0 || obj === '' || ( (obj instanceof Array) && 0 === obj.length ) || ('object' === typeof obj && 0 === Object.keys(obj).length);
     }
     var notEmpty = _.compose( negate, empty );
 
