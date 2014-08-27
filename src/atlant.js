@@ -10,7 +10,6 @@ var atlant = (function(){
     var s = require('./lib')
         ,simpleRender = require('./renders/simple')
         ,reactRender = require('./renders/react')
-        ,animate = require('./animations/simple')
         ,utils = require('./utils')
         ,Upstream = require('./upstream.js')
         ,Counter = require('./counter.js')()
@@ -244,33 +243,14 @@ var atlant = (function(){
                         clientFuncs.injectDependsIntoScope(scope, upstream);
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
                         var viewName = s.dot('.render.viewName', upstream);
-                        var endSignal = whenRenderedSignal.bind( this, upstream );
-
-                        var targetElement = document.querySelector( '#' + viewName );
-                        if ( !targetElement ) throw Error('The view "' + viewName + '" is not found. Please place html element before use.')
 
                         var render = ( RenderOperation.render === upstream.render.renderOperation ) ? prefs.render.render : prefs.render.clear;
+                        var render = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
 
-                        var cloned = targetElement.cloneNode(true);
-                        animate.before(cloned, targetElement);
-                        var rendered = render(viewProvider, targetElement, scope);
-
-                        if ( ! ( rendered instanceof Promise ) ) { 
-                            rendered = new Promise( function(resolve, reject) { throw new Error('Atlant: render should return Promise.'); } );
-                        }
-
-                        rendered = rendered.catch( clientFuncs.catchError );
-
-                        var animated;
-                        rendered.then( function() {
-                            animated = animate.after( cloned, targetElement );
-                        })
-
-                        if ( animated instanceof Promise ) {
-                            animated.catch( clientFuncs.catchError ).then( endSignal )
-                        } else {
-                            rendered.then( endSignal )
-                        }
+                        render(viewProvider, scope)
+                            .catch( clientFuncs.catchError )
+                            .then(function(component){ upstream.render.component = component; return upstream })
+                            .then( whenRenderedSignal );
 
                     } catch (e) { 
                         console.error(e.message, e.stack);
@@ -510,10 +490,10 @@ var atlant = (function(){
 
     var firstRender = renderStreams.renderEndStream 
         .take(1)
-        .onValue(function(value) { 
+        .onValue(function(value) { // value contains all rendered upstreams. 
             if ( prefs.root && prefs.parentOf[prefs.root] ) throw new Error('Cannot attach inner view');
             console.log('firstRender:value', value)
-            prefs.render.attach(prefs.rootElement, renderedComponent)
+            prefs.render.attach(value[prefs.root].render.component, prefs.rootElement );
         });
         
     var routeChangedStream =  publishStream

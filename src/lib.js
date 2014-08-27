@@ -313,6 +313,17 @@ var s = (function(){
         });
     }
 
+    var promiseD = function(promiseProvider) {
+        return function() {
+            var result = promiseProvider.apply(this, arguments );
+            if ( result instanceof Promise ) {
+                return result;
+            } else {
+                return promise(result);
+            }
+        }
+    }
+
     //memoize.js - by @addyosmani, @philogb, @mathias
     // with a few useful tweaks from @DmitryBaranovsk
     function memoize( fn ) {
@@ -395,6 +406,7 @@ var s = (function(){
     this.side = side;
     // Promises
     this.promise = promise;
+    this.promiseD = promiseD;
     this.if = _if;
     /**
      * Depreated
