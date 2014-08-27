@@ -488,6 +488,7 @@ var atlant = (function(){
     var whenRenderedStream = new Bacon.Bus(); // Stream for finishing purposes
     var nullifyScan = new Bacon.Bus();
 
+    /* Counting all renders of all whens. When zero => everything is rendered. */
     var ups = new Upstream();
     var whenCount = 0;
     var renderEndStream = whenRenderedStream
@@ -507,13 +508,13 @@ var atlant = (function(){
             }
             return oldVal;
         })
+        .filter(s.notEmpty)
         .changes()
         .filter( function(upstream) { return 0 === --whenCount; } )
 
     renderEndStream
         .onValue( function(){
             whenCount = 0; 
-            console.log('nullify!')
             nullifyScan.push('nullify');
             setTimeout( onRenderEnd, 0);
         })
@@ -522,7 +523,7 @@ var atlant = (function(){
 
     var stateR = { isRendering: false }; // Show state of rendering 
 
-    /* marking StateR.isRendering to show is in the process of rendering or not*/
+    /* Update state of rendering */
     renderEndStream
         .map( function() { return false; } ) 
         .merge(renderBeginStream.map( function() { return true }))
@@ -533,6 +534,7 @@ var atlant = (function(){
         .onValue();
 
     var firstRender = renderEndStream 
+        .take(1)
         .onValue(function(value) { 
             if ( prefs.root && prefs.parentOf[prefs.root] ) throw new Error('Cannot attach inner view');
             console.log('firstRender:value', value)
