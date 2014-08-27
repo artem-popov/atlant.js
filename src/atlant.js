@@ -212,7 +212,7 @@ var atlant = (function(){
 
         var whenRenderedSignal = function( upstream ) {
             // Signalling that view renders
-            whenRenderedStream.push(upstream);
+            renderStreams.whenRenderedStream.push(upstream);
 
             // signal for finally construct
             if ( !upstream.isFinally ) {
@@ -485,37 +485,12 @@ var atlant = (function(){
     var publishStream = new Bacon.Bus();  // Here we can put init things.
     publishStream.onValue(utils.attachGuardToLinks);
 
-    var whenRenderedStream = new Bacon.Bus(); // Stream for finishing purposes
-    var nullifyScan = new Bacon.Bus();
+    var whenCount = { value: 0 };
+    var renderStreams = require('./render-streams')(Counter, whenCount);
 
-    /* Counting all renders of all whens. When zero => everything is rendered. */
-    var ups = new Upstream();
-    var whenCount = 0;
-    var renderEndStream = whenRenderedStream
-        .map( s.compose( ups.push, ups.clear ) )
-        .map( Counter.decrease )
-        .filter(function(value) {
-            return 0 === value;
-        })
-        .map( ups.pop ) 
-        .merge(nullifyScan)
-        .scan({}, function(oldVal, newVal) {
-            if (newVal == 'nullify') {
-                oldVal = {};
-            } else {
-                oldVal[newVal.render.viewName] = newVal;
-                console.log('oldVal', oldVal);
-            }
-            return oldVal;
-        })
-        .filter(s.notEmpty)
-        .changes()
-        .filter( function(upstream) { return 0 === --whenCount; } )
-
-    renderEndStream
+    renderStreams.renderEndStream
         .onValue( function(){
-            whenCount = 0; 
-            nullifyScan.push('nullify');
+            renderStreams.nullifyScan.push('nullify');
             setTimeout( onRenderEnd, 0);
         })
 
@@ -524,7 +499,7 @@ var atlant = (function(){
     var stateR = { isRendering: false }; // Show state of rendering 
 
     /* Update state of rendering */
-    renderEndStream
+    renderStreams.renderEndStream
         .map( function() { return false; } ) 
         .merge(renderBeginStream.map( function() { return true }))
         .scan(false, function(oldVal, newVal){
@@ -533,7 +508,7 @@ var atlant = (function(){
         })
         .onValue();
 
-    var firstRender = renderEndStream 
+    var firstRender = renderStreams.renderEndStream 
         .take(1)
         .onValue(function(value) { 
             if ( prefs.root && prefs.parentOf[prefs.root] ) throw new Error('Cannot attach inner view');
@@ -585,7 +560,7 @@ var atlant = (function(){
 
     var otherWiseRootStream = rootStream
         .filter( s.compose( s.empty, s.flip(matchRoutes)(Matching.stop, routes), s.dot('path') ) )
-        .map( function(upstream) { whenCount++; return upstream; })
+        .map( function(upstream) { whenCount.value++; return upstream; })
         .map( s.logIt('Otherwise is in work.') );
 
  
@@ -684,7 +659,7 @@ var atlant = (function(){
 
             state.lastWhen // counter for whens and Informational message. 
                 .onValue(function(upstream) {
-                    whenCount++;
+                    whenCount.value++;
                     log('Matched route!', upstream);
                 });
 
