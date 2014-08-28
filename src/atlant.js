@@ -500,6 +500,9 @@ var atlant = (function(){
                ) console.log('Atlant.js: Warning: root and rootSelector should be declared both to work.')
 
             if ( prefs.toString || prefs.toSource ) {
+                
+                if( !prefs.root ) throw new Error('Antlant.js: \'root\' element not declared. Use atlant.root(\'viewName\') ');
+
                 if (prefs.toString) {
                     prefs.toString( prefs.render.toString(prefs.root, prefs.toStringOpts) );
                 }

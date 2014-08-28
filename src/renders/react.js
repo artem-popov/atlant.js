@@ -54,7 +54,7 @@ var reactRender = {
      * options parameter can be used to control what you will get.
      * */
     ,toString: function(name, options) {
-        if (options.static)
+        if ( options && options.static)
             return React.renderComponentToStaticMarkup(views[name]);
         else 
             return React.renderComponentToString(views[name]);
@@ -70,4 +70,6 @@ module.exports = {
     ,render: reactRender.render
     ,clear: reactRender.clear 
     ,attach: reactRender.attach
+    ,toString: reactRender.toString
+    ,toSource: reactRender.toSource
 }
