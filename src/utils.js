@@ -1,3 +1,7 @@
+"use strict";
+
+var s = require('./lib');
+
 var utils = function() {
     return {
         /**
@@ -31,23 +35,36 @@ var utils = function() {
                 ? route.substr(0, route.length-1)
                 : route +'/';
         }
+        ,parseURL: s.memoize( function(url) {
+            var q = url.indexOf('?');
+            var and = url.indexOf('&');
+
+            if (-1 === q) q = Infinity;
+            if (-1 === and) and = Infinity;
+            q = (q > and) ? and : q;
+
+            return { 
+                pathname: url.substring(0, q) 
+                ,search: url.substring(q+1) 
+            }
+        })
         /**
          *  URL query parser for old links to post and story
          * */
-        ,parseURLQuery: function(url){
-            var query = location.search.substring(1);
-            var params = query.split('&');
-            var result = {};
-            for(var i = 0; i < params.length; i++){
-                var item = params[i].split('=');
-                result[item[0]] = item[1];
-            }
-            return result;
-        }
+        ,parseSearch: s.memoize( function(search){
+            return search
+                        .replace('?', '&')
+                        .split('&')
+                        .reduce( function(obj, pair) { 
+                            pair = pair.split('=');
+                            if (pair[0]) obj[pair[0]] = pair[1]; 
+                            return obj; 
+                        }, {});
+        })
         ,getLocation: function() {
-            return window.location.pathname;
+            return window.location.pathname + window.location.search;
         }
-        ,parseUrl: function(url) {
+        ,parseURLDeprecated: function(url) {
             var urlParseRE = /^(((([^:\/#\?]+:)?(?:(\/\/)((?:(([^:@\/#\?]+)(?:\:([^:@\/#\?]+))?)@)?(([^:\/#\?\]\[]+|\[[^\/\]@#?]+\])(?:\:([0-9]+))?))?)?)?((\/?(?:[^\/\?#]+\/+)*)([^\?#]*)))?(\?[^#]+)?)(#.*)?/;
             var matches = urlParseRE.exec(url);
             return {
