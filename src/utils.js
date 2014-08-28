@@ -44,8 +44,8 @@ var utils = function() {
             q = (q > and) ? and : q;
 
             return { 
-                pathname: url.substring(0, q) 
-                ,search: url.substring(q+1) 
+                pathname: url.substring(0, q).trim()
+                ,search: url.substring(q+1).trim() 
             }
         })
         /**

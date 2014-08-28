@@ -3,8 +3,10 @@
  */
 var s = (function(){
 
-    var $s = this;
+    var _ = require('lodash')
+        ,Promise = require('promise');
 
+    var $s = this;
     var id = function(value) { return value; }
     var nop = function() { return void 0; }
 
@@ -316,7 +318,7 @@ var s = (function(){
     var promiseD = function(promiseProvider) {
         return function() {
             var result = promiseProvider.apply(this, arguments );
-            if ( result instanceof Promise ) {
+            if ( 'Promise' === result.constructor.name){
                 return result;
             } else {
                 return promise(result);

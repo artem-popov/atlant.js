@@ -119,7 +119,7 @@ var atlant = (function(){
     var clientFuncs = function() {
         var convertPromiseD = s.curry(function(promiseProvider, upstream) {
             var promise = promiseProvider( upstream );
-            if ( promise instanceof Promise ){
+            if ( 'Promise' === promise.constructor.name){
                 promise = promise
                     .catch( function(e) {  if (!e.stack) return e; else clientFuncs.catchError(e) } )
                 return Bacon.fromPromise( promise );
@@ -848,7 +848,7 @@ var atlant = (function(){
                 try{
                     clientFuncs.injectDependsIntoScope(injects,  upstream) 
                     var result = actionProvider(injects);
-                    if ( result instanceof Promise ) {
+                    if ( 'Promise' === result.constructor.name){
                         return result.then( function() { return upstream; } ).catch( clientFuncs.catchError );
                     } else {
                         return upstream;
