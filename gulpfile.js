@@ -38,7 +38,11 @@ gulp.task('watch', function() {
             var b = browserify( './src/atlant.js' );
             b.ignore('react');
             b.transform(livescript);
-            b.transform(literalify.configure({react: 'window.React'}));
+            b.transform(literalify.configure({
+                react: 'window.React'
+                ,lodash: 'window._'
+                ,baconjs: 'window.Bacon'
+            }));
 
             b.bundle({ standalone: 'atlant' }).pipe(source('./atlant.js'))
                 .pipe( gulp.dest(dest) )
