@@ -1,3 +1,5 @@
+0.3.0
+	massive change: improvements for server render to be reality
 0.2.12 use "decodeURIComponent" instead of deprecated "unescape"
 0.2.11 fix rendering same view several times - now first will stop this.
 0.2.10 all route change events will work only after publish(). publish() now
