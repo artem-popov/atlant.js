@@ -18,6 +18,8 @@ var atlant = (function(){
 
     //    ,State = require('./state.js')
 
+    var __state; // Stores state: path, mask, etc
+
     // Initialization specific vars
     var isRenderApplyed  // Is Render already set OnValue for renders
         ,params = [] // Route mask params parsed
@@ -169,6 +171,11 @@ var atlant = (function(){
                 var viewName =  upstream.render.viewId;
                 var saveData4Childs = s.set(viewName, dataByView)(data);
                 s.extend( data, dataByView[prefs.parentOf[viewName]])
+            }
+            
+            __state = {
+                mask: params['mask']
+                ,location: params['location'] 
             }
 
             s.extend( scope, params, data );
@@ -1005,6 +1012,9 @@ var atlant = (function(){
         ,root: _root
         ,toString: _toString
         ,toSource: _toSource
+        ,get state() {
+            return __state;
+        }
     };
 
 });
