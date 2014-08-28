@@ -456,6 +456,8 @@ var atlant = (function(){
     /* Base and helper streams*/
     log('registering base streams...');
 
+    var publishStream = new Bacon.Bus();  // Here we can put init things.
+
     // Browser specific actions.
     if ('undefined' !== typeof window) {
         require( './inc/wrapPushState.js')(window);
@@ -464,10 +466,10 @@ var atlant = (function(){
         // Because we are using the same ng-view with angular, then we need to know when it's filled by ng.
         document.addEventListener("DOMContentLoaded", onRouteChange);
         window.addEventListener("popstate", onRouteChange);
+
+        publishStream.onValue(utils.attachGuardToLinks);
     }
 
-    var publishStream = new Bacon.Bus();  // Here we can put init things.
-    publishStream.onValue(utils.attachGuardToLinks);
 
     var whenCount = { value: 0 };
     var renderStreams = require('./render-streams')(Counter, whenCount);
