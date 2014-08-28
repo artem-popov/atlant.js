@@ -318,7 +318,11 @@ var atlant = (function(){
             if (negate) {
                 mask = mask.slice(1, mask.length-1);
             }
+
+            var parsed = utils.parseURL( path )
+            path = parsed.pathname;
             path = decodeURIComponent(path);
+
             // Successefully find *
             if ( '*' === mask[0] ) return {};
 
@@ -349,7 +353,7 @@ var atlant = (function(){
                     dst[name] = match[index + 1];
                 });
 
-                dst = _.extend(utils.parseURLQuery(), dst);
+                dst = _.extend(utils.parseSearch(parsed.search), dst);
             } else if( negate ) {
                 dst = {}
                 match = true;
@@ -527,7 +531,7 @@ var atlant = (function(){
                 // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
                 var routeChanged = function(event) { 
                     event.preventDefault();
-                    var path = ( event.detail ) ?  utils.parseUrl( event.detail.url ).pathname :  utils.getLocation();
+                    var path = ( event.detail ) ?  utils.parseURL( event.detail.url ).pathname :  utils.getLocation();
                     sink( { path: path } ); 
                 };
                 window.addEventListener( 'popstate', routeChanged );
