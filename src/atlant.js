@@ -13,6 +13,9 @@ var atlant = (function(){
         ,utils = require('./utils')
         ,Upstream = require('./upstream.js')
         ,Counter = require('./counter.js')()
+        ,Bacon = require('baconjs')
+        ,_ = require('lodash')
+
     //    ,State = require('./state.js')
 
     // Initialization specific vars
@@ -452,8 +455,9 @@ var atlant = (function(){
 
     /* Base and helper streams*/
     log('registering base streams...');
+
     // Browser specific actions.
-    if (window) {
+    if ('undefined' !== typeof window) {
         require( './inc/wrapPushState.js')(window);
 
         // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
@@ -500,14 +504,16 @@ var atlant = (function(){
         
     var routeChangedStream =  publishStream
         .merge( Bacon.fromBinder(function(sink) {
-            // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
-            var routeChanged = function(event) { 
-                event.preventDefault();
-                var path = ( event.detail ) ?  utils.parseUrl( event.detail.url ).pathname :  utils.getLocation();
-                sink( { path: path } ); 
-            };
-            window.addEventListener( 'popstate', routeChanged );
-            window.addEventListener( 'pushstate', routeChanged );
+            if ( 'undefined' !== typeof window) {
+                // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
+                var routeChanged = function(event) { 
+                    event.preventDefault();
+                    var path = ( event.detail ) ?  utils.parseUrl( event.detail.url ).pathname :  utils.getLocation();
+                    sink( { path: path } ); 
+                };
+                window.addEventListener( 'popstate', routeChanged );
+                window.addEventListener( 'pushstate', routeChanged );
+            }
         }))
         .scan(void 0, function(previous, current){
             if ((previous && previous.hasOwnProperty('published')) || current.hasOwnProperty('published')) {
@@ -930,6 +936,14 @@ var atlant = (function(){
         return this;
     }   
 
+    var _toString = function() {
+        return this;
+    }
+
+    var _toSource = function() {
+        return this;
+    }
+
     return {
         // Set atlant preferencies
         set:_set
@@ -962,9 +976,11 @@ var atlant = (function(){
         ,attachTo: _attachTo
         /* parameter which will be send to Render.render.attach on attach() execution */
         ,root: _root
+        ,toString: _toString
+        ,toSource: _toSource
     };
 
 });
 
-module.exports = atlant();
+module.exports = new atlant();
 

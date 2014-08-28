@@ -50,6 +50,19 @@ var reactRender = {
 
         return attached;
     }
+    /* Return ready string representation 
+     * options parameter can be used to control what you will get.
+     * */
+    ,toString: function(name, options) {
+        if (options.static)
+            return React.renderComponentToStaticMarkup(views[name]);
+        else 
+            return React.renderComponentToString(views[name]);
+    }
+    /* Can return in it's own render format. For React.js it means React component */
+    ,toSource: function(name, options) {
+       return views[name];
+    }
 }
 
 module.exports = { 
