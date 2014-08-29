@@ -1,4 +1,4 @@
-// "use strict"
+"use strict";
 /**
 
  *
@@ -26,7 +26,9 @@ var atlant = (function(){
         ,routes = []  // Routes collected
         ,streams = {} // Streams collected
         ,renderNames = []
-        ,viewNames = []
+        ,viewNames = [];
+
+    var isRedirected = false;
 
     var onRenderEnd; // callback which will be called on finishing when rendering
     var cache = [];
@@ -978,46 +980,40 @@ var atlant = (function(){
         return this;
     }
 
-    return {
-        // Set atlant preferencies
-        set:_set
-        ,views: _views
-        ,when: _when
-        ,lastWhen: _lastWhen
-        ,otherwise: _otherwise
-        ,finally: _finally
-        // Depends execution glued to when
-        ,depends: _depends
-        ,and: _and
-        ,inject: _inject
-        ,if: _if
-        ,filter: _if
-        ,do: _do
-        ,map: _do
-        // Render methods:
-        // Render should return either the Promise either the something. Promise will be threated async.
-        ,render: _render
-        // Clears view. Simply alias to render with empty view
-        ,clear: _clear
-        ,redirect: _redirect
-        ,skip: _skip
-        ,publish: _publish
-        ,renders: { react: reactRender, simple: simpleRender }
-        ,onRenderEnd: _onRenderEnd
+    this. set = _set;
+    this.views =  _views;
+    this.when =  _when;
+    this.lastWhen =  _lastWhen;
+    this.otherwise =  _otherwise;
+    this.finally =  _finally;
+    this.depends =  _depends;
+    this.and =  _and;
+    this.inject =  _inject;
+    this.if =  _if;
+    this.filter =  _if;
+    this.do =  _do;
+    this.map =  _do;
+    this.render =  _render;
+    this.clear =  _clear;
+    this.redirect =  _redirect;
+    this.skip =  _skip;
+    this.publish =  _publish;
+    this.renders =  { react :  reactRender, simple :  simpleRender };
+    this.onRenderEnd =  _onRenderEnd;
+    this.log =  _log;
+    this.attachTo =  _attachTo;
+    this.root =  _root;
+    this.toString =  _toString;
+    this.toSource =  _toSource;
+    Object.defineProperty(this, 'state', {
+        enumerable: true,
+        get: function () { return __state; }
+    } );
 
-        ,log: _log
-        /* attach calls .attach method of Render.render once the first time everything is rendered. */
-        ,attachTo: _attachTo
-        /* parameter which will be send to Render.render.attach on attach() execution */
-        ,root: _root
-        ,toString: _toString
-        ,toSource: _toSource
-        ,get state() {
-            return __state;
-        }
-    };
+    return this;
 
 });
 
 module.exports = new atlant();
+
 
