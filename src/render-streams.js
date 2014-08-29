@@ -1,5 +1,6 @@
 "use strict";
 
+var Bacon = require('baconjs');
 
 module.exports = function(Counter, whenCount)  {
 
