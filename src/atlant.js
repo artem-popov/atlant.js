@@ -6,7 +6,7 @@
  * @TODO: #hashes are ignored
  */
 
-var atlant = (function(){
+function Atlant(){
     var s = require('./lib')
         ,simpleRender = require('./renders/simple')
         ,reactRender = require('./renders/react')
@@ -1013,8 +1013,8 @@ var atlant = (function(){
 
     return this;
 
-});
+};
 
-module.exports = new atlant();
+module.exports = new Atlant();
 
 
