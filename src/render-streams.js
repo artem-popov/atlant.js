@@ -11,20 +11,33 @@ module.exports = function(Counter, whenCount)  {
 
     /* Counting all renders of all whens. When zero => everything is rendered. */
     var ups = new Upstream();
+    var ups2 = new Upstream();
     var renderEndStream = whenRenderedStream
         .map( s.compose( ups.push, ups.clear ) )
-        .map( Counter.decrease )
-        .filter(function(value) {
-            return 0 === value;
+        .scan([], function(oldVal, newVal) {
+            oldVal.push(newVal); 
+            return oldVal;
         })
-        .map( ups.pop ) 
+        .map( s.compose( ups2.push, ups2.clear ) )
+        .map( ups.pop )
+        .map( Counter.decrease )
+        .filter( function(value) { return 0 === value; })
+        .map( ups2.pop )
+        .changes()
         .merge(nullifyScan)
         .scan({}, function(oldVal, newVal) {
             if (newVal == 'nullify') {
                 oldVal = {};
-            } else {
-                oldVal[newVal.render.viewName] = newVal;
+                return oldVal
             }
+
+            if ( !(newVal instanceof Array) ) 
+                newVal = [newVal];
+            
+            newVal.map(function(val){
+                oldVal[val.render.viewName] = val;
+            })
+
             return oldVal;
         })
         .filter(s.notEmpty)
