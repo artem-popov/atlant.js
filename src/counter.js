@@ -1,3 +1,5 @@
+"use strict"
+
 var counter = (function() {
     var rCount = {}
     ,rCountCopy
@@ -14,6 +16,9 @@ var counter = (function() {
            if ( !rCountCopy[upstream.conditionId] ) rCountCopy[upstream.conditionId] = rCount[upstream.conditionId];
            rCountCopy[upstream.conditionId]--;
            return rCountCopy[upstream.conditionId]
+       }
+       ,count: function(upstream) {
+            return rCount[upstream.conditionId];
        }
        ,reset: function() {
            rCountCopy = void 0; 

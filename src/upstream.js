@@ -43,15 +43,19 @@ var Upstream = function() {
         // fmap :: fn -> obj
         ,fmap: _fmap
         ,push: function( obj ) { 
-            return _fmap(_.extend, obj)
+            data = obj;
+            return data;
         }
         ,pop: function() {
             var upstream = data;
-            data = {};
+            data = [];
             return upstream;
         }
+        ,getLast: function() {
+            return data;
+        }
         ,clear: function(upstream){
-            data = {};
+            data = [];
             return upstream
         }
     }

@@ -121,7 +121,7 @@ var atlant = (function(){
     var clientFuncs = function() {
         var convertPromiseD = s.curry(function(promiseProvider, upstream) {
             var promise = promiseProvider( upstream );
-            if ( 'Promise' === promise.constructor.name){
+            if ( promise && 'Promise' === promise.constructor.name){
                 promise = promise
                     .catch( function(e) {  if (!e.stack) return e; else clientFuncs.catchError(e) } )
                 return Bacon.fromPromise( promise );
@@ -172,7 +172,6 @@ var atlant = (function(){
                 var saveData4Childs = s.set(viewName, dataByView)(data);
                 s.extend( data, dataByView[prefs.parentOf[viewName]])
             }
-            
             __state = {
                 mask: params['mask']
                 ,location: params['location'] 
@@ -258,9 +257,9 @@ var atlant = (function(){
                         var render = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
 
                         render(viewProvider, viewName, scope)
+                            .then(function(component){upstream.render.component = component; return upstream })
+                            .then( whenRenderedSignal )
                             .catch( clientFuncs.catchError )
-                            .then(function(component){ upstream.render.component = component; return upstream })
-                            .then( whenRenderedSignal );
 
                     } catch (e) { 
                         console.error(e.message, e.stack);
@@ -525,6 +524,7 @@ var atlant = (function(){
             }
 
             if( 'undefined' !== typeof window && prefs.root && prefs.rootSelector )   {
+                console.log('firstrender:', value)
                 prefs
                     .render.attach(value[prefs.root].render.component, prefs.root, prefs.rootSelector )
                     .then(function(upstrean){ console.log('attached ', prefs.root, ' to ', prefs.rootSelector, 'the value is ', value)})
@@ -538,7 +538,8 @@ var atlant = (function(){
                 // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
                 var routeChanged = function(event) { 
                     event.preventDefault();
-                    var path = ( event.detail ) ?  utils.parseURL( event.detail.url ).pathname :  utils.getLocation();
+                    var parsed = ( event.detail ) ? utils.parseURL( event.detail.url ) : void 0;
+                    var path = ( parsed ) ?  parsed.pathname + '?' + parsed.search :  utils.getLocation();
                     sink( { path: path } ); 
                 };
                 window.addEventListener( 'popstate', routeChanged );
@@ -855,7 +856,7 @@ var atlant = (function(){
                 try{
                     clientFuncs.injectDependsIntoScope(injects,  upstream) 
                     var result = actionProvider(injects);
-                    if ( 'Promise' === result.constructor.name){
+                    if ( result && 'Promise' === result.constructor.name){
                         return result.then( function() { return upstream; } ).catch( clientFuncs.catchError );
                     } else {
                         return upstream;
