@@ -1015,6 +1015,6 @@ function Atlant(){
 
 };
 
-module.exports = new Atlant();
+module.exports = Atlant;
 
 

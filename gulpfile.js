@@ -45,7 +45,7 @@ gulp.task('watch', function() {
                 ,promise: 'window.Promise'
             }));
 
-            b.bundle({ standalone: 'atlant' }).pipe(source('./atlant.js'))
+            b.bundle({ standalone: 'Atlant' }).pipe(source('./atlant.js'))
                 .pipe( gulp.dest(dest) )
         }))
 });
