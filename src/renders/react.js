@@ -1,50 +1,75 @@
 "use strict";
 var React = require('react');
 
-var updateComponent = [];
 var views = [];
-var wrappers = [];
+
+var Wrapper = (function(){
+    var wrappers = {}
+        ,thises = {}
+        ,instances = {};
+
+    return { 
+        check: function(name) {
+            if ( !wrappers[name] ) {
+                wrappers[name] = React.createClass({
+                    render: function(){
+                        // if ( views[name] ) 
+                        thises[name] = this;
+
+                        if ( !views[name] ) views[name] = React.DOM.div(null); 
+
+                        return views[name];
+                        // else
+                        // console.log('imhere')
+                        // return React.DOM.div(); 
+                    }
+            })}    
+            instances[name] = wrappers[name]();
+        }
+        ,getWrapper: function(name) {
+            return wrappers[name];
+        }
+        ,getInstance: function(name) {
+            return instances[name];
+        }
+        ,getThis: function(name) {
+            return thises[name];
+        }
+    }
+})();
 
 var reactRender = { 
     render: function(viewProvider, name, scope ) {
         var rendered = new Promise( function( resolve, reject ){
+            console.log('rendering the name:', name)
+
+            // get new component somehow.
             views[name] = viewProvider(scope);  
-            if( updateComponent[name] ) updateComponent[name]();
-            //@TODO: check type of returned value; 
-            return resolve(views[name]);
+
+            Wrapper.check(name);
+
+            return resolve(Wrapper.getInstance(name)); 
         });
 
         return rendered;
     }
     ,clear: function(viewProvider, name, scope) {
         return new Promise( function( resolve, reject ){
+
             views[name] = React.DOM.div(null);
-            if( updateComponent[name] ) updateComponent[name]();
-            return resolve(views[name]);
+            Wrapper.check(name);
+
+            return resolve(Wrapper.getInstance(name));
         });
     }
-    ,attach: function(component, name, selector) {
+    ,attach: function(name, selector) {
         var attached = new Promise( function( resolve, reject ){
-            if ( !window ) throw Error('AtlantJs, React render: not in browser.')
+            if ( !window ) throw Error('AtlantJs, React render: attach not possible in browser.')
 
             var element = document.querySelector(selector);
             if ( !element )   throw Error('AtlantJs, React render: can\'t find the selector' + selector )
-            if ( !component ) throw Error('AtlantJs, React render: no component provided. ')
 
-            var wrapper = React.createClass({
-                getInitialState: function() {
-                    updateComponent[name] = function(){
-                        this.forceUpdate() 
-                    }.bind(this);
-                    return {}
-                }
-                ,render: function(){
-                    return views[name];
-                }
-            })
-            views[name] = component;
-            wrappers[name] = wrapper;
-            React.renderComponent(wrappers[name](), element, resolve );
+            React.renderComponent(Wrapper.getInstance(name), element, resolve );
 
         });
 
@@ -59,10 +84,26 @@ var reactRender = {
         else 
             return React.renderComponentToString(views[name]);
     }
-    /* Can return in it's own render format. For React.js it means React component */
-    ,toSource: function(name, options) {
-       return views[name];
+    /* Can return inner view representation. For React.js it means React component */
+    ,get: function(name, options) {
+        Wrapper.check(name);
+        var instance = Wrapper.getWrapper(name);
+        return instance;
     }
+    /**
+     * InnerView component. Can be used inside parent (for example 'root') to render named inner views.
+     */
+    ,innerView: React.createClass({
+        render: function() {
+            return React.DOM.div(null);
+        }
+    })
+    ,forceUpdate: function(name) {
+        return new Promise( function( resolve, reject) {
+            var instance = Wrapper.getThis(name);
+            instance.forceUpdate( resolve )
+        })
+    } 
 }
 
 module.exports = { 
@@ -71,5 +112,7 @@ module.exports = {
     ,clear: reactRender.clear 
     ,attach: reactRender.attach
     ,toString: reactRender.toString
-    ,toSource: reactRender.toSource
+    ,get: reactRender.get
+    ,on: { renderEnd: reactRender.forceUpdate }
+    ,innerView: reactRender.innerView
 }

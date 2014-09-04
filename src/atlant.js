@@ -18,8 +18,6 @@ function Atlant(){
 
     //    ,State = require('./state.js')
 
-    var __state; // Stores state: path, mask, etc
-
     // Initialization specific vars
     var isRenderApplyed  // Is Render already set OnValue for renders
         ,params = [] // Route mask params parsed
@@ -30,16 +28,17 @@ function Atlant(){
 
     var isRedirected = false;
 
-    var onRenderEnd; // callback which will be called on finishing when rendering
     var cache = [];
 
     var lastMasks = [];
     var lastFinallyStream;
     var prefs = {
             parentOf: {}
-            ,view: ''
             ,skipRoutes: []  // This routes will be skipped in StreamRoutes
             ,render: { render: simpleRender.render, clear: simpleRender.clear }
+            ,viewState: ['root']
+            ,on: { renderEnd: void 0 }// callback which will be called on finishing when rendering
+
     }
 
     // var log = s.nop;
@@ -82,6 +81,7 @@ function Atlant(){
             }
         }
     }();
+
 
     // Streams specific vars
     var viewRendered = {}  // Flag that this view is rendered. Stops other streams to perform render then.
@@ -174,10 +174,6 @@ function Atlant(){
                 var saveData4Childs = s.set(viewName, dataByView)(data);
                 s.extend( data, dataByView[prefs.parentOf[viewName]])
             }
-            __state = {
-                mask: params['mask']
-                ,location: params['location'] 
-            }
 
             s.extend( scope, params, data );
 
@@ -229,11 +225,14 @@ function Atlant(){
                 upstream.finallyStream.push(upstream);
             }
 
+            //only for angular-like
             if (viewReady[upstream.render.viewName]) {
+                // console.log('rendering view', upstream.render.viewName, 'with data', upstream);
                 viewReady[upstream.render.viewName].push(upstream);
             }
         };
 
+        // when render applyed, no more renders will be accepted for this .when and viewName
         var renderStopper = function(upstream) {
             if ( viewRendered[upstream.render.viewName] || isRedirected ) { 
                 whenRenderedSignal(upstream);
@@ -286,9 +285,10 @@ function Atlant(){
         var getOrderedStreams = function(name, stream) {
             if (! prefs.parentOf[name] ) return stream;
 
-            log('View dependentions:', name, 'are depends on', prefs.parentOf[name]) 
             var parentStream = viewReady[prefs.parentOf[name]];
-            stream = Bacon.combineWith(yC, parentStream, stream).changes().filter(function(x){return x});
+
+            // Useful in angular.js, not in React. @TODO
+            //stream = Bacon.combineWith(yC, parentStream, stream).changes().filter(function(x){return x});
             return stream;
         };
 
@@ -489,7 +489,8 @@ function Atlant(){
     renderStreams.renderEndStream
         .onValue( function(){
             renderStreams.nullifyScan.push('nullify');
-            setTimeout( onRenderEnd, 0);
+            if (prefs.render.on.renderEnd) prefs.render.on.renderEnd('root');
+            setTimeout( prefs.on.renderEnd, 0);
         })
 
     var renderBeginStream = new Bacon.Bus();
@@ -509,27 +510,18 @@ function Atlant(){
     var firstRender = renderStreams.renderEndStream 
         .take(1)
         .onValue(function(value) { // value contains all rendered upstreams. 
-            if (  'undefined' !== typeof window &&
-                    ( ( prefs.root && ! prefs.rootSelector) || ( !prefs.root && prefs.rootSelector) )
-               ) console.log('Atlant.js: Warning: root and rootSelector should be declared both to work.')
 
-            if ( prefs.toString || prefs.toSource ) {
-                
-                if( !prefs.root ) throw new Error('Antlant.js: \'root\' element not declared. Use atlant.root(\'viewName\') ');
-
-                if (prefs.toString) {
-                    prefs.toString( prefs.render.toString(prefs.root, prefs.toStringOpts) );
-                }
-                if (prefs.toSource) {
-                    prefs.toSource( prefs.render.toSource(prefs.root, prefs.toSourceOpts));
+            if ( prefs.stringify ) {
+                if (prefs.stringify) {
+                    prefs.stringify( prefs.render.stringify('root', prefs.stringifyOpts) );
                 }
             }
 
-            if( 'undefined' !== typeof window && prefs.root && prefs.rootSelector )   {
-                console.log('firstrender:', value)
+            if( 'undefined' !== typeof window && prefs.rootSelector )   {
+                console.log('attaching!:', value  )
                 prefs
-                    .render.attach(value[prefs.root].render.component, prefs.root, prefs.rootSelector )
-                    .then(function(upstrean){ console.log('attached ', prefs.root, ' to ', prefs.rootSelector, 'the value is ', value)})
+                    .render.attach('root', prefs.rootSelector )
+                    .then(function(upstrean){ console.log('attached root to ', prefs.rootSelector, 'the value is ', value)})
                     .catch(function(e) { console.error(e.message, e.stack) })
             }
         });
@@ -681,7 +673,7 @@ function Atlant(){
             state.lastWhen // counter for whens and Informational message. 
                 .onValue(function(upstream) {
                     whenCount.value++;
-                    log('Matched route!', upstream);
+                    log('Matched route!', upstream.route.mask, upstream.path, upstream.route.when, upstream.whenId);
                 });
 
             state.lastIf = void 0;
@@ -812,7 +804,7 @@ function Atlant(){
             s.type(viewName, 'string');
             s.type(renderOperation, 'number')
 
-            viewName = viewName || prefs.view;
+            viewName = viewName || s.tail(prefs.viewState);
 
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             
@@ -830,6 +822,7 @@ function Atlant(){
             renders[viewName].push(thisRender);
 
             if( ! viewReady[viewName]) viewReady[viewName] = new Bacon.Bus(); // This will signal that this view is rendered. Will be used in onValue assignment.
+
 
             if (void 0 !== state.lastIf) State.rollback();
             State.print('_____renderStateAfter:', state);
@@ -936,8 +929,21 @@ function Atlant(){
         publishStream.push({published:true, path:path});
     }
 
-    var _set = function( properties ) {
-        var allowedProps = [ 'view', 'render' ];
+    var _set = function( view ) { 
+        s.type(view, 'string');
+        
+        prefs.viewState.push(view);
+        return this;
+    }
+
+    var _unset = function() {
+        if ( prefs.viewState.length > 1 ) prefs.viewState.pop();
+        return this;
+    }
+
+    // unused
+    var _setProps = function( properties ) {
+        var allowedProps = [];
         var wrongProps = s.compose( s.notEq( -1 ), allowedProps.indexOf.bind(allowedProps) ); 
         var propsGuard = s.filterKeys( wrongProps );
         var fillProps = s.compose( s.inject(this), s.merge( prefs ), propsGuard );
@@ -948,17 +954,19 @@ function Atlant(){
     }
 
     var _onRenderEnd = function(callback) {
-        onRenderEnd = callback; 
+        prefs.on.renderEnd = callback; 
+        return this;
+    }
+
+    var _use = function(render) {
+        s.type(render, 'object');
+        //@TODO: check render for internal structure
+        prefs.render = render;
         return this;
     }
 
     var _attachTo = function(selector) {
         prefs.rootSelector = selector;
-        return this;
-    }
-
-    var _root = function(root) {
-        prefs.root = root;
         return this;
     }
 
@@ -969,20 +977,27 @@ function Atlant(){
         return this;
     }   
 
-    var _toString = function(fn, options) {
-        prefs.toString = fn;
-        prefs.toStringOpts = options;
+    var _stringify = function(fn, options) {
+        prefs.stringify = fn;
+        prefs.stringifyOpts = options;
         return this;
     }
 
-    var _toSource = function(fn) {
-        prefs.toSource = fn;
-        prefs.toSourceOpts = options;
+    var _get = function(fn) {
+        prefs.get = fn;
+        prefs.getOpts = options;
         return this;
     }
 
-    this. set = _set;
+    // Set view active by defauilt (no need to mention in second parameter of .render
+    this.set = _set;
+    // Roolback previous set
+    this.unset = _unset;
+    // Use another render. simple render is default
+    this.use = _use;
+    // Set views hierarchy.
     this.views =  _views;
+
     this.when =  _when;
     this.lastWhen =  _lastWhen;
     this.otherwise =  _otherwise;
@@ -1000,16 +1015,12 @@ function Atlant(){
     this.skip =  _skip;
     this.publish =  _publish;
     this.renders =  { react :  reactRender, simple :  simpleRender };
-    this.onRenderEnd =  _onRenderEnd;
     this.log =  _log;
+
+    this.onRenderEnd =  _onRenderEnd;
     this.attachTo =  _attachTo;
-    this.root =  _root;
-    this.toString =  _toString;
-    this.toSource =  _toSource;
-    Object.defineProperty(this, 'state', {
-        enumerable: true,
-        get: function () { return __state; }
-    } );
+    this.stringify =  _stringify;
+    this.get =  _get;
 
     return this;
 
