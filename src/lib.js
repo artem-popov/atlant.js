@@ -185,6 +185,13 @@ var s = (function(){
     var concat = _.curry( function(a, b) {
         return b.concat(a);
     });
+    var tail = function(arr) {
+        if (arr) {
+            return arr[arr.length-1];
+        } else {
+            return void 0;
+        }
+    };
     var head = function(arr) {
         if (arr) {
             return arr[0];
@@ -362,7 +369,12 @@ var s = (function(){
     });
 
     var type = function(item, type) {
-        if ( type !== typeof item && item ) throw new Error('Type Error: ' + item + ' should be ' + type);
+        
+        if ( type !== typeof item && item ) {
+            var error = new Error('Type Error: ' + item + ' should be ' + type);
+            console.error(error.message, error.stack)
+            throw error;
+        }
     }
 
     this.compose      = _.compose;
@@ -395,6 +407,7 @@ var s = (function(){
     this.a2a    = a2a;
     this.replace = replace;
     this.head   = head;
+    this.tail   = tail;
     this.concat = concat;
     this.mapD   = mapD;
     this.fmap   = fmap;
