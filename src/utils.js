@@ -95,8 +95,13 @@ utils.attachGuardToLinks = function() {
         // In case of it is the same link with hash - do not involve the atlant, just scroll to id. 
         // @TODO? don't prevent default and understand that route not changed at routeChanged state?
         if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {
+
+            var element;
             var begin = loc.indexOf('#');  
-            document.getElementById( loc.slice( -1 === begin ? 1 : begin + 1, loc.length )).scrollIntoView();
+            var id = loc.slice( -1 === begin ? 1 : begin + 1, loc.length );
+            if( '' !== id) element = document.getElementById(id)
+            if(element) element.scrollIntoView();
+
             event.preventDefault();
             return false;
         }
