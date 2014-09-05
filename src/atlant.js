@@ -105,6 +105,7 @@ function Atlant(){
 
     var WhenFinally = {
         when: _.uniqueId()
+        ,match: _.uniqueId()
         ,finally: _.uniqueId()
     }
 
@@ -586,7 +587,7 @@ function Atlant(){
         var sanitizeName = s.compose( s.replace(/:/g, 'By_'), s.replace(/\//g,'_') );
         var createNameFromMasks = s.compose( s.reduce(s.plus, ''), s.map(sanitizeName) );
 
-        return function(masks, matchingBehaviour, whenOrFinally) {
+        return function(masks, matchingBehaviour, whenType) {
             s.type(masks, 'string');
             if ( -1 !== masks.indexOf('&&')) throw new Error('&& declarations not yet supported.') 
             masks = masks.split('||').map(s.trim);
@@ -596,21 +597,29 @@ function Atlant(){
 
             if ( 0 === masks.length || 1 === masks.length && '' === masks[0] ) throw new Error('At least one route mask should be specified.');
             State.first();
-            var name = ( whenOrFinally === WhenFinally.finally ? 'finally' : '' )  + createNameFromMasks(masks);
+
+            var name = '';
+            if (whenType === WhenFinally.finally) name = 'finally';
+            if (whenType === WhenFinally.match) name = 'match';
+            var name = name + createNameFromMasks(masks);
 
             var whenId = _.uniqueId();        
             var ups = new Upstream();
             var additionalMasks = [];
-            var finallyStream = ( WhenFinally.when === whenOrFinally ) ? new Bacon.Bus() : lastFinallyStream;
-            
-            if ( WhenFinally.when === whenOrFinally ) {
-                lastFinallyStream = finallyStream;
+            var finallyStream = ( WhenFinally.finally !== whenType ) ? new Bacon.Bus() : lastFinallyStream;
 
+            masks.forEach(function(mask) {
+                s.push(utils.getPossiblePath(mask), additionalMasks);
+            });
+
+            if( WhenFinally.when === whenType || WhenFinally.finally === whenType ) 
                 masks.forEach(function(mask) {
                     s.push({mask: mask}, routes);
-                    s.push(utils.getPossiblePath(mask), additionalMasks);
                     s.push({mask: utils.getPossiblePath(mask), redirectTo: mask}, routes);
                 });
+            
+            if ( WhenFinally.when === whenType || WhenFinally.match === whenType ) {
+                lastFinallyStream = finallyStream;
 
                 state.lastWhen = rootStream
                     .map(ups.fmap(_.extend))
@@ -707,6 +716,10 @@ function Atlant(){
      */
     var _when = function(masks) {
         return when.bind(this)( masks, Matching.continue, WhenFinally.when );
+    }
+
+    var _match = function(masks) {
+        return when.bind(this)( masks, Matching.stop, WhenFinally.match );
     }
 
     var _finally = function() {
@@ -900,7 +913,7 @@ function Atlant(){
 
     /**
      * Function: skip
-     * Skip: Sets the list of route masks which should be skipped by routeStreams.
+     * Skip: Sets the list of route masks which should be skipped by Atlant.
      * @param path
      * @returns atlant
      * @private
@@ -1000,7 +1013,11 @@ function Atlant(){
 
     this.when =  _when;
     this.lastWhen =  _lastWhen;
+    // Match declare a route which will be ignored by .otherwise()
+    this.match = _match;
+    // declare branch that will work if no routes declared by .when() are matched. Routes declared by .match() will be ignored even if they matched.
     this.otherwise =  _otherwise;
+    // creates branch which can destruct all what declared by .when() or .match()
     this.finally =  _finally;
     this.depends =  _depends;
     this.and =  _and;

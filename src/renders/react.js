@@ -78,7 +78,7 @@ var reactRender = {
     /* Return ready string representation 
      * options parameter can be used to control what you will get.
      * */
-    ,toString: function(name, options) {
+    ,stringify: function(name, options) {
         if ( options && options.static)
             return React.renderComponentToStaticMarkup(views[name]);
         else 
@@ -111,7 +111,7 @@ module.exports = {
     ,render: reactRender.render
     ,clear: reactRender.clear 
     ,attach: reactRender.attach
-    ,toString: reactRender.toString
+    ,stringify: reactRender.stringify
     ,get: reactRender.get
     ,on: { renderEnd: reactRender.forceUpdate }
     ,innerView: reactRender.innerView
