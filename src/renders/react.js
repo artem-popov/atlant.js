@@ -78,11 +78,11 @@ var reactRender = {
     /* Return ready string representation 
      * options parameter can be used to control what you will get.
      * */
-    ,toString: function(name, options) {
+    ,stringify: function(name, options) {
         if ( options && options.static)
-            return React.renderComponentToStaticMarkup(views[name]);
+            return React.renderComponentToStaticMarkup(Wrapper.getInstance(name));
         else 
-            return React.renderComponentToString(views[name]);
+            return React.renderComponentToString(Wrapper.getInstance(name));
     }
     /* Can return inner view representation. For React.js it means React component */
     ,get: function(name, options) {
@@ -111,7 +111,7 @@ module.exports = {
     ,render: reactRender.render
     ,clear: reactRender.clear 
     ,attach: reactRender.attach
-    ,toString: reactRender.toString
+    ,stringify: reactRender.stringify
     ,get: reactRender.get
     ,on: { renderEnd: reactRender.forceUpdate }
     ,innerView: reactRender.innerView
