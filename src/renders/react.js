@@ -80,9 +80,9 @@ var reactRender = {
      * */
     ,stringify: function(name, options) {
         if ( options && options.static)
-            return React.renderComponentToStaticMarkup(views[name]);
+            return React.renderComponentToStaticMarkup(Wrapper.getInstance(name));
         else 
-            return React.renderComponentToString(views[name]);
+            return React.renderComponentToString(Wrapper.getInstance(name));
     }
     /* Can return inner view representation. For React.js it means React component */
     ,get: function(name, options) {
