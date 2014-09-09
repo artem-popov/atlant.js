@@ -13,15 +13,10 @@ var Wrapper = (function(){
             if ( !wrappers[name] ) {
                 wrappers[name] = React.createClass({
                     render: function(){
-                        // if ( views[name] ) 
                         thises[name] = this;
-
                         if ( !views[name] ) views[name] = React.DOM.div(null); 
 
                         return views[name];
-                        // else
-                        // console.log('imhere')
-                        // return React.DOM.div(); 
                     }
             })}    
             instances[name] = wrappers[name]();
@@ -41,10 +36,9 @@ var Wrapper = (function(){
 var reactRender = { 
     render: function(viewProvider, name, scope ) {
         var rendered = new Promise( function( resolve, reject ){
-            console.log('rendering the name:', name)
-
             // get new component somehow.
             views[name] = viewProvider(scope);  
+            var instance = Wrapper.getThis('name');
 
             Wrapper.check(name);
 
@@ -101,7 +95,23 @@ var reactRender = {
     ,forceUpdate: function(name) {
         return new Promise( function( resolve, reject) {
             var instance = Wrapper.getThis(name);
-            instance.forceUpdate( resolve )
+            try {
+                if (instance) { 
+                    instance.forceUpdate(resolve)
+                } else {
+                    resolve();
+                }
+            } catch(e) { 
+                console.error(e.message, e.stack)
+                reject({error:e});
+                // trying to restore...
+                views.root = React.DOM.div(null); 
+                try{
+                    instance.forceUpdate(resolve);
+                } catch(e){
+                    console.error(e.message, e.stack)
+                }
+            }
         })
     } 
 }

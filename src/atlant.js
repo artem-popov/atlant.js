@@ -26,8 +26,6 @@ function Atlant(){
         ,renderNames = []
         ,viewNames = [];
 
-    var isRedirected = false;
-
     var cache = [];
 
     var lastMasks = [];
@@ -50,8 +48,6 @@ function Atlant(){
 
     //Action should be performed at route change.
     var onRouteChange = function() {
-        scopeAttached = {};
-        lastScopes = {};
     }
 
     var StateType = function(state) {
@@ -84,18 +80,10 @@ function Atlant(){
 
 
     // Streams specific vars
-    var viewRendered = {}  // Flag that this view is rendered. Stops other streams to perform render then.
-        ,dependViews = {}  // Set the views hirearchy. Both for streams and for render.
-        ,isLastWasMatched = false // Allow lastWhen to stop other when's execution/
+        var dependViews = {}  // Set the views hirearchy. Both for streams and for render.
         ,renders = {}  // Each view has it's own item in "renders" ender which is a merge of renders into this view. OnValue will catch once for lastRender.view
  		,lastRedirect
         ,viewReady = {}
-
-    // Render specific vars
-    var lastScopes = {}   // Each viewName has it's own scope - used on render.
-        ,dataByView = {}  // This data will be injected into scope when render occurs.
-        ,scopeAttached = {}; // Registering view templateUrl to know that this url was rendered in that view. Stops rendering this URL in this view then.
-
 
     // Matching enum for when.
     var Matching = {
@@ -139,7 +127,7 @@ function Atlant(){
                     return fn.apply(this, arguments);
                 } catch(e) {
                     console.error(e.message, e.stack);
-                    return Bacon.Error('Exception');;
+                    return Bacon.Error('Exception');
                 }
             }
         };
@@ -154,37 +142,41 @@ function Atlant(){
         });
 
 
-        var simpleType = function(data, key) {
-            return 'string' === typeof data[key] || 'number' === typeof data[key] || 'boolean' === typeof data[key]
-        }
         
         /**
          * Injects depend values from upstream into object which is supplyed first.
          */
         var injectDependsIntoScope = function ( scope, upstream ) {
             var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
-            var error = function(inject) { throw Error('Wrong inject accessor.' + inject) }
-            var data = s.map( s.compose( /*s.if(s.empty, error),*/  s.flipDot(upstream) ), injects );
+            var warning = function(inject) { console.log('Atlant warning: inject accessor return nothing:' + inject) }
 
+            var formatObject = function(obj) {
+                if ('string' === typeof obj.expression)
+                    return '.depends.' + obj.name + (obj.expression ? obj.expression : '' );
+
+                if ('undefined' === typeof obj.expression)
+                    return '.depends.' + obj.name;
+
+                return function() {
+                    return obj.expression(upstream.depends[obj.name]) 
+                }
+            }
+
+            var takeAccessor = s.compose( s.if(s.eq(void 0), warning),  s.flipDot(upstream));
+            var takeFunction = function(fn){
+                return fn.apply();
+            }
+
+            var fullfil = s.map( s.compose( s.ifelse(s.typeOf('string'), takeAccessor, takeFunction), formatObject)); 
+            var data = fullfil( injects );
+
+            // Injecting of mask and location.
             var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
             params['mask'] = (upstream.route) ? upstream.route.mask : void 0;    
             params['location'] = upstream.path;
 
-            if( upstream.render ) { 
-                var viewName =  upstream.render.viewId;
-                var saveData4Childs = s.set(viewName, dataByView)(data);
-                s.extend( data, dataByView[prefs.parentOf[viewName]])
-            }
-
             s.extend( scope, params, data );
 
-            Object.keys(data).filter(simpleType.bind(this, data)).map(function(key){
-                Object.defineProperty(scope, key, {
-                    get: function () {
-                        return s.flipDot( upstream, injects[key] );
-                    }
-                });
-            });
             return scope;
         };
 
@@ -222,24 +214,23 @@ function Atlant(){
             renderStreams.whenRenderedStream.push(upstream);
 
             // signal for finally construct
-            if ( !upstream.isFinally ) {
+            if ( !upstream.isFinally && upstream.finallyStream) {
                 upstream.finallyStream.push(upstream);
             }
 
             //only for angular-like
             if (viewReady[upstream.render.viewName]) {
-                // console.log('rendering view', upstream.render.viewName, 'with data', upstream);
                 viewReady[upstream.render.viewName].push(upstream);
             }
         };
 
         // when render applyed, no more renders will be accepted for this .when and viewName
         var renderStopper = function(upstream) {
-            if ( viewRendered[upstream.render.viewName] || isRedirected ) { 
+            if ( atlantState.viewRendered[upstream.render.viewName] || atlantState.isRedirected ) { 
                 whenRenderedSignal(upstream);
                 return false; 
             } else { 
-                viewRendered[upstream.render.viewName] = true;
+                atlantState.viewRendered[upstream.render.viewName] = true;
                 return true;
             }
         };
@@ -274,7 +265,7 @@ function Atlant(){
             lastRedirect.onValue(function(upstream){
                 var redirectUrl = utils.interpolate(upstream.redirectUrl, upstream.params);
                 log('Redirecting!', redirectUrl);
-                isRedirected = true;
+                atlantState.isRedirected = true;
                 utils.goTo(upstream.redirectUrl);
             });
         };
@@ -375,7 +366,7 @@ function Atlant(){
             if ('string' === typeof route) route = {mask:route};
             var match = matchRouteWrapper(path, route);
             if (match && Matching.stop === matchingBehaviour) {
-                isLastWasMatched = true;
+                atlantState.isLastWasMatched = true;
             }
             return match;
         });
@@ -401,12 +392,21 @@ function Atlant(){
     var depends = function() {
 
         var createDepStream = function(stream, depName, dep, injects) {
-
             var ups = new Upstream();
 
-            return stream
+            var stream = stream
                 .map( ups.fmap(_.extend) )
-                .flatMap( s.compose( clientFuncs.convertPromiseD, clientFuncs.safeD, clientFuncs.injectParamsD(state.lastDepName))( dep ) )
+
+            if ('function' === typeof dep) {
+                var treatDep = s.compose( clientFuncs.convertPromiseD, clientFuncs.safeD, clientFuncs.injectParamsD(state.lastDepName))( dep ) ;
+                stream = stream 
+                    .flatMap(treatDep)
+            } else { 
+                stream = stream
+                    .map( function() { return dep; } )
+            }
+
+            stream = stream
                 .map( ups.join('depends', depName) )
                 .map(function(upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
                     if (!upstream.injects) upstream.injects = [];
@@ -414,6 +414,8 @@ function Atlant(){
 
                     return upstream;
                 });
+
+            return stream;
         }
 
         /**
@@ -470,6 +472,7 @@ function Atlant(){
     log('registering base streams...');
 
     var publishStream = new Bacon.Bus();  // Here we can put init things.
+    var errorStream = new Bacon.Bus();
 
     // Browser specific actions.
     if ('undefined' !== typeof window) {
@@ -490,8 +493,15 @@ function Atlant(){
     renderStreams.renderEndStream
         .onValue( function(){
             renderStreams.nullifyScan.push('nullify');
-            if (prefs.render.on.renderEnd) prefs.render.on.renderEnd('root');
-            setTimeout( prefs.on.renderEnd, 0);
+            if (prefs.render.on.renderEnd) 
+                prefs.render.on
+                    .renderEnd('root')
+                    .then(function(){
+                        setTimeout( prefs.on.renderEnd, 0);
+                    })
+                    .catch(function(e){
+                        errorStream.push(e);
+                    })
         })
 
     var renderBeginStream = new Bacon.Bus();
@@ -519,10 +529,8 @@ function Atlant(){
             }
 
             if( 'undefined' !== typeof window && prefs.rootSelector )   {
-                console.log('attaching!:', value  )
                 prefs
                     .render.attach('root', prefs.rootSelector )
-                    .then(function(upstrean){ console.log('attached root to ', prefs.rootSelector, 'the value is ', value)})
                     .catch(function(e) { console.error(e.message, e.stack) })
             }
         });
@@ -554,16 +562,23 @@ function Atlant(){
         })
         .filter( s.compose( s.empty, s.flip(matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
         .map(function(upstream) { // Nil values.
-            Counter.reset(); // reset to default values the counter of render/clear. 
-            isLastWasMatched = false;
-            isRedirected = false;
-            viewRendered = [];
-            scopeAttached = [];
-            dataByView = {};
+            resetRouteState();
             renderBeginStream.push();
             return upstream;
         })
 
+    var atlantState = {
+        viewRendered: {} // Flag that this view is rendered. Stops other streams to perform render then. 
+        ,isLastWasMatched: false // Allow lastWhen to stop other when's execution 
+        ,isRedirected: false
+    }
+
+    var resetRouteState = function(){
+        atlantState.viewRendered = {};
+        atlantState.isRedirected = false;
+        atlantState.isLastWasMatched = false; 
+        Counter.reset(); // reset to default values the counter of render/clear. 
+    }
 
     var rootStream = Bacon.fromBinder(function(sink) {
             routeChangedStream.onValue(function(upstream) {
@@ -626,7 +641,7 @@ function Atlant(){
                     .map( function(upstream) {
                         return masks
                             .concat(additionalMasks)
-                            .filter(function() { return ! isLastWasMatched; }) // do not let stream go further if other is already matched.
+                            .filter(function() { return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched.
                             .map( matchRouteLast( upstream.path, matchingBehaviour ) )
                             .filter( s.notEmpty )                              // empty params means fails of route identity.
                     } )
@@ -743,10 +758,36 @@ function Atlant(){
         State.print('___Otherwise:', state);
 
         add(state.lastWhenName, state.lastWhen)
+        return this;
+
+    };
+
+    var _error = function(){
+        State.first();
+
+        var errorId = _.uniqueId(); 
+        state.lastWhen = errorStream
+            .map( function(stream) { 
+                resetRouteState();
+                console.log('errorId is:', errorId);
+                stream.conditionId = errorId;
+                return stream;
+            })
+            .map(s.logIt('error stream'))
+
+        state.lastIf = void 0;
+        state.lastDep = void 0;
+        state.lastDepName = void 0;
+        state.lastWhenName = 'error';
+        state.lastOp = state.lastWhen;
+        state.lastConditionId = errorId; 
+
+        State.print('__error:', state);
+
+        add(state.lastWhenName, state.lastWhen)
 
         return this;
     };
-
 
     /**
     	if Function
@@ -795,8 +836,10 @@ function Atlant(){
     }
 
     var _inject = function( key, expression ) {
-        if ( ! state.lastInjects ) throw new Error('.inject should follow .depends');
-        state.lastInjects[key] = '.depends.' + state.lastDepName + (expression ? expression : '' );
+        if ( ! state.lastDepName ) throw new Error('.inject should follow .depends');
+
+        state.lastInjects[key] = { name: state.lastDepName, expression: expression };
+
         return this;
     }
 
@@ -822,12 +865,13 @@ function Atlant(){
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             
             Counter.increase(state);
+            var renderId = _.uniqueId();
 
             var ups = new Upstream();
 
             var thisRender = state.lastOp
                 .map(ups.fmap(_.extend))
-                .map(function() { return { renderProvider: renderProvider, viewName:viewName, renderOperation:renderOperation}; })
+                .map(function() { return { renderId: renderId, renderProvider: renderProvider, viewName:viewName, renderOperation:renderOperation}; })
                 .map(ups.join('render', void 0))
 
             // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewName.
@@ -1002,6 +1046,7 @@ function Atlant(){
         return this;
     }
 
+
     // Set view active by defauilt (no need to mention in second parameter of .render
     this.set = _set;
     // Roolback previous set
@@ -1038,6 +1083,7 @@ function Atlant(){
     this.attachTo =  _attachTo;
     this.stringify =  _stringify;
     this.get =  _get;
+    this.error = _error;
 
     return this;
 

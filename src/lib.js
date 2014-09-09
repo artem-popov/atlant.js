@@ -308,6 +308,10 @@ var s = (function(){
     var instanceOf = function( type, object ) {
         return object instanceof type;
     }
+
+    var typeOf = _.curry(function( type, object ) {
+        return type === typeof object;
+    });
     
 
     var mapD = function(fn) {
@@ -363,6 +367,13 @@ var s = (function(){
         }
     }
 
+    var _ifelse = _.curry( function(condition, then, _else, value){
+        if( condition( value ) ) { console.log('condition is true'); return then(value);}
+        else {console.log(
+            'condition is false'); return _else(value);}
+
+    });
+
     var _if = _.curry( function(condition, then, value){
         if( condition( value ) ) return then(value);
         else return value;
@@ -375,6 +386,10 @@ var s = (function(){
             console.error(error.message, error.stack)
             throw error;
         }
+    }
+
+    var simpleType = function(data, key) {
+        return 'string' === typeof data[key] || 'number' === typeof data[key] || 'boolean' === typeof data[key]
     }
 
     this.compose      = _.compose;
@@ -397,6 +412,7 @@ var s = (function(){
     this.push 	= push;
     this.split 	= split;
     this.instanceOf = instanceOf;
+    this.typeOf = typeOf;
     this.eq     = eq;
     this.notEq = notEq;
     this.empty = empty;
@@ -423,6 +439,7 @@ var s = (function(){
     this.promise = promise;
     this.promiseD = promiseD;
     this.if = _if;
+    this.ifelse = _ifelse;
     /**
      * Depreated
      *
@@ -431,6 +448,7 @@ var s = (function(){
     this.resolveGuard = resolveGuard;
     this.Herald = Herald;
     this.type = type;
+    this.simpleType = simpleType;
     return this;
 
 })();
