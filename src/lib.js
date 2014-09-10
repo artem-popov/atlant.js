@@ -392,6 +392,21 @@ var s = (function(){
         return 'string' === typeof data[key] || 'number' === typeof data[key] || 'boolean' === typeof data[key]
     }
 
+    var tryD = function(fn, errorCallback){
+        return function() {
+            try {
+                return fn.apply(this, arguments);
+            } catch(e) {
+                console.error(e.message, e.stack);
+                return errorCallback(e);
+            }
+        }
+    };
+
+    var baconTryD = function(fn) {
+        return tryD(fn, function(e) { return Bacon.Error('Exception') })
+    }
+
     this.compose      = _.compose;
     this.curry        = _.curry;
     this.pass   = pass;
@@ -440,6 +455,10 @@ var s = (function(){
     this.promiseD = promiseD;
     this.if = _if;
     this.ifelse = _ifelse;
+    this.type = type;
+    this.simpleType = simpleType;
+    this.tryD = tryD;
+    this.baconTryD = baconTryD;
     /**
      * Depreated
      *
@@ -447,8 +466,7 @@ var s = (function(){
     this.guardWithTrue = guardWithTrue;
     this.resolveGuard = resolveGuard;
     this.Herald = Herald;
-    this.type = type;
-    this.simpleType = simpleType;
+
     return this;
 
 })();
