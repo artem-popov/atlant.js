@@ -121,21 +121,10 @@ function Atlant(){
             }
         });
 
-        var safeD = function(fn){
-            return function() {
-                try {
-                    return fn.apply(this, arguments);
-                } catch(e) {
-                    console.error(e.message, e.stack);
-                    return Bacon.Error('Exception');
-                }
-            }
-        };
-
         // Provides last depend data as param for .if command
         var injectParamsD = s.curry(function(lastDepName, fn) {
             return function(upstream) {
-                var scope = clientFuncs.injectDependsIntoScope({}, upstream);
+                var scope = clientFuncs.createScope(upstream);
 
                 return fn.call(this, scope);
             }
@@ -146,7 +135,7 @@ function Atlant(){
         /**
          * Injects depend values from upstream into object which is supplyed first.
          */
-        var injectDependsIntoScope = function ( scope, upstream ) {
+        var createScope = function ( upstream ) {
             var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
             var warning = function(inject) { console.log('Atlant warning: inject accessor return nothing:' + inject) }
 
@@ -157,9 +146,9 @@ function Atlant(){
                 if ('undefined' === typeof obj.expression)
                     return '.depends.' + obj.name;
 
-                return function() {
+                return s.baconTryD(function() {
                     return obj.expression(upstream.depends[obj.name]) 
-                }
+                })
             }
 
             var takeAccessor = s.compose( s.if(s.eq(void 0), warning),  s.flipDot(upstream));
@@ -175,9 +164,9 @@ function Atlant(){
             params['mask'] = (upstream.route) ? upstream.route.mask : void 0;    
             params['location'] = upstream.path;
 
-            s.extend( scope, params, data );
+            data = s.extend( params, data );
 
-            return scope;
+            return data;
         };
 
         var catchError = function(e) {
@@ -191,9 +180,8 @@ function Atlant(){
 
         return { 
             convertPromiseD: convertPromiseD
-            ,safeD: safeD
             ,injectParamsD: injectParamsD
-            ,injectDependsIntoScope: injectDependsIntoScope
+            ,createScope: createScope
             ,catchError: catchError
        };
     }();
@@ -241,8 +229,7 @@ function Atlant(){
                 .filter( renderStopper )
                 .onValue( function(upstream){
                     try{ 
-                        var scope = {}; // @TODO use cached scope
-                        clientFuncs.injectDependsIntoScope(scope, upstream);
+                        var scope = clientFuncs.createScope(upstream);
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
                         var viewName = s.dot('.render.viewName', upstream);
 
@@ -398,7 +385,7 @@ function Atlant(){
                 .map( ups.fmap(_.extend) )
 
             if ('function' === typeof dep) {
-                var treatDep = s.compose( clientFuncs.convertPromiseD, clientFuncs.safeD, clientFuncs.injectParamsD(state.lastDepName))( dep ) ;
+                var treatDep = s.compose( clientFuncs.convertPromiseD, s.baconTryD, clientFuncs.injectParamsD(state.lastDepName))( dep ) ;
                 stream = stream 
                     .flatMap(treatDep)
             } else { 
@@ -473,6 +460,7 @@ function Atlant(){
 
     var publishStream = new Bacon.Bus();  // Here we can put init things.
     var errorStream = new Bacon.Bus();
+    var onRenderEndStream = new Bacon.Bus();
 
     // Browser specific actions.
     if ('undefined' !== typeof window) {
@@ -490,14 +478,15 @@ function Atlant(){
     var whenCount = { value: 0 };
     var renderStreams = require('./render-streams')(Counter, whenCount);
 
+
     renderStreams.renderEndStream
-        .onValue( function(){
+        .onValue( function(upstreams){
             renderStreams.nullifyScan.push('nullify');
-            if (prefs.render.on.renderEnd) 
                 prefs.render.on
                     .renderEnd('root')
                     .then(function(){
-                        setTimeout( prefs.on.renderEnd, 0);
+                        var scopeMap = s.map(clientFuncs.createScope, upstreams)
+                        onRenderEndStream.push(scopeMap);
                     })
                     .catch(function(e){
                         errorStream.push(e);
@@ -803,7 +792,7 @@ function Atlant(){
 
         var thisIf = state
             .lastOp
-            .filter( clientFuncs.safeD( clientFuncs.injectParamsD( state.lastDepName ) ) (fn) )
+            .filter(s.baconTryD( clientFuncs.injectParamsD( state.lastDepName ) ) (fn) )
             .map( function(stream) { stream.conditionId = ifId; return stream; })
 
         state.lastIf = thisIf; 
@@ -904,10 +893,9 @@ function Atlant(){
 
         var thisDo = state.lastOp
             .flatMap( function(upstream) { 
-                var injects = {};
                 try{
-                    clientFuncs.injectDependsIntoScope(injects,  upstream) 
-                    var result = actionProvider(injects);
+                    var scope = clientFuncs.createScope(upstream) 
+                    var result = actionProvider(scope);
                     if ( result && 'Promise' === result.constructor.name){
                         return result.then( function() { return upstream; } ).catch( clientFuncs.catchError );
                     } else {
@@ -1011,7 +999,7 @@ function Atlant(){
     }
 
     var _onRenderEnd = function(callback) {
-        prefs.on.renderEnd = callback; 
+        onRenderEndStream.onValue(s.baconTryD(callback));
         return this;
     }
 
