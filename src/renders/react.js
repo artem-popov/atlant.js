@@ -1,15 +1,13 @@
 "use strict";
 var React = require('react');
 
-var views = [];
-
-var Wrapper = (function(){
+var State = function(){
     var wrappers = {}
+        ,views = {}
         ,thises = {}
         ,instances = {};
 
-    return { 
-        check: function(name) {
+        this.check = function(name) {
             if ( !wrappers[name] ) {
                 wrappers[name] = React.createClass({
                     render: function(){
@@ -21,80 +19,99 @@ var Wrapper = (function(){
             })}    
             instances[name] = wrappers[name]();
         }
-        ,getWrapper: function(name) {
+
+        this.getState = function(name) {
             return wrappers[name];
         }
-        ,getInstance: function(name) {
+
+        this.getInstance = function(name) {
             return instances[name];
         }
-        ,getThis: function(name) {
+
+        this.getThis = function(name) {
             return thises[name];
         }
-    }
-})();
 
-var reactRender = { 
-    render: function(viewProvider, name, scope ) {
+        this.set = function(name, view){
+            views[name] = view;
+            return void 0;
+        }
+
+        return this;
+};
+
+var Render = function() {
+    var state = new State;
+
+    this.name = 'React';
+
+    this.render = function(viewProvider, name, scope ) {
         var rendered = new Promise( function( resolve, reject ){
             // get new component somehow.
-            views[name] = viewProvider(scope);  
-            var instance = Wrapper.getThis('name');
+            state.set(name, viewProvider(scope));  
+            var instance = state.getThis('name');
 
-            Wrapper.check(name);
+            state.check(name);
 
-            return resolve(Wrapper.getInstance(name)); 
+            return resolve(state.getInstance(name)); 
         });
 
         return rendered;
     }
-    ,clear: function(viewProvider, name, scope) {
+
+    this.clear = function(viewProvider, name, scope) {
         return new Promise( function( resolve, reject ){
 
-            views[name] = React.DOM.div(null);
-            Wrapper.check(name);
+            state.set(name, React.DOM.div(null));
+            state.check(name);
 
-            return resolve(Wrapper.getInstance(name));
+            return resolve(state.getInstance(name));
         });
     }
-    ,attach: function(name, selector) {
+
+    this.attach = function(name, selector) {
         var attached = new Promise( function( resolve, reject ){
             if ( !window ) throw Error('AtlantJs, React render: attach not possible in browser.')
 
             var element = document.querySelector(selector);
             if ( !element )   throw Error('AtlantJs, React render: can\'t find the selector' + selector )
 
-            React.renderComponent(Wrapper.getInstance(name), element, resolve );
+            React.renderComponent(state.getInstance(name), element, resolve );
 
         });
 
         return attached;
     }
+
     /* Return ready string representation 
      * options parameter can be used to control what you will get.
      * */
-    ,stringify: function(name, options) {
+    this.stringify = function(name, options) {
         if ( options && options.static)
-            return React.renderComponentToStaticMarkup(Wrapper.getInstance(name));
+            return React.renderComponentToStaticMarkup(state.getInstance(name));
         else 
-            return React.renderComponentToString(Wrapper.getInstance(name));
+            return React.renderComponentToString(state.getInstance(name));
     }
+
     /* Can return inner view representation. For React.js it means React component */
-    ,get: function(name, options) {
-        Wrapper.check(name);
-        var instance = Wrapper.getWrapper(name);
+    this.get = function(name, options) {
+        state.check(name);
+        var instance = state.getState(name);
         return instance;
     }
+
     /**
      * InnerView component. Can be used inside parent (for example 'root') to render named inner views.
      */
-    ,innerView: React.createClass({
+    this.innerView = React.createClass({
         render: function() {
             return React.DOM.div(null);
         }
     })
-    ,forceUpdate: function(name) {
+
+    this.on = { renderEnd: function(name) {
         return new Promise( function( resolve, reject) {
-            var instance = Wrapper.getThis(name);
+            var instance = state.getThis(name);
             try {
                 if (instance) { 
                     instance.forceUpdate(resolve)
@@ -105,7 +122,7 @@ var reactRender = {
                 console.error(e.message, e.stack)
                 reject({error:e});
                 // trying to restore...
-                views.root = React.DOM.div(null); 
+                state.set(name, React.DOM.div(null)); 
                 try{
                     instance.forceUpdate(resolve);
                 } catch(e){
@@ -113,16 +130,8 @@ var reactRender = {
                 }
             }
         })
-    } 
+    }} 
+
 }
 
-module.exports = { 
-    name: 'react'
-    ,render: reactRender.render
-    ,clear: reactRender.clear 
-    ,attach: reactRender.attach
-    ,stringify: reactRender.stringify
-    ,get: reactRender.get
-    ,on: { renderEnd: reactRender.forceUpdate }
-    ,innerView: reactRender.innerView
-}
+module.exports = Render;
