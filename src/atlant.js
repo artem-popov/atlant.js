@@ -33,7 +33,6 @@ function Atlant(){
     var prefs = {
             parentOf: {}
             ,skipRoutes: []  // This routes will be skipped in StreamRoutes
-            ,render: { render: simpleRender.render, clear: simpleRender.clear }
             ,viewState: ['root']
             ,on: { renderEnd: void 0 }// callback which will be called on finishing when rendering
 
@@ -1022,9 +1021,11 @@ function Atlant(){
     }
 
     var _use = function(render) {
-        s.type(render, 'object');
+        s.type(render, 'function');
         //@TODO: check render for internal structure
-        prefs.render = render;
+        if (prefs.render) throw new Error('You should specify render only once.'); 
+
+        prefs.render = new render();
         return this;
     }
 
@@ -1050,6 +1051,9 @@ function Atlant(){
         return this;
     }
 
+    var _view = function(name) {
+        return prefs.render.get(name);
+    }
 
     // Set view active by defauilt (no need to mention in second parameter of .render
     this.set = _set;
@@ -1059,6 +1063,7 @@ function Atlant(){
     this.use = _use;
     // Set views hierarchy.
     this.views =  _views;
+    this.view = _view;
 
     this.when =  _when;
     this.lastWhen =  _lastWhen;
