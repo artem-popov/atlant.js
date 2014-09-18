@@ -368,10 +368,8 @@ var s = (function(){
     }
 
     var _ifelse = _.curry( function(condition, then, _else, value){
-        if( condition( value ) ) { console.log('condition is true'); return then(value);}
-        else {console.log(
-            'condition is false'); return _else(value);}
-
+        if( condition( value ) ) return then(value);
+        else return _else(value)
     });
 
     var _if = _.curry( function(condition, then, value){

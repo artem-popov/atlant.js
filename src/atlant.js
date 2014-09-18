@@ -836,6 +836,7 @@ function Atlant(){
     }
 
     var _inject = function( key, expression ) {
+        s.type(key, 'string');
         if ( ! state.lastDepName ) throw new Error('.inject should follow .depends');
 
         state.lastInjects[key] = { name: state.lastDepName, expression: expression };
@@ -844,6 +845,7 @@ function Atlant(){
     }
 
     var _join = function( key, expression ) {
+        s.type(key, 'string');
         state.lastInjects[key] = { name: state.lastDepName, expression: expression, injects: Array.prototype.slice.apply(state.lastInjects) };
 
         return this;
