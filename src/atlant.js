@@ -107,11 +107,10 @@ function Atlant(){
         ,clear: parseInt(_.uniqueId())
     }
 
-
     var clientFuncs = function() {
         var convertPromiseD = s.curry(function(promiseProvider, upstream) {
             var promise = promiseProvider( upstream );
-            if ( promise && 'Promise' === promise.constructor.name){
+            if ( s.isPromise( promise ) ){
                 promise = promise
                     .catch( function(e) {  if (!e.stack) return e; else clientFuncs.catchError(e) } )
                 return Bacon.fromPromise( promise );
@@ -915,7 +914,7 @@ function Atlant(){
                 try{
                     var scope = clientFuncs.createScope(upstream) 
                     var result = actionProvider(scope);
-                    if ( result && 'Promise' === result.constructor.name){
+                    if ( s.isPromise( result ) ){
                         return result.then( function() { return upstream; } ).catch( clientFuncs.catchError );
                     } else {
                         return upstream;

@@ -390,6 +390,11 @@ var s = (function(){
         return 'string' === typeof data[key] || 'number' === typeof data[key] || 'boolean' === typeof data[key]
     }
 
+    var isPromise = function(promise) {
+        if ( promise && 'function' === typeof promise.then ) return true;
+        else return false;
+    }
+
     var tryD = function(fn, errorCallback){
         return function() {
             try {
@@ -454,6 +459,7 @@ var s = (function(){
     this.if = _if;
     this.ifelse = _ifelse;
     this.type = type;
+    this.isPromise = isPromise;
     this.simpleType = simpleType;
     this.tryD = tryD;
     this.baconTryD = baconTryD;
