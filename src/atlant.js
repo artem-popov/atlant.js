@@ -123,7 +123,6 @@ function Atlant(){
         var injectParamsD = s.curry(function(lastDepName, fn) {
             return function(upstream) {
                 var scope = clientFuncs.createScope(upstream);
-
                 return fn.call(this, scope);
             }
         });
@@ -317,7 +316,7 @@ function Atlant(){
                 mask = mask.slice(1, mask.length-1);
             }
 
-            var parsed = utils.parseURL( path )
+            var parsed = utils.parseURL( path );
             path = parsed.pathname;
             path = decodeURIComponent(path);
 
@@ -350,8 +349,8 @@ function Atlant(){
                 params.map(function(name, index) {
                     dst[name] = match[index + 1];
                 });
-
-                dst = _.extend(utils.parseSearch(parsed.search), dst);
+                var searches = _.clone( utils.parseSearch(parsed.search), true);
+                dst = _.extend(searches, dst);
             } else if( negate ) {
                 dst = {}
                 match = true;

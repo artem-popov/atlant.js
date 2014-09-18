@@ -50,7 +50,6 @@ var Render = function() {
             // get new component somehow.
             state.set(name, viewProvider(scope));  
             var instance = state.getThis('name');
-
             state.check(name);
 
             return resolve(state.getInstance(name)); 
