@@ -233,6 +233,8 @@ function Atlant(){
             }
         };
 
+        var renderState = {};
+
         // Registering render for view.
         var assignRender = function(stream) {
             stream
@@ -240,8 +242,20 @@ function Atlant(){
                 .onValue( function(upstream){
                     try{ 
                         var scope = clientFuncs.createScope(upstream);
-                        var viewProvider = s.dot('.render.renderProvider', upstream); 
                         var viewName = s.dot('.render.viewName', upstream);
+
+                        // If the data is not changed then there is no any point to redraw.
+                        console.log('checking for equality:', viewName);
+                        if( ! renderState[viewName] ) { 
+                            renderState[viewName] = scope;
+                        } else if ( _.isEqual ( scope, renderState[viewName] )) {
+                            whenRenderedSignal(upstream);
+                            return;
+                        } else {
+                            renderState[viewName] = scope;
+                        }
+
+                        var viewProvider = s.dot('.render.renderProvider', upstream); 
 
                         var render = ( RenderOperation.render === upstream.render.renderOperation ) ? prefs.render.render : prefs.render.clear;
                         var render = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)

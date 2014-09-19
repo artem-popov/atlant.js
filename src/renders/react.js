@@ -1,11 +1,14 @@
 "use strict";
-var React = require('react');
+var React = require('react')
+     ,s = require('./../lib')
+     ,_ = require('lodash')
 
 var State = function(){
     var wrappers = {}
         ,views = {}
         ,thises = {}
-        ,instances = {};
+        ,instances = {}
+        ,renders = [];
 
         this.check = function(name) {
             if ( !wrappers[name] ) {
@@ -37,6 +40,18 @@ var State = function(){
             return void 0;
         }
 
+        this.pushRenders = function(name) {
+            renders.push(name)
+        }
+
+        this.getRenders = function(){
+            return _.uniq(renders);
+        }
+
+        this.cleanRenders = function(){
+            renders = [];
+        }
+
         return this;
 };
 
@@ -47,10 +62,15 @@ var Render = function() {
 
     this.render = function(viewProvider, name, scope ) {
         var rendered = new Promise( function( resolve, reject ){
+            console.time('rendering view ' + name);
+
             // get new component somehow.
             state.set(name, viewProvider(scope));  
             var instance = state.getThis('name');
             state.check(name);
+
+            state.pushRenders(name);
+            console.timeEnd('rendering view ' + name);
 
             return resolve(state.getInstance(name)); 
         });
@@ -113,7 +133,10 @@ var Render = function() {
             var instance = state.getThis(name);
             try {
                 if (instance) { 
-                    instance.forceUpdate(resolve)
+                    console.time('forcing update of root')
+                    instance.forceUpdate(s.compose( console.timeEnd.bind(console, 'forcing update of root'), resolve));
+                    s.map(function(view){ console.log('view rendered:', view) }, state.getRenders());
+                    state.cleanRenders();
                 } else {
                     resolve();
                 }
