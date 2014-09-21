@@ -211,6 +211,12 @@ function Atlant(){
             // Signalling that view renders
             renderStreams.whenRenderedStream.push(upstream);
 
+            if ( upstream.action ) {
+                prefs.render.on
+                        .renderEnd('root')
+            }
+
+
             // signal for finally construct
             if ( !upstream.isFinally && upstream.finallyStream) {
                 upstream.finallyStream.push(upstream);
@@ -791,6 +797,7 @@ function Atlant(){
 
                 stream.injects = [];
                 stream.injects.push(state.lastInjects);
+                stream.action = true;
 
                 return stream;
             })
