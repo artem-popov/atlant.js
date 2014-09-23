@@ -251,7 +251,6 @@ function Atlant(){
                         var viewName = s.dot('.render.viewName', upstream);
 
                         // If the data is not changed then there is no any point to redraw.
-                        console.log('checking for equality:', viewName);
                         if( ! renderState[viewName] ) { 
                             renderState[viewName] = scope;
                         } else if ( _.isEqual ( scope, renderState[viewName] )) {
@@ -512,15 +511,15 @@ function Atlant(){
     renderStreams.renderEndStream
         .onValue( function(upstreams){
             renderStreams.nullifyScan.push('nullify');
-                prefs.render.on
-                    .renderEnd('root')
-                    .then(function(){
-                        var scopeMap = s.map(clientFuncs.createScope, upstreams)
-                        onRenderEndStream.push(scopeMap);
-                    })
-                    .catch(function(e){
-                        errorStream.push(e);
-                    })
+            prefs.render.on
+                .renderEnd('root')
+                .then(function(){
+                    var scopeMap = s.map(clientFuncs.createScope, upstreams)
+                    onRenderEndStream.push(scopeMap);
+                })
+                .catch(function(e){
+                    errorStream.push(e);
+                })
         })
 
     var renderBeginStream = new Bacon.Bus();
@@ -783,10 +782,12 @@ function Atlant(){
     var _action = function(action){
         State.first();
 
+        if(!action) throw new Error('Atlant.js: action stream is not provided!')
         var actionId = _.uniqueId(); 
 
         var depName = 'action_' + _.uniqueId();
-        state.lastInjects = {}; // Here we will store further injects with ".inject"
+        var injects = {};
+        state.lastInjects = injects // Here we will store further injects with ".inject"
 
         state.lastWhen = action
             .map( function(upstream) { 
@@ -796,8 +797,10 @@ function Atlant(){
                 stream.conditionId = actionId;
 
                 stream.injects = [];
-                stream.injects.push(state.lastInjects);
+                stream.injects.push(injects);
                 stream.action = true;
+
+                atlantState.viewRendered = {}; // the only thing we can nullify.
 
                 return stream;
             })
