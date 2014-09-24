@@ -105,6 +105,7 @@ function Atlant(){
     var RenderOperation = {
         render: parseInt(_.uniqueId())
         ,clear: parseInt(_.uniqueId())
+        ,redirect: parseInt(_.uniqueId())
     }
 
     var clientFuncs = function() {
@@ -262,13 +263,31 @@ function Atlant(){
 
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
 
-                        var render = ( RenderOperation.render === upstream.render.renderOperation ) ? prefs.render.render : prefs.render.clear;
-                        var render = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
+                        // Choose appropriate render.
+                        var render;
+                        if (RenderOperation.redirect === upstream.render.renderOperation ){
 
-                        render(viewProvider, viewName, scope)
-                            .then(function(component){upstream.render.component = component; return upstream })
-                            .then( whenRenderedSignal )
-                            .catch( clientFuncs.catchError )
+                            if ('function' === typeof viewProvider) 
+                                utils.goTo(viewProvider(scope))
+                            else 
+                                utils.goTo(viewProvider)
+
+                            return;
+                        
+                        } else {
+                            if ( RenderOperation.render === upstream.render.renderOperation ) {
+                                render = prefs.render.render 
+                            } else if ( RenderOperation.clear === upstream.render.renderOperation ){
+                                render = prefs.render.clear
+                            } 
+
+                            var render = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
+
+                            render(viewProvider, viewName, scope)
+                                .then(function(component){upstream.render.component = component; return upstream })
+                                .then( whenRenderedSignal )
+                                .catch( clientFuncs.catchError )
+                        }
 
                     } catch (e) { 
                         console.error(e.message, e.stack);
@@ -921,7 +940,9 @@ function Atlant(){
 
             if ( ! state.lastOp ) throw new Error('"render" should nest something');
             
-            s.type(renderProvider, 'function');
+            if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider ) {
+                throw new Error('Atlant.js: render first param should be function or URI')
+            } 
             s.type(viewName, 'string');
             s.type(renderOperation, 'number')
 
@@ -959,6 +980,10 @@ function Atlant(){
         return render.bind(this)(function(){}, viewName, RenderOperation.clear);
     }
 
+    var _redirect = function(redirectProvider) {
+        return render.bind(this)(redirectProvider, void 0, RenderOperation.redirect);
+    }
+
     /**
      * Just action. receives upstream, do not return it.
      */
@@ -990,25 +1015,6 @@ function Atlant(){
         return this;
     }
 
-    var _redirect = function(url){
-
-        if ( ! state.lastOp ) throw new Error('"redirect" should nest something');
-
-        var ups = new Upstream();
-
-        Counter.increase(state);
-
-        var thisRedirect = (state.lastIf || state.lastDep || state.lastWhen)
-            .map(ups.fmap(_.extend))
-            .map(function() { return url; })
-            .map(ups.join('render', 'redirectUrl'));
-
-        lastRedirect = lastRedirect ? lastRedirect.merge(thisRedirect) : thisRedirect;
-
-        if (void 0 !== state.lastIf) State.rollback();
-
-        return this;
-    }
 
 
     /* Not ordered commands */
