@@ -38,6 +38,8 @@ function Atlant(){
 
     }
 
+    var lastPath; // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
+
     // var log = s.nop;
     var log = console.log.bind(console, '--');
 
@@ -530,6 +532,10 @@ function Atlant(){
     renderStreams.renderEndStream
         .onValue( function(upstreams){
             renderStreams.nullifyScan.push('nullify');
+
+            lastPath = utils.getLocation();
+            console.log('setting new lastPath', lastPath)
+
             prefs.render.on
                 .renderEnd('root')
                 .then(function(){
@@ -575,7 +581,13 @@ function Atlant(){
                     event.preventDefault();
                     var parsed = ( event.detail ) ? utils.parseURL( event.detail.url ) : void 0;
                     var path = ( parsed ) ?  parsed.pathname + '?' + parsed.search :  utils.getLocation();
-                    sink( { path: path } ); 
+                    if (path !== lastPath) {
+                        console.log('ok, changing', lastPath, 'to', path)
+                        lastPath = path;
+                        sink( { path: path } ); 
+                    } else {
+                        console.log('NO!!!, tryed changing ', lastPath, 'to', path)
+                    }
                 };
                 window.addEventListener( 'popstate', routeChanged );
                 window.addEventListener( 'pushstate', routeChanged );
