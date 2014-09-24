@@ -1,3 +1,4 @@
+0.2.14 added workaround for safari's "popstate" at start.
 0.2.12 use "decodeURIComponent" instead of deprecated "unescape"
 0.2.11 fix rendering same view several times - now first will stop this.
 0.2.10 all route change events will work only after publish(). publish() now

@@ -16,6 +16,7 @@ var atlant = (function(){
         ,Counter = require('./counter.js')()
     //    ,State = require('./state.js')
 
+    var lastPath = void 0; // Stores last visited path.
     // Initialization specific vars
     var isRenderApplyed  // Is Render already set OnValue for renders
         ,params = [] // Route mask params parsed
@@ -502,6 +503,8 @@ var atlant = (function(){
     renderEndStream
         .onValue( function(){
             whenCount = 0; 
+            lastPath = utils.getLocation();
+            console.log('setting new lastPath', lastPath)
             setTimeout( onRenderEnd, 0);
         })
 
@@ -522,8 +525,15 @@ var atlant = (function(){
             // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
             var routeChanged = function(event) { 
                 event.preventDefault();
+                console.log('event detail:', event)
                 var path = ( event.detail ) ?  utils.parseUrl( event.detail.url ).pathname :  utils.getLocation();
-                sink( { path: path } ); 
+                if (path !== lastPath) {
+                    console.log('ok, changing', lastPath, ' to ', path)
+                    lastPath = path;
+                    sink( { path: path } ); 
+                } else {
+                    console.log('NO!!!, tryed changing', lastPath, ' to ', path)
+                }
             };
             window.addEventListener( 'popstate', routeChanged );
             window.addEventListener( 'pushstate', routeChanged );
