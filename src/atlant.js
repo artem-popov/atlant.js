@@ -443,7 +443,7 @@ function Atlant(){
                 stream = stream 
                     .map(clientFuncs.createScope)
                     .flatMap(function(scope) { 
-                        if (depCache.has(depName)) {
+                        if (depCache.has(depName, scope)) {
                             return Bacon.constant(depCache.get(depName));
                         }
                         else { 
