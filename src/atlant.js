@@ -10,12 +10,14 @@ function Atlant(){
     var s = require('./lib')
         ,simpleRender = require('./renders/simple')
         ,reactRender = require('./renders/react')
+        ,DepCache = require('./inc/dep-cache')
         ,utils = require('./utils')
         ,Upstream = require('./upstream.js')
         ,Counter = require('./counter.js')()
         ,Bacon = require('baconjs')
-        ,_ = require('lodash')
+        ,_ = require('lodash');
 
+    var depCache = new DepCache();
     //    ,State = require('./state.js')
 
     // Initialization specific vars
@@ -122,14 +124,11 @@ function Atlant(){
             }
         });
 
-        // Provides last depend data as param for .if command
-        var injectParamsD = s.curry(function(lastDepName, fn) {
-            return function(upstream) {
-                var scope = clientFuncs.createScope(upstream);
-                return fn.call(this, scope);
+        var applyScopeD = function(fn) {
+            return function(scope) {
+                return fn.call(this, scope)
             }
-        });
-
+        };
 
         
         /**
@@ -137,7 +136,6 @@ function Atlant(){
          */
         var createScope = function ( upstream ) {
             var warning = function(inject) { console.log('Atlant warning: inject accessor return nothing:' + inject) }
-
             var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
             var joins = s.filter( function(inject){ return inject.hasOwnProperty('injects') }, injects);
             injects = s.filter( function(inject){ return !inject.hasOwnProperty('injects') }, injects);
@@ -193,12 +191,11 @@ function Atlant(){
 
         return { 
             convertPromiseD: convertPromiseD
-            ,injectParamsD: injectParamsD
+            ,applyScopeD: applyScopeD
             ,createScope: createScope
             ,catchError: catchError
        };
     }();
-
 
     var streams = {}; 
     var add = function(name, value) {
@@ -434,13 +431,30 @@ function Atlant(){
             var stream = stream
                 .map( ups.fmap(_.extend) )
 
-            if ('function' === typeof dep) {
-                var treatDep = s.compose( clientFuncs.convertPromiseD, s.baconTryD, clientFuncs.injectParamsD(state.lastDepName))( dep ) ;
-                stream = stream 
-                    .flatMap(treatDep)
-            } else { 
+            if ('function' !== typeof dep) {
                 stream = stream
-                    .map( function() { return dep; } )
+                    .map( s.inject(dep) )
+            } else {  
+                var treatDep = s.compose(  clientFuncs.convertPromiseD
+                                            ,s.baconTryD
+                                            ,clientFuncs.applyScopeD
+                                        )( dep ) ;
+                
+                stream = stream 
+                    .map(clientFuncs.createScope)
+                    .flatMap(function(scope) { 
+                        if (depCache.has(depName)) {
+                            return Bacon.constant(depCache.get(depName));
+                        }
+                        else { 
+                            var stream = treatDep(scope)
+                                                        .map(function(upstream){
+                                                            depCache.put(depName, scope, upstream);
+                                                            return upstream;
+                                                        })
+                            return stream;
+                        }
+                    })
             }
 
             stream = stream
@@ -534,7 +548,6 @@ function Atlant(){
             renderStreams.nullifyScan.push('nullify');
 
             lastPath = utils.getLocation();
-            console.log('setting new lastPath', lastPath)
 
             prefs.render.on
                 .renderEnd('root')
@@ -582,12 +595,9 @@ function Atlant(){
                     var parsed = ( event.detail ) ? utils.parseURL( event.detail.url ) : void 0;
                     var path = ( parsed ) ?  parsed.pathname + '?' + parsed.search :  utils.getLocation();
                     if (path !== lastPath) {
-                        console.log('ok, changing', lastPath, 'to', path)
                         lastPath = path;
                         sink( { path: path } ); 
-                    } else {
-                        console.log('NO!!!, tryed changing ', lastPath, 'to', path)
-                    }
+                    } 
                 };
                 window.addEventListener( 'popstate', routeChanged );
                 window.addEventListener( 'pushstate', routeChanged );
@@ -891,7 +901,10 @@ function Atlant(){
 
         var thisIf = state
             .lastOp
-            .filter(s.baconTryD( clientFuncs.injectParamsD( state.lastDepName ) ) (fn) )
+            .filter( s.compose( 
+                               s.baconTryD( clientFuncs.applyScopeD ) (fn)
+                               , clientFuncs.createScope
+                              ))
             .map( function(stream) { stream.conditionId = ifId; return stream; })
 
         state.lastIf = thisIf; 
