@@ -4,6 +4,8 @@
  *
  * @TODO: fast switching generate console.error.
  * @TODO: #hashes are ignored
+ * @TODO: check(true) to check only this view params (by specifically set fields or somehow)
+ * @TODO: depCache to check only this dep params (by specifically set fields or somehow)
  */
 
 function Atlant(){
@@ -34,6 +36,7 @@ function Atlant(){
     var lastFinallyStream;
     var prefs = {
             parentOf: {}
+            ,checkInjectsEquality: true
             ,skipRoutes: []  // This routes will be skipped in StreamRoutes
             ,viewState: ['root']
             ,on: { renderEnd: void 0 }// callback which will be called on finishing when rendering
@@ -253,10 +256,12 @@ function Atlant(){
                         // If the data is not changed then there is no any point to redraw.
                         if( ! renderState[viewName] ) { 
                             renderState[viewName] = scope;
-                        } else if ( _.isEqual ( scope, renderState[viewName] )) {
+                        } else if ( prefs.checkInjectsEquality && _.isEqual ( scope, renderState[viewName] )) {
+                            // console.log('the same injects, skip render')
                             whenRenderedSignal(upstream);
                             return;
                         } else {
+                            // console.log('injects are new, rendering', viewName)
                             renderState[viewName] = scope;
                         }
 
@@ -1008,6 +1013,15 @@ function Atlant(){
     var _redirect = function(redirectProvider) {
         return render.bind(this)(redirectProvider, void 0, RenderOperation.redirect);
     }
+     
+    var _check = function(isCheck) {
+        if ( 'undefined' === typeof isCheck)
+            throw new Error('Atlant.js: check require boolean parameter.')
+
+
+        prefs.checkInjectsEquality = isCheck;
+        return this;
+    }
 
     /**
      * Just action. receives upstream, do not return it.
@@ -1192,7 +1206,10 @@ function Atlant(){
      * Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
      */
     this.log =  _log;
+    /* Renders the view. first - render provider, second - view name */
     this.render =  _render;
+    /* If true then view will be re-rendered only when injects are changed. Accepts boolean. Default true */
+    this.check = _check;
     this.clear =  _clear;
     this.redirect =  _redirect;
     this.skip =  _skip;
