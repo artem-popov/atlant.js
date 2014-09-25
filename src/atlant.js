@@ -444,7 +444,7 @@ function Atlant(){
                     .map(clientFuncs.createScope)
                     .flatMap(function(scope) { 
                         if (depCache.has(depName, scope)) {
-                            return Bacon.constant(depCache.get(depName));
+                            return Bacon.constant(depCache.get(depName, scope));
                         }
                         else { 
                             var stream = treatDep(scope)

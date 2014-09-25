@@ -7,7 +7,7 @@ var depCache = function() {
 
     this.has = function(name, scope) {
         var key = name + JSON.stringify(scope);
-        return !!cache[key]
+        return cache.hasOwnProperty(key);
     }
     this.get = function(name, scope) {
         var key = name + JSON.stringify(scope);
