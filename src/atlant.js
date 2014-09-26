@@ -465,10 +465,9 @@ function Atlant(){
             stream = stream
                 .map( ups.join('depends', depName) )
                 .map(function(upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
-                    if (!upstream.injects) upstream.injects = [];
-                    upstream.injects.push(injects);
+                    var stream = prepare4injects(depName, upstream.depends[depName], injects, upstream);
 
-                    return upstream;
+                    return stream;
                 });
 
             return stream;
@@ -483,17 +482,6 @@ function Atlant(){
             return x;
         });
 
-       // var cachedPromise = s.curry( function(cacheName, cacheKey, dependency, upstream) {
-       //     // if ( cache[cacheName] && cache[cacheName][cacheKey] ) { console.log('cached!')}
-       //     //     return cache[cacheName][cacheKey];
-       //
-       //     console.log('nilling!', cacheName, cacheKey)
-       //     return dependency(upstream).then(function (response) {
-       //         // cache[cacheName][cacheKey] = response;
-       //         return response;
-       //     });
-       // });
-
         return function(dependency, dependsBehaviour ) {
             if ( ! state.lastWhen ) throw new Error('"depends" should nest "when"');
 
@@ -505,7 +493,7 @@ function Atlant(){
                 lastOp = state.lastIf || state.lastWhen;
             }
 
-            state.lastInjects = {}; // Here we will store further injects with ".inject"
+            prepare4injectsInit(depName);
 
             var thisDep = createDepStream(lastOp, depName, dependency, state.lastInjects )
 
@@ -686,6 +674,9 @@ function Atlant(){
             var additionalMasks = [];
             var finallyStream = ( WhenFinally.finally !== whenType ) ? new Bacon.Bus() : lastFinallyStream;
 
+            // Allows attaching injects to .when().
+            var injects = prepare4injectsInit(name);
+
             masks.forEach(function(mask) {
                 s.push(utils.getPossiblePath(mask), additionalMasks);
             });
@@ -716,7 +707,9 @@ function Atlant(){
                         upstream.route.when = masks;
                         upstream.isFinally = false; 
                         upstream.finallyStream = finallyStream;
-                        return upstream; 
+                        var depData = {location: upstream.path, mask: upstream.route.mask};
+                        var stream = prepare4injects(name, depData, injects, upstream);
+                        return stream; 
                     })
             } else {
                 lastFinallyStream = void 0;
@@ -742,8 +735,14 @@ function Atlant(){
 
                     })
                     .filter( function(x) { return x === 'orly'; } )
-                    .map(function() {
-                        return { whenId: whenId, route: { whenNot: masks }, isFinally:true }; 
+                    .map(ups.join(void 0, void 0))
+                    .map(function(upstream) {
+                        var depData = {location: upstream.path, mask: void 0};
+                        var stream = prepare4injects(name, depData, injects, {});
+                        stream.isFinally = true;
+                        stream.whenId = whenId;
+                        stream.route = { whenNot: masks };
+                        return stream;
                     })
             }
 
@@ -1186,6 +1185,10 @@ function Atlant(){
     this.match = _match;
     // declare branch that will work if no routes declared by .when() are matched. Routes declared by .match() will be ignored even if they matched.
     this.otherwise =  _otherwise;
+    // Creates stream which will be called when render error is happend
+    this.error = _error;
+    // Creates custom stream which accepts Bacon stream
+    this.action = _action;
     // creates branch which can destruct all what declared by .when() or .match()
     this.finally =  _finally;
     this.depends =  _depends;
@@ -1223,9 +1226,9 @@ function Atlant(){
     this.onRenderEnd =  _onRenderEnd;
     this.attachTo =  _attachTo;
     this.stringify =  _stringify;
+
+    // Returns child view component
     this.get =  _get;
-    this.error = _error;
-    this.action = _action;
 
     return this;
 
