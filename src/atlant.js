@@ -825,26 +825,38 @@ function Atlant(){
 
     };
 
+    // Help in creating injects tail
+    // Include this before declaring streams: "var injects = prepare4injectsInit();"
+    var prepare4injectsInit = function(depName) {
+        if (!depName) throw new Error('Atlant.js: developer: you forgot the "depName"!')
+        var injects = {};
+        state.lastInjects = injects // Here we will store further injects with ".inject"
+        return injects;
+    }
+    // Add invocation when mapping stream.
+    var prepare4injects = function(depName, depValue, injects, upstream) {
+        if( !upstream.depends ) upstream.depends = {};
+        upstream.depends[depName] = depValue;
+
+        if( !upstream.injects ) upstream.injects = [];
+        upstream.injects.push(injects);
+        return upstream
+    }
+
     var _action = function(action){
         State.first();
 
         if(!action) throw new Error('Atlant.js: action stream is not provided!')
         var actionId = _.uniqueId(); 
-
         var depName = 'action_' + _.uniqueId();
-        var injects = {};
-        state.lastInjects = injects // Here we will store further injects with ".inject"
+        var injects = prepare4injectsInit(depName);
 
         state.lastWhen = action
-            .map( function(upstream) { 
-                var stream = {};
-                stream.depends = {};
-                stream.depends[depName] = upstream;
-                stream.conditionId = actionId;
+            .map( function(depValue) { 
+                var stream = prepare4injects(depName, depValue, injects, {})
 
-                stream.injects = [];
-                stream.injects.push(injects);
                 stream.action = true;
+                stream.conditionId = actionId;
 
                 atlantState.viewRendered = {}; // the only thing we can nullify.
 
@@ -904,13 +916,20 @@ function Atlant(){
         State.divide();
         var ifId = _.uniqueId();
 
+        var depName = 'if_' + _.uniqueId();
+        var injects = prepare4injectsInit(depName);
+
         var thisIf = state
             .lastOp
             .filter( s.compose( 
                                s.baconTryD( clientFuncs.applyScopeD ) (fn)
                                , clientFuncs.createScope
                               ))
-            .map( function(stream) { stream.conditionId = ifId; return stream; })
+            .map( function(upstream) { 
+                var stream = prepare4injects(depName, {}, injects, upstream);
+                stream.conditionId = ifId;
+                return stream;
+            })
 
         state.lastIf = thisIf; 
         state.lastOp = state.lastIf;
@@ -1058,12 +1077,6 @@ function Atlant(){
 
     /* Not ordered commands */
 
-    /* @TODO: deprecate */
-    var _views = function(hirearchyObject) {
-        prefs.parentOf = s.merge( prefs.parentOf, hirearchyObject );
-        return this;
-    }
-
     /**
      * Function: skip
      * Skip: Sets the list of route masks which should be skipped by Atlant.
@@ -1165,8 +1178,6 @@ function Atlant(){
     this.unset = _unset;
     // Use another render. simple render is default
     this.use = _use;
-    // Set views hierarchy.
-    this.views =  _views;
     this.view = _view;
 
     this.when =  _when;
@@ -1195,13 +1206,6 @@ function Atlant(){
     this.inject =  _inject;
     this.join = _join;
     this.if =  _if;
-    this.filter =  _if;
-    /* Will get the same scope as ".render()".
-     * Can be used for suitable things.
-     * If promise passed, the execution will be paused before ending, simple function will be executed asyncroniously.
-     * The return value will be ignored.
-     * */
-    this.do =  _do;
     /**
      * Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
      */
