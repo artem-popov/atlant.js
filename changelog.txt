@@ -1,3 +1,4 @@
+0.2.15 fixed redirect when any key tapped on link
 0.2.14 added workaround for safari's "popstate" at start.
 0.2.12 use "decodeURIComponent" instead of deprecated "unescape"
 0.2.11 fix rendering same view several times - now first will stop this.

@@ -69,6 +69,8 @@ utils.attachGuardToLinks = function() {
         if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which ) return;
         var element = event.target;
 
+        if ( 'KeyboarEvent' !== typeof event || 13 !== event.keyCode) return;
+
         while ( 'a' !== element.nodeName.toLowerCase() ){
             if (element === document || ! (element = element.parentNode) ) return; 
         }
