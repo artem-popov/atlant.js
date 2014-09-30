@@ -540,7 +540,7 @@ function Atlant(){
         .onValue( function(upstreams){
             renderStreams.nullifyScan.push('nullify');
 
-            lastPath = utils.getLocation();
+            if (window) lastPath = utils.getLocation();
 
             prefs.render.on
                 .renderEnd('root')
