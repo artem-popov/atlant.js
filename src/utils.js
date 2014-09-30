@@ -69,14 +69,15 @@ utils.attachGuardToLinks = function() {
         if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which ) return;
         var element = event.target;
 
-        if ( 'KeyboarEvent' !== typeof event || 13 !== event.keyCode) return;
-
         while ( 'a' !== element.nodeName.toLowerCase() ){
             if (element === document || ! (element = element.parentNode) ) return; 
         }
 
         var loc = element.getAttribute('href'); 
         if ( !loc ) return;
+
+        if ( event instanceof KeyboardEvent && 13 !== event.keyCode) return;
+
         // In case of it is the same link with hash - do not involve the atlant, just scroll to id. 
         // @TODO? don't prevent default and understand that route not changed at routeChanged state?
         if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {
