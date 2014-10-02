@@ -8,6 +8,7 @@ var browserify = require('browserify')
     ,fs = require('fs')
     ,serveStatic = require('serve-static')
     ,livescript = require('browserify-livescript')
+    ,Promise = require('promise')
     
 var browOpt = {standalone: 'atlant'};
 var dest = 'lib/';
@@ -16,6 +17,17 @@ var getLocalIndex = function(req, res, next){
     return fs.createReadStream('examples/index.html', {encoding: 'utf8'})
         .pipe(res);
 }
+
+var exec = require('child_process').exec;
+function execute(command, callback){
+    exec(command, function(error, stdout, stderr){ callback(stdout); });
+};
+
+var getCommit = new Promise( function(resolve, reject) {
+    execute("git rev-parse HEAD", function(commitCode){
+        resolve(commitCode)
+    });
+});
 
 /** Examples local server */
 // not in use actually
@@ -30,25 +42,35 @@ gulp.task('examples', function() {
         .listen(9500);
 });
 
-gulp.task('watch', function() {
-    return gulp
-        .src(['src/**/*.js', 'src/**/*.ls'])
-        .pipe( plumber() )
-        .pipe( watch( function(){ 
-            var b = browserify( './src/atlant.js' );
-            b.ignore('react');
-            b.transform(livescript);
-            b.transform(literalify.configure({
-                react: 'window.React'
-                ,lodash: 'window._'
-                ,baconjs: 'window.Bacon'
-                ,promise: 'window.Promise'
-            }));
-
-            b.bundle({ standalone: 'Atlant' }).pipe(source('./atlant.js'))
-                .pipe( gulp.dest(dest) )
-        }))
+var commitCode;
+gulp.task('revision', function(done) {
+    getCommit.then(function(commit){
+        commitCode = commit;
+        done();
+    })
 });
 
-gulp.task('default', ['watch']);
+gulp.task('watch', function() {
+        return gulp
+            .src(['src/**/*.js', 'src/**/*.ls'])
+            .pipe( plumber() )
+            .pipe( watch( function(){ 
+                var b = browserify( './src/atlant.js' );
+                b.ignore('react');
+                b.transform(livescript);
+                b.transform(literalify.configure({
+                    react: 'window.React'
+                    ,lodash: 'window._'
+                    ,baconjs: 'window.Bacon'
+                    ,promise: 'window.Promise'
+                    ,AtlantVersion: "'0.3.0'"
+                    ,AtlantBuild: '"' + (new Date().getTime()) + '"'
+                    ,AtlantRevision: '"' + commitCode.trim() + '"'
+                }));
 
+                b.bundle({ standalone: 'Atlant' }).pipe(source('./atlant.js'))
+                    .pipe( gulp.dest(dest) )
+            }))
+});
+
+gulp.task('default', ['revision', 'watch']);
