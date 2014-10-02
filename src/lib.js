@@ -401,7 +401,7 @@ var s = (function(){
                 return fn.apply(this, arguments);
             } catch(e) {
                 console.error(e.message, e.stack);
-                return errorCallback(e);
+                if( errorCallback) return errorCallback(e);
             }
         }
     };
