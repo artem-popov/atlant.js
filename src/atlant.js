@@ -179,7 +179,6 @@ function Atlant(){
             params['location'] = upstream.path;
 
             data = s.extend( params, data, joinsData );
-
             return data;
         };
 
@@ -918,17 +917,18 @@ function Atlant(){
         var depName = 'if_' + _.uniqueId();
         var injects = prepare4injectsInit(depName);
 
-        var thisIf = state
-            .lastOp
-            .filter( s.compose( 
-                               s.baconTryD( clientFuncs.applyScopeD ) (fn)
-                               , clientFuncs.createScope
-                              ))
+        var thisIf = state.lastOp
+            .map(clientFuncs.createScope)
+            .filter( s.compose(
+                                clientFuncs.applyScopeD 
+                                ,s.tryD
+                              )(fn) )
             .map( function(upstream) { 
                 var stream = prepare4injects(depName, {}, injects, upstream);
                 stream.conditionId = ifId;
                 return stream;
             })
+
 
         state.lastIf = thisIf; 
         state.lastOp = state.lastIf;
