@@ -17,7 +17,8 @@ function Atlant(){
         ,Upstream = require('./upstream.js')
         ,Counter = require('./counter.js')()
         ,Bacon = require('baconjs')
-        ,_ = require('lodash');
+        ,_ = require('lodash')
+        ,interfaces = require('./inc/interfaces');
 
     var depCache = new DepCache();
     //    ,State = require('./state.js')
@@ -42,6 +43,9 @@ function Atlant(){
             ,on: { renderEnd: void 0 }// callback which will be called on finishing when rendering
 
     }
+
+    var injectsGrabber = new interfaces.injectsGrabber();
+    var whenCounter = new interfaces.whenCounter();
 
     var lastPath; // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
 
@@ -463,7 +467,7 @@ function Atlant(){
             stream = stream
                 .map( ups.join('depends', depName) )
                 .map(function(upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
-                    var stream = prepare4injects(depName, upstream.depends[depName], injects, upstream);
+                    var stream = injectsGrabber.add(depName, upstream.depends[depName], injects, upstream);
 
                     return stream;
                 });
@@ -491,7 +495,7 @@ function Atlant(){
                 lastOp = state.lastIf || state.lastWhen;
             }
 
-            prepare4injectsInit(depName);
+            injectsGrabber.init(depName, state);
 
             var thisDep = createDepStream(lastOp, depName, dependency, state.lastInjects )
 
@@ -673,7 +677,7 @@ function Atlant(){
             var finallyStream = ( WhenFinally.finally !== whenType ) ? new Bacon.Bus() : lastFinallyStream;
 
             // Allows attaching injects to .when().
-            var injects = prepare4injectsInit(name);
+            var injects = injectsGrabber.init(name, state);
 
             masks.forEach(function(mask) {
                 s.push(utils.getPossiblePath(mask), additionalMasks);
@@ -706,7 +710,7 @@ function Atlant(){
                         upstream.isFinally = false; 
                         upstream.finallyStream = finallyStream;
                         var depData = {location: upstream.path, mask: upstream.route.mask};
-                        var stream = prepare4injects(name, depData, injects, upstream);
+                        var stream = injectsGrabber.add(name, depData, injects, upstream);
                         return stream; 
                     })
             } else {
@@ -736,7 +740,7 @@ function Atlant(){
                     .map(ups.join(void 0, void 0))
                     .map(function(upstream) {
                         var depData = {location: upstream.path, mask: void 0};
-                        var stream = prepare4injects(name, depData, injects, {});
+                        var stream = injectsGrabber.add(name, depData, injects, {});
                         stream.isFinally = true;
                         stream.whenId = whenId;
                         stream.route = { whenNot: masks };
@@ -748,17 +752,14 @@ function Atlant(){
 
             state.lastWhen
                 .onValue( function(upstream) {
+                    console.log('Matched route!', upstream.route.mask, upstream.path, upstream.route.when, upstream.whenId);
                     if( upstream.redirectTo) {  // If the route is a "bad clone", then redirecting.
                         log('----------------Redirect:',upstream);
                         utils.goTo(upstream.redirectTo);
                     }
                 });
 
-            state.lastWhen // counter for whens and Informational message. 
-                .onValue(function(upstream) {
-                    whenCount.value++;
-                    log('Matched route!', upstream.route.mask, upstream.path, upstream.route.when, upstream.whenId);
-                });
+            whenCounter.add(state.lastWhen, whenCount);
 
             state.lastIf = void 0;
             state.lastDep = void 0;
@@ -804,16 +805,26 @@ function Atlant(){
     var _otherwise = function(){
         State.first();
 
-        var otherwiseId = _.uniqueId(); 
+        var whenId = _.uniqueId(); 
+        var depName = 'otherwise_' + _.uniqueId();
+        var injects = injectsGrabber.init(depName, state);
+
         state.lastWhen = otherWiseRootStream
-            .map( function(stream) { stream.conditionId = otherwiseId; return stream; })
+            .map( function(depValue) { 
+                var stream = injectsGrabber.add(depName, depValue, injects, {})
+                stream.otherwise = true;
+                stream.conditionId = whenId;
+                return stream; 
+            })
 
         state.lastIf = void 0;
         state.lastDep = void 0;
         state.lastDepName = void 0;
         state.lastWhenName = 'otherwise';
         state.lastOp = state.lastWhen;
-        state.lastConditionId = otherwiseId; 
+        state.lastConditionId = whenId; 
+
+        whenCounter.add(state.lastOp, state);
 
         State.print('___Otherwise:', state);
 
@@ -822,50 +833,34 @@ function Atlant(){
 
     };
 
-    // Help in creating injects tail
-    // Include this before declaring streams: "var injects = prepare4injectsInit();"
-    var prepare4injectsInit = function(depName) {
-        if (!depName) throw new Error('Atlant.js: developer: you forgot the "depName"!')
-        var injects = {};
-        state.lastInjects = injects // Here we will store further injects with ".inject"
-        return injects;
-    }
-    // Add invocation when mapping stream.
-    var prepare4injects = function(depName, depValue, injects, upstream) {
-        if( !upstream.depends ) { upstream.depends = {}; } 
-        upstream.depends[depName] = depValue;
-
-        if( !upstream.injects ) upstream.injects = [];
-        upstream.injects.push(injects);
-        return upstream
-    }
-
     var _action = function(action){
         State.first();
 
         if(!action) throw new Error('Atlant.js: action stream is not provided!')
-        var actionId = _.uniqueId(); 
+        var whenId = _.uniqueId(); 
         var depName = 'action_' + _.uniqueId();
-        var injects = prepare4injectsInit(depName);
+        var injects = injectsGrabber.init(depName, state);
 
         state.lastWhen = action
             .map( function(depValue) { 
-                var stream = prepare4injects(depName, depValue, injects, {})
+                var stream = injectsGrabber.add(depName, depValue, injects, {})
 
                 stream.action = true;
-                stream.conditionId = actionId;
+                stream.conditionId = whenId;
 
                 atlantState.viewRendered = {}; // the only thing we can nullify.
 
                 return stream;
             })
 
+        whenCounter.add(state.lastWhen, whenCount);
+
         state.lastIf = void 0;
         state.lastDep = void 0;
         state.lastDepName = depName;
         state.lastWhenName = depName;
         state.lastOp = state.lastWhen;
-        state.lastConditionId = actionId; 
+        state.lastConditionId = whenId; 
 
         State.print('___action:', state);
 
@@ -915,7 +910,7 @@ function Atlant(){
         var ups = new Upstream();
 
         var depName = 'if_' + _.uniqueId();
-        var injects = prepare4injectsInit(depName);
+        var injects = injectsGrabber.init(depName, state);
 
         var thisIf = state.lastOp
             .map( ups.push )
@@ -926,7 +921,7 @@ function Atlant(){
                               )(fn))
             .map( ups.pop )
             .map( function(upstream) { 
-                var stream = prepare4injects(depName, {}, injects, upstream);
+                var stream = injectsGrabber.add(depName, {}, injects, upstream);
                 stream.conditionId = ifId;
                 return stream;
             })
