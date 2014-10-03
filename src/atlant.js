@@ -61,7 +61,7 @@ function Atlant(){
     }
 
     var StateType = function(state) {
-        _.extend( this, {lastWhen: void 0, lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastWhenName: void 0, lastInjects: void 0} );
+        _.extend( this, {lastWhen: void 0, lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0} );
         _.merge( this, state );
     };
     var State = function(){
@@ -311,27 +311,12 @@ function Atlant(){
             });
         };
 
-        var yC = function(x,y) {
-            return x.id === y.id ? y : false;
-        };
-
-        var getOrderedStreams = function(name, stream) {
-            if (! prefs.parentOf[name] ) return stream;
-
-            var parentStream = viewReady[prefs.parentOf[name]];
-
-            // Useful in angular.js, not in React. @TODO
-            //stream = Bacon.combineWith(yC, parentStream, stream).changes().filter(function(x){return x});
-            return stream;
-        };
-
         return function() {
             if ( isRenderApplyed ) return;
 
             isRenderApplyed = true
             for(var viewName in renders) {
-                var orderedStreams = s.map(getOrderedStreams.bind(this, viewName), renders[viewName]);
-                s.map(assignRender, orderedStreams);
+                s.map(assignRender, renders[viewName]);
             }
 
             assignLastRedirect();
@@ -669,7 +654,7 @@ function Atlant(){
             var name = '';
             if (whenType === WhenFinally.finally) name = 'finally';
             if (whenType === WhenFinally.match) name = 'match';
-            var name = name + createNameFromMasks(masks);
+            var name = name + createNameFromMasks(masks) + _.uniqueId();
 
             var whenId = _.uniqueId();        
             var ups = new Upstream();
@@ -697,7 +682,7 @@ function Atlant(){
                     .map( function(upstream) {
                         return masks
                             .concat(additionalMasks)
-                            .filter(function() { return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched.
+                            .filter(function() { if(WhenFinally.match === whenType) return true; else return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched.
                             .map( matchRouteLast( upstream.path, matchingBehaviour ) )
                             .filter( s.notEmpty )                              // empty params means fails of route identity.
                     } )
@@ -708,6 +693,7 @@ function Atlant(){
                         upstream.whenId = whenId;
                         upstream.route.when = masks;
                         upstream.isFinally = false; 
+                        upstream.isMatch = WhenFinally.match === whenType;
                         upstream.finallyStream = finallyStream;
                         var depData = {location: upstream.path, mask: upstream.route.mask};
                         var stream = injectsGrabber.add(name, depData, injects, upstream);
@@ -752,7 +738,7 @@ function Atlant(){
 
             state.lastWhen
                 .onValue( function(upstream) {
-                    console.log('Matched route!', upstream.route.mask, upstream.path, upstream.route.when, upstream.whenId);
+                    console.log('----Matched route!', upstream);
                     if( upstream.redirectTo) {  // If the route is a "bad clone", then redirecting.
                         log('----------------Redirect:',upstream);
                         utils.goTo(upstream.redirectTo);
@@ -764,13 +750,11 @@ function Atlant(){
             state.lastIf = void 0;
             state.lastDep = void 0;
             state.lastDepName = void 0;
-            state.lastWhenName = name;
             state.lastOp = state.lastWhen;
             state.lastConditionId = whenId;
 
             State.print('___When:'+JSON.stringify(masks), state);
 
-            add(state.lastWhenName, state.lastWhen)
 
             return this;
         };
@@ -820,7 +804,6 @@ function Atlant(){
         state.lastIf = void 0;
         state.lastDep = void 0;
         state.lastDepName = void 0;
-        state.lastWhenName = 'otherwise';
         state.lastOp = state.lastWhen;
         state.lastConditionId = whenId; 
 
@@ -828,7 +811,6 @@ function Atlant(){
 
         State.print('___Otherwise:', state);
 
-        add(state.lastWhenName, state.lastWhen)
         return this;
 
     };
@@ -858,13 +840,11 @@ function Atlant(){
         state.lastIf = void 0;
         state.lastDep = void 0;
         state.lastDepName = depName;
-        state.lastWhenName = depName;
         state.lastOp = state.lastWhen;
         state.lastConditionId = whenId; 
 
         State.print('___action:', state);
 
-        add(state.lastWhenName, state.lastWhen)
         return this;
 
     };
@@ -885,13 +865,11 @@ function Atlant(){
         state.lastIf = void 0;
         state.lastDep = void 0;
         state.lastDepName = void 0;
-        state.lastWhenName = 'error';
         state.lastOp = state.lastWhen;
         state.lastConditionId = errorId; 
 
         State.print('__error:', state);
 
-        add(state.lastWhenName, state.lastWhen)
 
         return this;
     };

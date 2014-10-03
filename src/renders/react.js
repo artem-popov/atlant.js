@@ -57,8 +57,7 @@ var Render = function() {
             state.check(name);
 
             console.timeEnd('rendering view ' + name);
-
-            return resolve(state.getInstance(name)); 
+            return resolve(state.getInstance(name));  
         });
 
         return rendered;
@@ -81,7 +80,11 @@ var Render = function() {
             var element = document.querySelector(selector);
             if ( !element )   throw Error('AtlantJs, React render: can\'t find the selector' + selector )
 
-            React.renderComponent(state.getInstance(name), element, resolve );
+            var root = state.getInstance(name);
+
+            if ( !root ) { throw new Error('AtlantJs: Please use .render(component, "' + name + '") to render something') }
+
+            React.renderComponent(root, element, resolve );
 
         });
 
