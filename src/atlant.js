@@ -116,6 +116,7 @@ function Atlant(){
         render: parseInt(_.uniqueId())
         ,clear: parseInt(_.uniqueId())
         ,redirect: parseInt(_.uniqueId())
+        ,move: parseInt(_.uniqueId())
     }
 
     var clientFuncs = function() {
@@ -266,7 +267,15 @@ function Atlant(){
                                 utils.goTo(viewProvider)
 
                             return;
-                        
+                        } else if (RenderOperation.move === upstream.render.renderOperation){
+
+                            console.log('move in the country!')
+                            if ('function' === typeof viewProvider) 
+                                window.location.assign(viewProvider(scope))
+                            else 
+                                window.location.assign(viewProvider)
+
+                            return;
                         } else {
                             if ( RenderOperation.render === upstream.render.renderOperation ) {
                                 render = prefs.render.render 
@@ -1011,6 +1020,10 @@ function Atlant(){
         return render.bind(this)(redirectProvider, void 0, RenderOperation.redirect);
     }
      
+    var _move = function(redirectProvider) {
+        return render.bind(this)(redirectProvider, void 0, RenderOperation.move);
+    }
+
     var _check = function(isCheck) {
         if ( 'undefined' === typeof isCheck)
             throw new Error('Atlant.js: check require boolean parameter.')
@@ -1195,7 +1208,10 @@ function Atlant(){
     /* If true then view will be re-rendered only when injects are changed. Accepts boolean. Default true */
     this.check = _check;
     this.clear =  _clear;
+    // Soft atlant-inside redirect.
     this.redirect =  _redirect;
+    // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
+    this.move = _move;
     this.skip =  _skip;
     this.publish =  _publish;
     this.renders =  { react :  reactRender, simple :  simpleRender };
