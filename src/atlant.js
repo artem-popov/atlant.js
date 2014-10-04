@@ -206,12 +206,10 @@ function Atlant(){
     var assignRenders = function(){
 
         var whenRenderedSignal = function( upstream ) {
-            console.log('whenrenderedsignal', upstream.render.viewName, upstream);
             // Signalling that view renders
             renderStreams.whenRenderedStream.push(upstream);
 
             if ( upstream.action ) {
-                console.log('hoho it is action')
                 prefs.render.on
                         .renderEnd('root')
             }
@@ -303,7 +301,6 @@ function Atlant(){
         return function() {
             if ( isRenderApplyed ) return;
 
-            console.log('there is whenCount:', whenCount.value)
             isRenderApplyed = true
             for(var viewName in renders) {
                 s.map(assignRender, renders[viewName]);
@@ -687,7 +684,6 @@ function Atlant(){
                         upstream.isMatch = WhenFinally.match === whenType;
                         upstream.finallyStream = finallyStream;
                         whenCount.value++;
-                        console.log('are increasing:', whenCount)
                         var depData = {location: upstream.path, mask: upstream.route.mask};
                         var stream = injectsGrabber.add(name, depData, injects, upstream);
                         return stream; 
@@ -723,7 +719,6 @@ function Atlant(){
                         stream.isFinally = true;
                         stream.whenId = whenId;
                         whenCount.value++;
-                        console.log('are increasing:', whenCount)
                         stream.route = { whenNot: masks };
                         return stream;
                     })
@@ -795,7 +790,6 @@ function Atlant(){
                 stream.otherwise = true;
                 stream.conditionId = whenId;
                 whenCount.value++;
-                console.log('are increasing:', whenCount)
                 return stream; 
             })
 
@@ -830,7 +824,6 @@ function Atlant(){
                 stream.conditionId = whenId;
 
                 whenCount.value++;
-                console.log('are increasing:', whenCount)
                 atlantState.viewRendered = {}; // the only thing we can nullify.
 
                 return stream;
@@ -860,7 +853,6 @@ function Atlant(){
         state.lastWhen = errorStream
             .map( function(depValue) { 
                 resetRouteState();
-                console.log('whenId is:', whenId);
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
 
                 stream.error = true;
@@ -869,7 +861,6 @@ function Atlant(){
                 atlantState.viewRendered = {}; // the only thing we can nullify.
 
                 whenCount.value++;
-                console.log('are increasing:', whenCount)
                 return stream;
 
             })
@@ -915,7 +906,6 @@ function Atlant(){
             .map( function(upstream) { 
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
                 whenCount.value++;
-                console.log('are increasing:', whenCount)
                 stream.conditionId = ifId;
                 return stream;
             })
