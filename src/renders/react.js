@@ -92,8 +92,7 @@ var Render = function() {
                 var element = document.querySelector('#rootView');
                 React.unmountComponentAtNode(element);
 
-                console.log('this is a error')
-                // reject(e);
+                reject(e);
             }
 
         });
