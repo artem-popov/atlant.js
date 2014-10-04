@@ -248,7 +248,7 @@ function Atlant(){
                         if( ! renderState[viewName] ) { 
                             renderState[viewName] = scope;
                         } else if ( prefs.checkInjectsEquality && _.isEqual ( scope, renderState[viewName] )) {
-                            console.log('Atlant.js: Render cache enabled: no parameters changed skiping rendering of ', viewName)
+                            console.log('Atlant.js: Render cache enabled: no parameters changed. Skiping rendering of ', viewName)
                             whenRenderedSignal(upstream);
                             return;
                         } else {
@@ -426,12 +426,13 @@ function Atlant(){
                 var treatDep = s.compose(  clientFuncs.convertPromiseD
                                             ,s.baconTryD
                                             ,clientFuncs.applyScopeD
-                                        )( dep ) ;
+                                        )( dep );
                 
                 stream = stream 
                     .map(clientFuncs.createScope)
                     .flatMap(function(scope) { 
                         if (depCache.has(depName, scope)) {
+                            console.log('Atlant.js: Depends cache enabled: no parameters changed. Skipping accessing of dependation')
                             return Bacon.constant(depCache.get(depName, scope));
                         }
                         else { 
