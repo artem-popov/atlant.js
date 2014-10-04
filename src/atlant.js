@@ -91,7 +91,6 @@ function Atlant(){
     // Streams specific vars
         var dependViews = {}  // Set the views hirearchy. Both for streams and for render.
         ,renders = {}  // Each view has it's own item in "renders" ender which is a merge of renders into this view. OnValue will catch once for lastRender.view
- 		,lastRedirect
         ,viewReady = {}
 
     // Matching enum for when.
@@ -224,7 +223,7 @@ function Atlant(){
 
         // when render applyed, no more renders will be accepted for this .when and viewName
         var renderStopper = function(upstream) {
-            if ( atlantState.viewRendered[upstream.render.viewName] || atlantState.isRedirected ) { 
+            if ( atlantState.viewRendered[upstream.render.viewName] ) { 
                 whenRenderedSignal(upstream);
                 return false; 
             } else { 
@@ -260,16 +259,16 @@ function Atlant(){
                         // Choose appropriate render.
                         var render;
                         if (RenderOperation.redirect === upstream.render.renderOperation ){
-
-                            if ('function' === typeof viewProvider) 
+                            whenRenderedSignal(upstream);
+                            if ('function' === typeof viewProvider) {
                                 utils.goTo(viewProvider(scope))
-                            else 
+                            } else {
                                 utils.goTo(viewProvider)
+                            }
 
                             return;
                         } else if (RenderOperation.move === upstream.render.renderOperation){
 
-                            console.log('move in the country!')
                             if ('function' === typeof viewProvider) 
                                 window.location.assign(viewProvider(scope))
                             else 
@@ -297,16 +296,6 @@ function Atlant(){
                 });                
         };
 
-        var assignLastRedirect = function() {
-            if (!lastRedirect) return;
-            lastRedirect.onValue(function(upstream){
-                var redirectUrl = utils.interpolate(upstream.redirectUrl, upstream.params);
-                log('Redirecting!', redirectUrl);
-                atlantState.isRedirected = true;
-                utils.goTo(upstream.redirectUrl);
-            });
-        };
-
         return function() {
             if ( isRenderApplyed ) return;
 
@@ -315,7 +304,6 @@ function Atlant(){
                 s.map(assignRender, renders[viewName]);
             }
 
-            assignLastRedirect();
         };
     }();
 
@@ -520,7 +508,9 @@ function Atlant(){
 
     renderStreams.renderEndStream
         .onValue( function(upstreams){
+            console.log('nullifying on render ends!')
             renderStreams.nullifyScan.push('nullify');
+            console.log('----whenCount is....', whenCount);
 
             if (window) lastPath = utils.getLocation();
 
@@ -531,7 +521,6 @@ function Atlant(){
                     return onRenderEndStream.push(scopeMap);
                 })
                 .catch(function(e){
-                    console.log('we are here: the error')
                     errorStream.push(e);
                 })
         })
@@ -800,6 +789,7 @@ function Atlant(){
                 stream.otherwise = true;
                 stream.conditionId = whenId;
                 whenCount.value++;
+                console.log('---Matched otherwise!!!')
                 return stream; 
             })
 
@@ -835,6 +825,7 @@ function Atlant(){
 
                 whenCount.value++;
                 atlantState.viewRendered = {}; // the only thing we can nullify.
+                console.log('---Matched action!!!')
 
                 return stream;
             })
@@ -871,6 +862,7 @@ function Atlant(){
                 atlantState.viewRendered = {}; // the only thing we can nullify.
 
                 whenCount.value++;
+                console.log('---Matched error!!!')
                 return stream;
 
             })
@@ -916,6 +908,7 @@ function Atlant(){
             .map( function(upstream) { 
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
                 whenCount.value++;
+                console.log('---Matched if!!!')
                 stream.conditionId = ifId;
                 return stream;
             })

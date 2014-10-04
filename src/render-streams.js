@@ -15,7 +15,13 @@ module.exports = function(Counter, whenCount)  {
     var ups2 = new Upstream();
     var renderEndStream = whenRenderedStream
         .map( s.compose( ups.push, ups.clear ) )
+        .merge(nullifyScan)
         .scan([], function(oldVal, newVal) {  // Gathering the upstreams which come here.
+            if (newVal == 'nullify') {
+                oldVal = []
+                return oldVal
+            }
+
             oldVal.push(newVal); 
             return oldVal;
         })
@@ -43,6 +49,7 @@ module.exports = function(Counter, whenCount)  {
         })
         .filter(s.notEmpty) // Still this hash can be nullified, so stay aware.
         .changes()
+        .map(function(u){ console.log('checking whenCount', whenCount); return u})
         .filter( function(upstream) { return 0 === --whenCount.value; } ) // Here checking is there all whens are ended.
 
     return { 
