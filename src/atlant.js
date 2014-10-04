@@ -508,9 +508,7 @@ function Atlant(){
 
     renderStreams.renderEndStream
         .onValue( function(upstreams){
-            console.log('nullifying on render ends!')
             renderStreams.nullifyScan.push('nullify');
-            console.log('----whenCount is....', whenCount);
 
             if (window) lastPath = utils.getLocation();
 

@@ -49,7 +49,6 @@ module.exports = function(Counter, whenCount)  {
         })
         .filter(s.notEmpty) // Still this hash can be nullified, so stay aware.
         .changes()
-        .map(function(u){ console.log('checking whenCount', whenCount); return u})
         .filter( function(upstream) { return 0 === --whenCount.value; } ) // Here checking is there all whens are ended.
 
     return { 
