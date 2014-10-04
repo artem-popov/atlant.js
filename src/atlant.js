@@ -27,7 +27,6 @@ function Atlant(){
     var isRenderApplyed  // Is Render already set OnValue for renders
         ,params = [] // Route mask params parsed
         ,routes = []  // Routes collected
-        ,streams = {} // Streams collected
         ,renderNames = []
         ,viewNames = [];
 
@@ -203,21 +202,16 @@ function Atlant(){
        };
     }();
 
-    var streams = {}; 
-    var add = function(name, value) {
-        if (streams[name]) throw new Error('This stream is already defined!:', name);
-        state.lastName = name;
-        streams[name] = { name:name, stream: value }
-    }
-
     /* Helpers */
     var assignRenders = function(){
 
         var whenRenderedSignal = function( upstream ) {
+            console.log('whenrenderedsignal', upstream.render.viewName, upstream);
             // Signalling that view renders
             renderStreams.whenRenderedStream.push(upstream);
 
             if ( upstream.action ) {
+                console.log('hoho it is action')
                 prefs.render.on
                         .renderEnd('root')
             }
@@ -227,10 +221,6 @@ function Atlant(){
                 upstream.finallyStream.push(upstream);
             }
 
-            //only for angular-like
-            if (viewReady[upstream.render.viewName]) {
-                viewReady[upstream.render.viewName].push(upstream);
-            }
         };
 
         // when render applyed, no more renders will be accepted for this .when and viewName
@@ -267,7 +257,6 @@ function Atlant(){
                         }
 
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
-
 
                         // Choose appropriate render.
                         var render;
@@ -314,6 +303,7 @@ function Atlant(){
         return function() {
             if ( isRenderApplyed ) return;
 
+            console.log('there is whenCount:', whenCount.value)
             isRenderApplyed = true
             for(var viewName in renders) {
                 s.map(assignRender, renders[viewName]);
@@ -492,8 +482,6 @@ function Atlant(){
             state.lastDepName = depName;
             state.lastOp = state.lastDep;
 
-            add( depName, thisDep );
-
             State.print(depName, state);
             return this;
         };
@@ -533,9 +521,10 @@ function Atlant(){
                 .renderEnd('root')
                 .then(function(){
                     var scopeMap = s.map(clientFuncs.createScope, upstreams)
-                    onRenderEndStream.push(scopeMap);
+                    return onRenderEndStream.push(scopeMap);
                 })
                 .catch(function(e){
+                    console.log('we are here: the error')
                     errorStream.push(e);
                 })
         })
@@ -562,7 +551,10 @@ function Atlant(){
             if( 'undefined' !== typeof window && prefs.rootSelector )   {
                 prefs
                     .render.attach('root', prefs.rootSelector )
-                    .catch(function(e) { console.error(e.message, e.stack) })
+                    .catch(function(e) {
+                        console.error(e.message, e.stack); 
+                        errorStream.push(e);
+                    })
             }
         });
         
@@ -627,7 +619,6 @@ function Atlant(){
 
     var otherWiseRootStream = rootStream
         .filter( s.compose( s.empty, s.flip(matchRoutes)(Matching.stop, routes), s.dot('path') ) )
-        .map( function(upstream) { whenCount.value++; return upstream; })
         .map( s.logIt('Otherwise is in work.') );
 
  
@@ -695,6 +686,8 @@ function Atlant(){
                         upstream.isFinally = false; 
                         upstream.isMatch = WhenFinally.match === whenType;
                         upstream.finallyStream = finallyStream;
+                        whenCount.value++;
+                        console.log('are increasing:', whenCount)
                         var depData = {location: upstream.path, mask: upstream.route.mask};
                         var stream = injectsGrabber.add(name, depData, injects, upstream);
                         return stream; 
@@ -729,6 +722,8 @@ function Atlant(){
                         var stream = injectsGrabber.add(name, depData, injects, {});
                         stream.isFinally = true;
                         stream.whenId = whenId;
+                        whenCount.value++;
+                        console.log('are increasing:', whenCount)
                         stream.route = { whenNot: masks };
                         return stream;
                     })
@@ -745,7 +740,8 @@ function Atlant(){
                     }
                 });
 
-            whenCounter.add(state.lastWhen, whenCount);
+                
+            // whenCounter.add(state.lastWhen, whenCount);
 
             state.lastIf = void 0;
             state.lastDep = void 0;
@@ -786,7 +782,7 @@ function Atlant(){
         return when.bind(this)( '', Matching.continue, WhenFinally.finally );
     }
 
-    var _otherwise = function(){
+    var _otherwise = function(){ //@TODO create mixins for this
         State.first();
 
         var whenId = _.uniqueId(); 
@@ -798,6 +794,8 @@ function Atlant(){
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
                 stream.otherwise = true;
                 stream.conditionId = whenId;
+                whenCount.value++;
+                console.log('are increasing:', whenCount)
                 return stream; 
             })
 
@@ -807,7 +805,7 @@ function Atlant(){
         state.lastOp = state.lastWhen;
         state.lastConditionId = whenId; 
 
-        whenCounter.add(state.lastOp, state);
+        // whenCounter.add(state.lastOp, whenCount);
 
         State.print('___Otherwise:', state);
 
@@ -826,16 +824,19 @@ function Atlant(){
         state.lastWhen = action
             .map( function(depValue) { 
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
+                resetRouteState();
 
                 stream.action = true;
                 stream.conditionId = whenId;
 
+                whenCount.value++;
+                console.log('are increasing:', whenCount)
                 atlantState.viewRendered = {}; // the only thing we can nullify.
 
                 return stream;
             })
 
-        whenCounter.add(state.lastWhen, whenCount);
+        // whenCounter.add(state.lastWhen, whenCount);
 
         state.lastIf = void 0;
         state.lastDep = void 0;
@@ -852,24 +853,37 @@ function Atlant(){
     var _error = function(){
         State.first();
 
-        var errorId = _.uniqueId(); 
+        var whenId = _.uniqueId(); 
+        var depName = 'error_' + _.uniqueId();
+        var injects = injectsGrabber.init(depName, state);
+
         state.lastWhen = errorStream
-            .map( function(stream) { 
+            .map( function(depValue) { 
                 resetRouteState();
-                console.log('errorId is:', errorId);
-                stream.conditionId = errorId;
+                console.log('whenId is:', whenId);
+                var stream = injectsGrabber.add(depName, depValue, injects, {})
+
+                stream.error = true;
+                stream.conditionId = whenId;
+
+                atlantState.viewRendered = {}; // the only thing we can nullify.
+
+                whenCount.value++;
+                console.log('are increasing:', whenCount)
                 return stream;
+
             })
             .map(s.logIt('error stream'))
 
+        // whenCounter.add(state.lastWhen, whenCount);
+
         state.lastIf = void 0;
         state.lastDep = void 0;
-        state.lastDepName = void 0;
+        state.lastDepName = depName;
         state.lastOp = state.lastWhen;
-        state.lastConditionId = errorId; 
+        state.lastConditionId = whenId; 
 
         State.print('__error:', state);
-
 
         return this;
     };
@@ -900,6 +914,8 @@ function Atlant(){
             .map( ups.pop )
             .map( function(upstream) { 
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
+                whenCount.value++;
+                console.log('are increasing:', whenCount)
                 stream.conditionId = ifId;
                 return stream;
             })
@@ -908,8 +924,6 @@ function Atlant(){
         state.lastIf = thisIf; 
         state.lastOp = state.lastIf;
         state.lastConditionId = ifId;
-
-        add( 'if_' + ifId, state.lastIf );
 
         State.print('_if__After:', state);
 
@@ -1038,8 +1052,6 @@ function Atlant(){
                     console.error(e.message, e.stack)
                 }
             }.bind(this));
-
-        add( 'do_' + doId, thisDo );
 
         state.lastOp = thisDo;
         State.print('_do__After:', state);

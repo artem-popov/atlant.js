@@ -84,7 +84,17 @@ var Render = function() {
 
             if ( !root ) { throw new Error('AtlantJs: Please use .render(component, "' + name + '") to render something') }
 
-            React.renderComponent(root, element, resolve );
+            try{
+                React.renderComponent(root, element, resolve );
+            } catch(e) {
+                console.error(e.message, e.stack)
+
+                var element = document.querySelector('#rootView');
+                React.unmountComponentAtNode(element);
+
+                console.log('this is a error')
+                // reject(e);
+            }
 
         });
 
@@ -117,29 +127,39 @@ var Render = function() {
         }
     })
 
-    this.on = { renderEnd: function(name) {
-        return new Promise( function( resolve, reject) {
-            var instance = state.getThis(name);
-            try {
-                if (instance) { 
-                    console.time('forcing update of root')
-                    instance.forceUpdate(s.compose( console.timeEnd.bind(console, 'forcing update of root'), resolve));
-                } else {
-                    resolve();
-                }
-            } catch(e) { 
-                console.error(e.message, e.stack)
-                reject({error:e});
-                // trying to restore...
-                state.set(name, React.DOM.div(null)); 
-                try{
-                    instance.forceUpdate(resolve);
-                } catch(e){
+    this.on = { 
+        renderEnd: function(name) {
+            return new Promise( function( resolve, reject) {
+                var instance = state.getThis(name);
+                try {
+                    if (instance) { 
+                        console.time('forcing update of root')
+                        instance.forceUpdate(s.compose( console.timeEnd.bind(console, 'forcing update of root'), resolve));
+                    } else {
+                        resolve();
+                    }
+                } catch(e) { 
                     console.error(e.message, e.stack)
+                    reject({error:e});
+
+                    var element = document.querySelector('#rootView');
+                    React.unmountComponentAtNode(element);
                 }
+            })
+        }
+        ,error:function(){
+            // trying to restore...
+            try{
+                console.log('React:', React)
+                // React.renderComponent(React.DOM.div('Hey! Error in the city!'), element, function(){console.log('view restored!')} );
+                //instance.forceUpdate(resolve);
+            } catch(e){
+                console.error(e.message, e.stack)
             }
-        })
-    }} 
+        }
+    }
+
+    window.render = this.on.renderEnd;
 
 }
 
