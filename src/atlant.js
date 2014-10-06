@@ -208,17 +208,11 @@ function Atlant(){
         var whenRenderedSignal = function( upstream ) {
             // Signalling that view renders
             renderStreams.whenRenderedStream.push(upstream);
-
-            if ( upstream.action ) {
-                prefs.render.on
-                        .renderEnd('root')
-            }
-
+            
             // signal for finally construct
             if ( !upstream.isFinally && upstream.finallyStream) {
                 upstream.finallyStream.push(upstream);
             }
-
         };
 
         // when render applyed, no more renders will be accepted for this .when and viewName
@@ -244,14 +238,14 @@ function Atlant(){
                         var viewName = s.dot('.render.viewName', upstream);
 
                         // If the data is not changed then there is no any point to redraw.
-                        if( ! renderState[viewName] ) { 
-                            renderState[viewName] = scope;
-                        } else if ( prefs.checkInjectsEquality && _.isEqual ( scope, renderState[viewName] )) {
+                        if( ! renderState[upstream.render.renderId] ) { 
+                            renderState[upstream.render.renderId] = scope;
+                        } else if ( false  && prefs.checkInjectsEquality && _.isEqual ( scope, renderState[upstream.render.renderId] )) {
                             console.log('Atlant.js: Render cache enabled: no parameters changed. Skiping rendering of ', viewName)
                             whenRenderedSignal(upstream);
                             return;
                         } else {
-                            renderState[viewName] = scope;
+                            renderState[upstream.render.renderId] = scope;
                         }
 
                         var viewProvider = s.dot('.render.renderProvider', upstream); 
@@ -259,12 +253,13 @@ function Atlant(){
                         // Choose appropriate render.
                         var render;
                         if (RenderOperation.redirect === upstream.render.renderOperation ){
-                            whenRenderedSignal(upstream);
                             if ('function' === typeof viewProvider) {
-                                utils.goTo(viewProvider(scope))
+                                upstream.doLater = function(){utils.goTo(viewProvider(scope))}
                             } else {
-                                utils.goTo(viewProvider)
+                                upstream.doLater = function(){utils.goTo(viewProvider)}
                             }
+
+                            whenRenderedSignal(upstream);
 
                             return;
                         } else if (RenderOperation.move === upstream.render.renderOperation){
@@ -512,15 +507,32 @@ function Atlant(){
 
             if (window) lastPath = utils.getLocation();
 
-            prefs.render.on
-                .renderEnd('root')
-                .then(function(){
-                    var scopeMap = s.map(clientFuncs.createScope, upstreams)
-                    return onRenderEndStream.push(scopeMap);
-                })
-                .catch(function(e){
-                    errorStream.push(e);
-                })
+            var redirect = [];
+            s.map(function(upstream){ 
+                if(upstream.doLater) {
+                    redirect.push(upstream.doLater);   
+                } 
+            }, upstreams);
+
+           redirect
+               .filter(function(x){return x}) 
+
+            if(!redirect.length) {
+                prefs.render.on
+                    .renderEnd('root')
+                    .then(function(){
+                        var scopeMap = s.map(clientFuncs.createScope, upstreams)
+                        return onRenderEndStream.push(scopeMap);
+                    })
+                    .catch(function(e){
+                        errorStream.push(e);
+                    })
+            } else {
+                var scopeMap = s.map(clientFuncs.createScope, upstreams)
+                onRenderEndStream.push(scopeMap);
+                setTimeout(redirect[0]);
+            }
+            return upstreams;
         })
 
     var renderBeginStream = new Bacon.Bus();
@@ -540,8 +552,6 @@ function Atlant(){
     var firstRender = renderStreams.renderEndStream 
         .take(1)
         .onValue(function(value) { // value contains all rendered upstreams. 
-
-
             if( 'undefined' !== typeof window && prefs.rootSelector )   {
                 prefs
                     .render.attach('root', prefs.rootSelector )

@@ -10,6 +10,7 @@ var utils = function() {
          * @returns {*}
          */
         goTo: function(url) {
+            console.log('someone asked for redirect', url)
             history.pushState(null, null, url);
         }
         /**
