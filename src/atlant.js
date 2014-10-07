@@ -414,7 +414,7 @@ function Atlant(){
                 stream = stream 
                     .map(clientFuncs.createScope)
                     .flatMap(function(scope) { 
-                        if (depCache.has(depName, scope)) {
+                        if (false && depCache.has(depName, scope)) {
                             console.log('Atlant.js: Depends cache enabled: no parameters changed. Skipping accessing of dependation')
                             return Bacon.constant(depCache.get(depName, scope));
                         }
