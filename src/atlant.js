@@ -691,7 +691,8 @@ function Atlant(){
                         upstream.isMatch = WhenFinally.match === whenType;
                         upstream.finallyStream = finallyStream;
                         whenCount.value++;
-                        var depData = {location: upstream.path, mask: upstream.route.mask};
+                        var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
+                        var depData = s.merge( params, {location: upstream.path, mask: upstream.route.mask} );
                         var stream = injectsGrabber.add(name, depData, injects, upstream);
                         return stream; 
                     })
@@ -747,7 +748,7 @@ function Atlant(){
 
             state.lastIf = void 0;
             state.lastDep = void 0;
-            state.lastDepName = void 0;
+            state.lastDepName = name;
             state.lastOp = state.lastWhen;
             state.lastConditionId = whenId;
 
