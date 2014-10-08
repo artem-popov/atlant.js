@@ -95,6 +95,9 @@ utils.attachGuardToLinks = function() {
 
         if ( event instanceof KeyboardEvent && 13 !== event.keyCode) return;
 
+        var linkProps = element.getAttribute('data-atlant');
+        if (linkProps && 'ignore' === linkProps) return;
+
         // In case of it is the same link with hash - do not involve the atlant, just scroll to id. 
         // @TODO? don't prevent default and understand that route not changed at routeChanged state?
         if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {
