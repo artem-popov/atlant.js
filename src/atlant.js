@@ -586,7 +586,7 @@ function Atlant(){
             return current;
         })
         .filter(function(upstream) { return upstream && upstream.hasOwnProperty('published') })
-        .filter(function(upstream) { return !stateR.isRendering } ) // Do not allow routeChangedStream propagation if already rendering.
+        .filter(function(upstream) { if (stateR.isRendering) console.log('Canceling route change: already rendering.'); return !stateR.isRendering } ) // Do not allow routeChangedStream propagation if already rendering.
         .map(function(upstream){ 
             return upstream && upstream.path ? upstream : { path: utils.getLocation() };
         })
