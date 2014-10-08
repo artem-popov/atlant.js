@@ -79,7 +79,10 @@ atlant.when( routes ) // adds leaf with route mask
 ```
 "routes" are conditional like '/faq || /about', the "&&" and brackets not yet supported.
 
+### Flow
 
+Atlant watches when you touch links and manages them. 
+use a attribute data-atlant="ignore" to skip this.
 
 ### atlant.onRenderEnd(callback)
 works out when route fully rendered.
