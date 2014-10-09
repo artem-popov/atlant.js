@@ -20,6 +20,9 @@ function Atlant(){
         ,_ = require('lodash')
         ,interfaces = require('./inc/interfaces');
 
+    var safeGoToCopy = utils.goTo;
+    utils.goTo = safeGoToCopy.bind(utils, false);
+
     var depCache = new DepCache();
     //    ,State = require('./state.js')
 
@@ -1160,6 +1163,11 @@ function Atlant(){
         return this;
     }
 
+    var _await = function(shouldAWait) {
+        utils.goTo = safeGoToCopy.bind(utils, shouldAWait);
+        return this;
+    }
+
     var _view = function(name) {
         return prefs.render.get(name);
     }
@@ -1214,6 +1222,8 @@ function Atlant(){
     // Soft atlant-inside redirect.
     this.redirect =  _redirect;
     // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
+    this.await = _await;
+
     this.move = _move;
     this.skip =  _skip;
     this.publish =  _publish;

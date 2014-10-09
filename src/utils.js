@@ -80,6 +80,31 @@ var utils = function() {
     };
 }();
 
+utils.isIE = function()
+{
+    var isIE11 = navigator.userAgent.indexOf(".NET CLR") > -1;      
+    var isIE11orLess = isIE11 || navigator.appVersion.indexOf("MSIE") != -1;
+    return isIE11orLess;
+}
+
+/**
+ * Redirect to the other path using $location
+ * @param upstream
+ * @returns {*}
+ */
+utils.goTo = function(awaitLoad, url) {
+
+    if(!awaitLoad) {
+        if (utils.isIE()) {
+          window.document.execCommand('Stop');
+        } else {
+          window.stop();
+        }
+    }
+
+    history.pushState(null, null, url);
+}
+
 utils.attachGuardToLinks = function() {
     
     var linkDefender = function(event){
@@ -120,5 +145,6 @@ utils.attachGuardToLinks = function() {
     document.addEventListener('click', linkDefender );
     document.addEventListener('keydown', linkDefender );
 }
+
 
 module.exports = utils;
