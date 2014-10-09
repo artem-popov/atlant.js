@@ -102,7 +102,7 @@ utils.goTo = function(awaitLoad, url) {
         }
     }
 
-    history.pushState(null, null, url);
+    setTimeout( history.pushState.bind(this, null, null, url), 0);
 }
 
 utils.attachGuardToLinks = function() {
