@@ -1172,6 +1172,17 @@ function Atlant(){
         return prefs.render.get(name);
     }
 
+    var _redirectTo = function(url) {
+        return utils.goTo(url)
+    }
+
+    var _moveTo = function(url) {
+        if( 'undefined' !== typeof window) 
+            return window.location.assign(url)
+        else
+            console.error('Atlant.js: no window object...')
+    }
+
     // Set view active by defauilt (no need to mention in second parameter of .render
     this.set = _set;
     // Roolback previous set
@@ -1221,6 +1232,7 @@ function Atlant(){
     this.clear =  _clear;
     // Soft atlant-inside redirect.
     this.redirect =  _redirect;
+    this.go =  _redirect;
     // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
     this.await = _await;
 
@@ -1238,6 +1250,10 @@ function Atlant(){
     this.version = require('AtlantVersion');
     this.build = require('AtlantBuild');
     this.revision = require('AtlantRevision');
+
+    this.goTo = _redirectTo;
+    this.redirectTo = _redirectTo;
+    this.moveTo = _moveTo;
 
     return this;
 
