@@ -540,18 +540,6 @@ function Atlant(){
 
     var renderBeginStream = new Bacon.Bus();
 
-    var stateR = { isRendering: false }; // Show state of rendering 
-
-    /* Update state of rendering */
-    renderStreams.renderEndStream
-        .map( function() { return false; } ) 
-        .merge(renderBeginStream.map( function() { return true }))
-        .scan(false, function(oldVal, newVal){
-            stateR.isRendering = newVal;
-            return newVal; 
-        })
-        .onValue();
-
     var firstRender = renderStreams.renderEndStream 
         .take(1)
         .onValue(function(value) { // value contains all rendered upstreams. 
@@ -589,7 +577,6 @@ function Atlant(){
             return current;
         })
         .filter(function(upstream) { return upstream && upstream.hasOwnProperty('published') })
-        .filter(function(upstream) { if (stateR.isRendering) console.log('Canceling route change: already rendering.'); return !stateR.isRendering } ) // Do not allow routeChangedStream propagation if already rendering.
         .map(function(upstream){ 
             return upstream && upstream.path ? upstream : { path: utils.getLocation() };
         })
