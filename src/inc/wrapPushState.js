@@ -19,7 +19,7 @@ var wrapPushState = function(window){
 
     window.history.pushState = function(state, title, url) {
         var newState;
-        var onpushstate = new CustomEvent('pushstate', { detail: { state: state, title: title, url: url } } );
+        var onpushstate = new CustomEvent('pushstate', { detail: { state: {referrer: window.location.pathname}, title: title, url: url } } );
         window.dispatchEvent(onpushstate);
 
         return tryState(arguments);

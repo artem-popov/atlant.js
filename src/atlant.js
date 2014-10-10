@@ -563,7 +563,11 @@ function Atlant(){
                     var path = ( parsed ) ?  parsed.pathname + '?' + parsed.search :  utils.getLocation();
                     if (path !== lastPath) {
                         lastPath = path;
-                        sink( { path: path } ); 
+                        var referrer = (event.detail && event.detail.state ) ? event.detail.state.referrer : void 0;
+                        sink({ 
+                            path: path 
+                            ,referrer: referrer
+                        }); 
                     } 
                 };
                 window.addEventListener( 'popstate', routeChanged );
@@ -578,7 +582,14 @@ function Atlant(){
         })
         .filter(function(upstream) { return upstream && upstream.hasOwnProperty('published') })
         .map(function(upstream){ 
-            return upstream && upstream.path ? upstream : { path: utils.getLocation() };
+            if ( upstream.path ) {
+                return upstream;
+            } else {
+                return { 
+                    path: utils.getLocation()
+                    ,referrer: utils.getReferrer()
+                }
+            }
         })
         .filter( s.compose( s.empty, s.flip(matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
         .map(function(upstream) { // Nil values.
@@ -682,7 +693,7 @@ function Atlant(){
                         upstream.finallyStream = finallyStream;
                         whenCount.value++;
                         var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
-                        var depData = s.merge( params, {location: upstream.path, mask: upstream.route.mask} );
+                        var depData = s.merge( params, {location: upstream.path, mask: upstream.route.mask, referrer: upstream.referrer} );
                         var stream = injectsGrabber.add(name, depData, injects, upstream);
                         return stream; 
                     })
@@ -712,7 +723,7 @@ function Atlant(){
                     .filter( function(x) { return x === 'orly'; } )
                     .map(ups.join(void 0, void 0))
                     .map(function(upstream) {
-                        var depData = {location: upstream.path, mask: void 0};
+                        var depData = {location: upstream.path, mask: void 0, referrer: upstream.referrer};
                         var stream = injectsGrabber.add(name, depData, injects, {});
                         stream.isFinally = true;
                         stream.whenId = whenId;

@@ -77,6 +77,13 @@ var utils = function() {
                 ,hashes: matches[17] || ''
             };
         }
+        ,getReferrer: function(){
+            if( 'undefined' !== typeof window) {
+                if (!window.document.referrer) return void 0;
+                else return "/" + window.document.referrer.split('/').slice(3).join('/');
+            }
+            return void 0;
+        }
     };
 }();
 
