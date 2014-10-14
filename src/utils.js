@@ -10,7 +10,11 @@ var utils = function() {
          * @returns {*}
          */
         goTo: function(url) {
-            history.pushState(null, null, url);
+            if ('undefined' !== typeof window) {
+                if ( (window.location.origin + url) !== window.location.href) {
+                    window.history.pushState(null, null, url);
+                }
+            }
         }
         /**
          * @returns interpolation of the redirect path with the parametrs
@@ -129,6 +133,11 @@ utils.attachGuardToLinks = function() {
 
         var linkProps = element.getAttribute('data-atlant');
         if (linkProps && 'ignore' === linkProps) return;
+
+        if ( (window.location.origin + loc ) === window.location.href) {
+            event.preventDefault();
+            return;
+        } 
 
         // In case of it is the same link with hash - do not involve the atlant, just scroll to id. 
         // @TODO? don't prevent default and understand that route not changed at routeChanged state?
