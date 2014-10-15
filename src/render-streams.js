@@ -9,6 +9,7 @@ module.exports = function(Counter, whenCount)  {
 
     var whenRenderedStream = new Bacon.Bus(); // Stream for finishing purposes
     var nullifyScan = new Bacon.Bus();
+    var taskRendered = new Bacon.Bus();
 
     /* Counting all renders of all whens. When zero => everything is rendered. */
     var ups = new Upstream();
@@ -50,10 +51,12 @@ module.exports = function(Counter, whenCount)  {
         .filter(s.notEmpty) // Still this hash can be nullified, so stay aware.
         .changes()
         .filter( function(upstream) { return 0 === --whenCount.value; } ) // Here checking is there all whens are ended.
+        .merge(taskRendered);
 
     return { 
         renderEndStream: renderEndStream 
         ,whenRenderedStream: whenRenderedStream  
         ,nullifyScan: nullifyScan 
+        ,taskRendered: taskRendered
     }
 }

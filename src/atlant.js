@@ -210,8 +210,11 @@ function Atlant(){
 
         var whenRenderedSignal = function( upstream ) {
             // Signalling that view renders
-            renderStreams.whenRenderedStream.push(upstream);
-            
+            if (upstream.isTask)
+                renderStreams.taskRendered.push(upstream); 
+            else 
+                renderStreams.whenRenderedStream.push(upstream);
+
             // signal for finally construct
             if ( !upstream.isFinally && upstream.finallyStream) {
                 upstream.finallyStream.push(upstream);
@@ -817,7 +820,7 @@ function Atlant(){
 
     };
 
-    var _action = function(action){
+    var _action = function(action, isTask){
         State.first();
 
         if(!action) throw new Error('Atlant.js: action stream is not provided!')
@@ -832,8 +835,9 @@ function Atlant(){
 
                 stream.action = true;
                 stream.conditionId = whenId;
+                stream.isTask = isTask;
 
-                whenCount.value++;
+                if ( !isTask ) whenCount.value++;
                 atlantState.viewRendered = {}; // the only thing we can nullify.
                 console.log('---Matched action!!!')
 
@@ -976,7 +980,7 @@ function Atlant(){
      * @param viewName - directive name which will be used to inject template
      * @returns {*}
      */
-    var render = function(renderProvider, viewName, renderOperation){
+    var _render = function(renderProvider, viewName, renderOperation){
 
             if ( ! state.lastOp ) throw new Error('"render" should nest something');
             
@@ -1012,21 +1016,6 @@ function Atlant(){
             return this;
     };
 
-    var _render = function(renderProvider, viewName) {
-        return render.bind(this)(renderProvider, viewName, RenderOperation.render);
-    }
-
-    var _clear = function(viewName) {
-        return render.bind(this)(function(){}, viewName, RenderOperation.clear);
-    }
-
-    var _redirect = function(redirectProvider) {
-        return render.bind(this)(redirectProvider, void 0, RenderOperation.redirect);
-    }
-     
-    var _move = function(redirectProvider) {
-        return render.bind(this)(redirectProvider, void 0, RenderOperation.move);
-    }
 
     var _check = function(isCheck) {
         if ( 'undefined' === typeof isCheck)
@@ -1133,7 +1122,7 @@ function Atlant(){
     var _use = function(render) {
         s.type(render, 'function');
         //@TODO: check render for internal structure
-        if (prefs.render) throw new Error('You should specify render only once.'); 
+        if (prefs.render) throw new Error('You can specify render only once.'); 
 
         prefs.render = new render();
         return this;
@@ -1199,6 +1188,8 @@ function Atlant(){
     this.error = _error;
     // Creates custom stream which accepts Bacon stream
     this.action = _action;
+    // Creates custom stream which accepts Bacon stream. The difference with action is that this task will be performed immediatelly without waiting of other tasks to execute.
+    this.task = function(action) { return _action.call(this, action, true); }
     // creates branch which can destruct all what declared by .when() or .match()
     this.finally =  _finally;
     this.depends =  _depends;
@@ -1223,18 +1214,21 @@ function Atlant(){
      * Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
      */
     this.log =  _log;
-    /* Renders the view. first - render provider, second - view name */
-    this.render =  _render;
     /* If true then view will be re-rendered only when injects are changed. Accepts boolean. Default true */
     this.check = _check;
-    this.clear =  _clear;
-    // Soft atlant-inside redirect.
-    this.redirect =  _redirect;
-    this.go =  _redirect;
-    // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
+    /* wait or not for resources loading when going to next route when link tapped */
     this.await = _await;
 
-    this.move = _move;
+    /* Renders the view. first - render provider, second - view name */
+    this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, RenderOperation.render);}
+    /* clears provided viewName */
+    this.clear = function(viewName) {return _render.bind(this)(function(){}, viewName, RenderOperation.clear);}
+    // Soft atlant-inside redirect.
+    this.redirect = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.redirect);}
+    this.go =  this.redirect;
+    // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
+    this.move = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.move);}
+
     this.skip =  _skip;
     this.publish =  _publish;
     this.renders =  { react :  reactRender, simple :  simpleRender };
