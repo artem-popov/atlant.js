@@ -10,6 +10,17 @@ module.exports = function(Counter, whenCount)  {
     var whenRenderedStream = new Bacon.Bus(); // Stream for finishing purposes
     var nullifyScan = new Bacon.Bus();
     var taskRendered = new Bacon.Bus();
+        // .merge(nullifyScan)
+        // .scan([], function(oldVal, newVal) {  // Gathering the upstreams which come here.
+        //     if (newVal == 'nullify') {
+        //         oldVal = []
+        //         return oldVal
+        //     }
+        //
+        //     oldVal.push(newVal); 
+        //     return oldVal;
+        // })
+        // .changes();
 
     /* Counting all renders of all whens. When zero => everything is rendered. */
     var ups = new Upstream();

@@ -602,6 +602,7 @@ function Atlant(){
         })
         .map(function(upstream){
             console.log('---The location is:', upstream.path);
+            lastPath = upstream.path; // in the case of first load - in that case we come here not from sink, so the lastPath is still undefined!
             return upstream
         });
 
