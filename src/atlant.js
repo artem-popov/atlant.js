@@ -55,10 +55,6 @@ function Atlant(){
     // var log = s.nop;
     var log = console.log.bind(console, '--');
 
-    var state
-        ,states
-        ,oldStates = [];
-
     //Action should be performed at route change.
     var onRouteChange = function() {
     }
@@ -67,30 +63,38 @@ function Atlant(){
         _.extend( this, {lastWhen: void 0, lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0} );
         _.merge( this, state );
     };
-    var State = function(){
-        return {
-            first: function(){
-                states = [];
-                state = new StateType();
-                states.push(state);
-            },
-            divide: function() {
-                state = new StateType(state);
-                state.lastDep = void 0;
+    var StateClass = function(){
+        var states;
 
-                states.push(state);
-            },
-            rollback: function() {
-                var oldState = states.pop();
-                oldStates.push(oldState);
-                state = states[states.length-1];
-            },
-            print: function(message, state) {
-                //log(message, JSON.stringify([ 'W:',state.lastWhen, "I:",state.lastIf, 'D:',state.lastDep, 'O:',state.lastOp ]));
-            }
+        this.state = void 0;
+
+        this.first = function(){
+            states = [];
+            this.state = new StateType();
+            states.push(this.state);
         }
-    }();
 
+        this.divide = function() {
+            this.state = new StateType(this.state);
+            this.state.lastDep = void 0;
+
+            states.push(this.state);
+        }
+
+        this.rollback = function() {
+            states.pop();
+            this.state = states[states.length-1];
+        }
+
+        this.print = function(message, state) {
+            //log(message, JSON.stringify([ 'W:',state.lastWhen, "I:",state.lastIf, 'D:',state.lastDep, 'O:',state.lastOp ]));
+        }
+
+        return this;
+    };
+    
+    var State = new StateClass();
+    var TopState = new StateClass();
 
     // Streams specific vars
         var dependViews = {}  // Set the views hirearchy. Both for streams and for render.
@@ -406,7 +410,7 @@ function Atlant(){
         var createDepStream = function(stream, depName, dep, injects) {
             var ups = new Upstream();
 
-            var nameContainer = dependsName.init(depName, state);
+            var nameContainer = dependsName.init(depName, State.state);
 
             var stream = stream
                 .map( dependsName.add.bind(dependsName, depName, void 0, nameContainer) )
@@ -460,44 +464,56 @@ function Atlant(){
         });
 
         return function(dependency, dependsBehaviour ) {
-            if ( ! state.lastWhen ) throw new Error('"depends" should nest "when"');
+            if ( ! State.state.lastWhen ) throw new Error('"depends" should nest "when"');
 
             var prefix = (dependsBehaviour === Depends.continue) ? '_and_' : '_';
-            var depName = (state.lastDepName ? state.lastDepName + prefix : 'depend_') + _.uniqueId();
+            var depName = (State.state.lastDepName ? State.state.lastDepName + prefix : 'depend_') + _.uniqueId();
 
-            var lastOp = state.lastOp;
+            var lastOp = State.state.lastOp;
             if (dependsBehaviour === Depends.parallel) {
-                lastOp = state.lastIf || state.lastWhen;
+                lastOp = State.state.lastIf || State.state.lastWhen;
             }
 
              
-            injectsGrabber.init(depName, state);
+            injectsGrabber.init(depName, State.state);
 
-            var thisDep = createDepStream(lastOp, depName, dependency, state.lastInjects )
+            var thisDep = createDepStream(lastOp, depName, dependency, State.state.lastInjects )
 
-            if( dependsBehaviour === Depends.parallel && state.lastDep) { // if deps was before then we need to zip all of them to be arrived simultaneously
-                thisDep = state.lastDep.zip( thisDep, zippersJoin( state.lastDepName, depName ) );
+            if( dependsBehaviour === Depends.parallel && State.state.lastDep) { // if deps was before then we need to zip all of them to be arrived simultaneously
+                thisDep = State.state.lastDep.zip( thisDep, zippersJoin( State.state.lastDepName, depName ) );
             }
 
-            state.lastDep = thisDep;
-            state.lastDepName = depName;
-            state.lastOp = state.lastDep;
+            State.state.lastDep = thisDep;
+            State.state.lastDepName = depName;
+            State.state.lastOp = State.state.lastDep;
 
-            State.print(depName, state);
+            State.print(depName, State.state);
             return this;
         };
     }();
 
     var _name = function(name) {
-        dependsName.tailFill(name, state);            
+        dependsName.tailFill(name, State.state);            
         return this
     }
     
-    var _transferDepends = function(name) {
+    var _transferDepends = function(depends) {
+        var depends = [] || [].concat(depends);
+        
+        if (void 0 !== TopState.state.lastTransfers) throw new Error('Atlant.js: You forgot the .to()!')
+
+        TopState.state.lastTransfers = {};
+        TopState.state.lastTransfer = depends;
+        
         return this
     }
 
     var _to = function(name) {
+        if (void 0 === TopState.state.lastTransfers) throw new Error('Atlant.js: You forgot the .transferDepends() before .to()!')
+        
+        TopState.state.lastTransfers[name] = TopState.state.lastTransfer;
+        TopState.state.lastTransfers = void 0;
+
         return this
     }
 
@@ -668,6 +684,7 @@ function Atlant(){
 
             if ( 0 === masks.length || 1 === masks.length && '' === masks[0] ) throw new Error('At least one route mask should be specified.');
             State.first();
+            TopState.first();
 
             var name = '';
             if (whenType === WhenFinally.finally) name = 'finally';
@@ -680,7 +697,7 @@ function Atlant(){
             var finallyStream = ( WhenFinally.finally !== whenType ) ? new Bacon.Bus() : lastFinallyStream;
 
             // Allows attaching injects to .when().
-            var injects = injectsGrabber.init(name, state);
+            var injects = injectsGrabber.init(name, State.state);
 
             masks.forEach(function(mask) {
                 s.push(utils.getPossiblePath(mask), additionalMasks);
@@ -695,7 +712,7 @@ function Atlant(){
             if ( WhenFinally.when === whenType || WhenFinally.match === whenType ) {
                 lastFinallyStream = finallyStream;
 
-                state.lastWhen = rootStream
+                State.state.lastWhen = rootStream
                     .map(ups.fmap(_.extend))
                     .map( function(upstream) {
                         return masks
@@ -722,7 +739,7 @@ function Atlant(){
             } else {
                 lastFinallyStream = void 0;
                 
-                state.lastWhen = rootStream
+                State.state.lastWhen = rootStream
                     .map(ups.fmap(_.extend))
                     .map( function(upstream) {
                         var result = masks
@@ -755,9 +772,9 @@ function Atlant(){
                     })
             }
 
-            state.lastWhen = state.lastWhen.map( function(stream) { stream.conditionId = whenId; return stream; })
+            State.state.lastWhen = State.state.lastWhen.map( function(stream) { stream.conditionId = whenId; return stream; })
 
-            state.lastWhen
+            State.state.lastWhen
                 .onValue( function(upstream) {
                     console.log('----Matched route!', upstream);
                     if( upstream.redirectTo) {  // If the route is a "bad clone", then redirecting.
@@ -767,15 +784,15 @@ function Atlant(){
                 });
 
                 
-            // whenCounter.add(state.lastWhen, whenCount);
+            // whenCounter.add(State.state.lastWhen, whenCount);
 
-            state.lastIf = void 0;
-            state.lastDep = void 0;
-            state.lastDepName = name;
-            state.lastOp = state.lastWhen;
-            state.lastConditionId = whenId;
+            State.state.lastIf = void 0;
+            State.state.lastDep = void 0;
+            State.state.lastDepName = name;
+            State.state.lastOp = State.state.lastWhen;
+            State.state.lastConditionId = whenId;
 
-            State.print('___When:'+JSON.stringify(masks), state);
+            State.print('___When:'+JSON.stringify(masks), State.state);
 
 
             return this;
@@ -810,12 +827,13 @@ function Atlant(){
 
     var _otherwise = function(){ //@TODO create mixins for this
         State.first();
+        TopState.first();
 
         var whenId = _.uniqueId(); 
         var depName = 'otherwise_' + _.uniqueId();
-        var injects = injectsGrabber.init(depName, state);
+        var injects = injectsGrabber.init(depName, State.state);
 
-        state.lastWhen = otherWiseRootStream
+        State.state.lastWhen = otherWiseRootStream
             .map( function(depValue) { 
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
                 stream.otherwise = true;
@@ -825,15 +843,15 @@ function Atlant(){
                 return stream; 
             })
 
-        state.lastIf = void 0;
-        state.lastDep = void 0;
-        state.lastDepName = void 0;
-        state.lastOp = state.lastWhen;
-        state.lastConditionId = whenId; 
+        State.state.lastIf = void 0;
+        State.state.lastDep = void 0;
+        State.state.lastDepName = void 0;
+        State.state.lastOp = State.state.lastWhen;
+        State.state.lastConditionId = whenId; 
 
-        // whenCounter.add(state.lastOp, whenCount);
+        // whenCounter.add(State.state.lastOp, whenCount);
 
-        State.print('___Otherwise:', state);
+        State.print('___Otherwise:', State.state);
 
         return this;
 
@@ -841,13 +859,14 @@ function Atlant(){
 
     var _action = function(action, isTask){
         State.first();
+        TopState.first();
 
         if(!action) throw new Error('Atlant.js: action stream is not provided!')
         var whenId = _.uniqueId(); 
         var depName = 'action_' + _.uniqueId();
-        var injects = injectsGrabber.init(depName, state);
+        var injects = injectsGrabber.init(depName, State.state);
 
-        state.lastWhen = action
+        State.state.lastWhen = action
             .map( function(depValue) { 
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
                 resetRouteState();
@@ -863,15 +882,15 @@ function Atlant(){
                 return stream;
             })
 
-        // whenCounter.add(state.lastWhen, whenCount);
+        // whenCounter.add(State.state.lastWhen, whenCount);
 
-        state.lastIf = void 0;
-        state.lastDep = void 0;
-        state.lastDepName = depName;
-        state.lastOp = state.lastWhen;
-        state.lastConditionId = whenId; 
+        State.state.lastIf = void 0;
+        State.state.lastDep = void 0;
+        State.state.lastDepName = depName;
+        State.state.lastOp = State.state.lastWhen;
+        State.state.lastConditionId = whenId; 
 
-        State.print('___action:', state);
+        State.print('___action:', State.state);
 
         return this;
 
@@ -879,12 +898,13 @@ function Atlant(){
 
     var _error = function(){
         State.first();
+        TopState.first();
 
         var whenId = _.uniqueId(); 
         var depName = 'error_' + _.uniqueId();
-        var injects = injectsGrabber.init(depName, state);
+        var injects = injectsGrabber.init(depName, State.state);
 
-        state.lastWhen = errorStream
+        State.state.lastWhen = errorStream
             .map( function(depValue) { 
                 resetRouteState();
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
@@ -901,15 +921,15 @@ function Atlant(){
             })
             .map(s.logIt('error stream'))
 
-        // whenCounter.add(state.lastWhen, whenCount);
+        // whenCounter.add(State.state.lastWhen, whenCount);
 
-        state.lastIf = void 0;
-        state.lastDep = void 0;
-        state.lastDepName = depName;
-        state.lastOp = state.lastWhen;
-        state.lastConditionId = whenId; 
+        State.state.lastIf = void 0;
+        State.state.lastDep = void 0;
+        State.state.lastDepName = depName;
+        State.state.lastOp = State.state.lastWhen;
+        State.state.lastConditionId = whenId; 
 
-        State.print('__error:', state);
+        State.print('__error:', State.state);
 
         return this;
     };
@@ -921,16 +941,16 @@ function Atlant(){
      */
     var _if = function(fn) {
 
-        if ( ! state.lastOp ) { throw new Error('"if" should nest something.'); }
+        if ( ! State.state.lastOp ) { throw new Error('"if" should nest something.'); }
 
         State.divide();
         var ifId = _.uniqueId();
         var ups = new Upstream();
 
         var depName = 'if_' + _.uniqueId();
-        var injects = injectsGrabber.init(depName, state);
+        var injects = injectsGrabber.init(depName, State.state);
 
-        var thisIf = state.lastOp
+        var thisIf = State.state.lastOp
             .map( ups.push )
             .map(clientFuncs.createScope)
             .filter(s.compose(
@@ -947,11 +967,11 @@ function Atlant(){
             })
 
 
-        state.lastIf = thisIf; 
-        state.lastOp = state.lastIf;
-        state.lastConditionId = ifId;
+        State.state.lastIf = thisIf; 
+        State.state.lastOp = State.state.lastIf;
+        State.state.lastConditionId = ifId;
 
-        State.print('_if__After:', state);
+        State.print('_if__After:', State.state);
 
         return this;
     }
@@ -976,16 +996,16 @@ function Atlant(){
 
     var _inject = function( key, expression ) {
         s.type(key, 'string');
-        if ( ! state.lastDepName ) throw new Error('.inject should follow .depends');
+        if ( ! State.state.lastDepName ) throw new Error('.inject should follow .depends');
 
-        state.lastInjects[key] = { name: state.lastDepName, expression: expression };
+        State.state.lastInjects[key] = { name: State.state.lastDepName, expression: expression };
 
         return this;
     }
 
     var _join = function( key, expression ) {
         s.type(key, 'string');
-        state.lastInjects[key] = { name: state.lastDepName, expression: expression, injects: Array.prototype.slice.apply(state.lastInjects) };
+        State.state.lastInjects[key] = { name: State.state.lastDepName, expression: expression, injects: Array.prototype.slice.apply(State.state.lastInjects) };
 
         return this;
     }
@@ -1001,7 +1021,7 @@ function Atlant(){
      */
     var _render = function(renderProvider, viewName, renderOperation){
 
-            if ( ! state.lastOp ) throw new Error('"render" should nest something');
+            if ( ! State.state.lastOp ) throw new Error('"render" should nest something');
             
             if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider ) {
                 throw new Error('Atlant.js: render first param should be function or URI')
@@ -1013,12 +1033,12 @@ function Atlant(){
 
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             
-            Counter.increase(state);
+            Counter.increase(State.state);
             var renderId = _.uniqueId();
 
             var ups = new Upstream();
 
-            var thisRender = state.lastOp
+            var thisRender = State.state.lastOp
                 .map(ups.fmap(_.extend))
                 .map(function() { return { renderId: renderId, renderProvider: renderProvider, viewName:viewName, renderOperation:renderOperation}; })
                 .map(ups.join('render', void 0))
@@ -1030,8 +1050,8 @@ function Atlant(){
             if( ! viewReady[viewName]) viewReady[viewName] = new Bacon.Bus(); // This will signal that this view is rendered. Will be used in onValue assignment.
 
 
-            if (void 0 !== state.lastIf) State.rollback();
-            State.print('_____renderStateAfter:', state);
+            if (void 0 !== State.state.lastIf) State.rollback();
+            State.print('_____renderStateAfter:', State.state);
             return this;
     };
 
@@ -1049,11 +1069,11 @@ function Atlant(){
      * Just action. receives upstream, do not return it.
      */
     var _do = function(actionProvider) {
-        if ( ! state.lastOp ) throw new Error('"do" should nest something');
+        if ( ! State.state.lastOp ) throw new Error('"do" should nest something');
         s.type(actionProvider, 'function');
         var doId = _.uniqueId();
 
-        var thisDo = state.lastOp
+        var thisDo = State.state.lastOp
             .flatMap( function(upstream) { 
                 try{
                     var scope = clientFuncs.createScope(upstream) 
@@ -1068,8 +1088,8 @@ function Atlant(){
                 }
             }.bind(this));
 
-        state.lastOp = thisDo;
-        State.print('_do__After:', state);
+        State.state.lastOp = thisDo;
+        State.print('_do__After:', State.state);
 
         return this;
     }
