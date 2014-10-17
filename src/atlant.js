@@ -18,7 +18,8 @@ function Atlant(){
         ,Counter = require('./counter.js')()
         ,Bacon = require('baconjs')
         ,_ = require('lodash')
-        ,interfaces = require('./inc/interfaces');
+        ,interfaces = require('./inc/interfaces')
+        ,StateClass = require('./inc/state');
 
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
@@ -59,40 +60,6 @@ function Atlant(){
     var onRouteChange = function() {
     }
 
-    var StateType = function(state) {
-        _.extend( this, {lastWhen: void 0, lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0} );
-        _.merge( this, state );
-    };
-    var StateClass = function(){
-        var states;
-
-        this.state = void 0;
-
-        this.first = function(){
-            states = [];
-            this.state = new StateType();
-            states.push(this.state);
-        }
-
-        this.divide = function() {
-            this.state = new StateType(this.state);
-            this.state.lastDep = void 0;
-
-            states.push(this.state);
-        }
-
-        this.rollback = function() {
-            states.pop();
-            this.state = states[states.length-1];
-        }
-
-        this.print = function(message, state) {
-            //log(message, JSON.stringify([ 'W:',state.lastWhen, "I:",state.lastIf, 'D:',state.lastDep, 'O:',state.lastOp ]));
-        }
-
-        return this;
-    };
-    
     var State = new StateClass();
     var TopState = new StateClass();
 
