@@ -1,6 +1,29 @@
     // Help in creating injects tail
     // Include this before declaring streams: "var injects = prepare4injectsInit();"
     
+var dependsName = function() {
+
+
+    this.init = function(depName, state) {
+        if (!depName) throw new Error('Atlant.js: developer: you forgot the "depName"!')
+        var nameContainer = {};
+        state.lastNameContainer = nameContainer // Here we will store further names with ".name"
+        return nameContainer;
+    }
+
+    // Add invocation when mapping stream.
+    this.add = function(depName, depValue, nameContainer, upstream) {
+        upstream.ref = nameContainer.ref;
+        return upstream
+    }
+    
+    this.tailFill = function(value, state){
+        state.lastNameContainer.ref = value;
+    }
+
+    return this;
+}
+
 var injectsGrabber = function() {
     this.init = function(depName, state) {
         if (!depName) throw new Error('Atlant.js: developer: you forgot the "depName"!')
@@ -33,4 +56,5 @@ var whenCounter = function() {
 module.exports = { 
                 injectsGrabber:injectsGrabber
                 ,whenCounter: whenCounter
+                ,dependsName: dependsName
 }

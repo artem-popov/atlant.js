@@ -47,6 +47,7 @@ function Atlant(){
     }
 
     var injectsGrabber = new interfaces.injectsGrabber();
+    var dependsName = new interfaces.dependsName();
     var whenCounter = new interfaces.whenCounter();
 
     var lastPath; // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
@@ -405,7 +406,10 @@ function Atlant(){
         var createDepStream = function(stream, depName, dep, injects) {
             var ups = new Upstream();
 
+            var nameContainer = dependsName.init(depName, state);
+
             var stream = stream
+                .map( dependsName.add.bind(dependsName, depName, void 0, nameContainer) )
                 .map( ups.fmap(_.extend) )
 
             if ('function' !== typeof dep) {
@@ -466,6 +470,7 @@ function Atlant(){
                 lastOp = state.lastIf || state.lastWhen;
             }
 
+             
             injectsGrabber.init(depName, state);
 
             var thisDep = createDepStream(lastOp, depName, dependency, state.lastInjects )
@@ -482,6 +487,19 @@ function Atlant(){
             return this;
         };
     }();
+
+    var _name = function(name) {
+        dependsName.tailFill(name, state);            
+        return this
+    }
+    
+    var _transferDepends = function(name) {
+        return this
+    }
+
+    var _to = function(name) {
+        return this
+    }
 
     /* Base and helper streams*/
     log('registering base streams...');
@@ -1198,6 +1216,19 @@ function Atlant(){
      * The same as ".depends()", but executes only after last ".depends()" or ".and()" ends.
      * */
     this.and =  _and;
+    /*
+     * Allows give name for .depends()
+     */
+    this.name = _name;
+    /**
+     * Allow to define array of depend names which will be transfered if user goes from current when/action to route/action defined in .to()
+     * */
+    this.transferDepends = _transferDepends;
+    /**
+     * Allow to define array of routes, which will receive array of transfered depends 
+     * */
+    this.to = _to;
+
     /*
      * Injects variables into ".render()".
      * accepts 2 params: key, accessor.
