@@ -1,5 +1,3 @@
-    // Help in creating injects tail
-    // Include this before declaring streams: "var injects = prepare4injectsInit();"
     
 var dependsName = function() {
 
@@ -12,8 +10,9 @@ var dependsName = function() {
     }
 
     // Add invocation when mapping stream.
-    this.add = function(depName, depValue, nameContainer, upstream) {
-        upstream.ref = nameContainer.ref;
+    this.add = function(depName, nameContainer, upstream) {
+        if( !upstream.refs ) upstream.refs = {};
+        upstream.refs[nameContainer.ref] = depName;
         return upstream
     }
     
@@ -21,6 +20,32 @@ var dependsName = function() {
         state.lastNameContainer.ref = value;
     }
 
+    return this;
+}
+
+var transfersGrabber = function() {
+    this.init = function(state) {
+        var data = {};
+        state.lastTransfers = data // Here we will store further injects with ".transfers"
+        return data;
+    }
+    // Add invocation when mapping stream.
+    this.add = function(transfers, upstream) {
+        upstream.transfers = transfers;
+        return upstream
+    }
+    this.tailTransfer = function(depends, state) {
+        depends = [].concat(depends);
+        if (void 0 !== state.lastTransfer) throw new Error('Atlant.js: You forgot the .to()!')
+
+        state.lastTransfer = depends
+    }
+    this.tailTo = function(name, state) {
+        if (void 0 === state.lastTransfers) throw new Error('Atlant.js: You forgot the .transfer() before .to()!')
+        
+        state.lastTransfers[name] = state.lastTransfer;
+        state.lastTransfer = void 0;
+    }
     return this;
 }
 
@@ -57,4 +82,5 @@ module.exports = {
                 injectsGrabber:injectsGrabber
                 ,whenCounter: whenCounter
                 ,dependsName: dependsName
+                ,transfersGrabber: transfersGrabber
 }
