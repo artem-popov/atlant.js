@@ -36,6 +36,7 @@ function Atlant(){
 
     var cache = [];
 
+    var lastData; // Data saved from last route.
     var lastMasks = [];
     var lastFinallyStream;
     var prefs = {
@@ -49,6 +50,7 @@ function Atlant(){
 
     var injectsGrabber = new interfaces.injectsGrabber();
     var dependsName = new interfaces.dependsName();
+    var transfersGrabber = new interfaces.transfersGrabber();
     var whenCounter = new interfaces.whenCounter();
 
     var lastPath; // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
@@ -380,7 +382,7 @@ function Atlant(){
             var nameContainer = dependsName.init(depName, State.state);
 
             var stream = stream
-                .map( dependsName.add.bind(dependsName, depName, void 0, nameContainer) )
+                .map( dependsName.add.bind(dependsName, depName, nameContainer) )
                 .map( ups.fmap(_.extend) )
 
             if ('function' !== typeof dep) {
@@ -464,23 +466,13 @@ function Atlant(){
         return this
     }
     
-    var _transferDepends = function(depends) {
-        var depends = [] || [].concat(depends);
-        
-        if (void 0 !== TopState.state.lastTransfers) throw new Error('Atlant.js: You forgot the .to()!')
-
-        TopState.state.lastTransfers = {};
-        TopState.state.lastTransfer = depends;
-        
+    var _transfer = function(depends) {
+        transfersGrabber.tailTransfer(depends, TopState.state);
         return this
     }
 
     var _to = function(name) {
-        if (void 0 === TopState.state.lastTransfers) throw new Error('Atlant.js: You forgot the .transferDepends() before .to()!')
-        
-        TopState.state.lastTransfers[name] = TopState.state.lastTransfer;
-        TopState.state.lastTransfers = void 0;
-
+        transfersGrabber.tailTo(name, TopState.state);
         return this
     }
 
@@ -513,6 +505,20 @@ function Atlant(){
             renderStreams.nullifyScan.push('nullify');
 
             if (window) lastPath = utils.getLocation();
+
+            lastData = s.reduce(function(xs, x){
+                var foldDeps = s.reduce(function(ax, a){
+                                    var obj = {};
+                                    obj[a] = x.depends[x.refs[a]];
+                                    return _.merge(ax, obj) }
+                                   , {});
+
+                var dx = s.map( foldDeps, x.transfers);
+
+                return _.merge(xs, dx);
+            }, {}, upstreams)
+
+            console.log('-----Will transfer data:', lastData)
 
             var redirect = [];
             s.map(function(upstream){ 
@@ -665,6 +671,7 @@ function Atlant(){
 
             // Allows attaching injects to .when().
             var injects = injectsGrabber.init(name, State.state);
+            var transfers = transfersGrabber.init(TopState.state);
 
             masks.forEach(function(mask) {
                 s.push(utils.getPossiblePath(mask), additionalMasks);
@@ -701,6 +708,7 @@ function Atlant(){
                         var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
                         var depData = s.merge( params, {location: upstream.path, mask: upstream.route.mask, referrer: upstream.referrer} );
                         var stream = injectsGrabber.add(name, depData, injects, upstream);
+                        stream = transfersGrabber.add(transfers, upstream)
                         return stream; 
                     })
             } else {
@@ -731,6 +739,7 @@ function Atlant(){
                     .map(function(upstream) {
                         var depData = {location: upstream.path, mask: void 0, referrer: upstream.referrer};
                         var stream = injectsGrabber.add(name, depData, injects, {});
+                        stream = transfersGrabber.add(transfers, upstream)
                         stream.isFinally = true;
                         stream.whenId = whenId;
                         whenCount.value++;
@@ -1210,7 +1219,7 @@ function Atlant(){
     /**
      * Allow to define array of depend names which will be transfered if user goes from current when/action to route/action defined in .to()
      * */
-    this.transferDepends = _transferDepends;
+    this.transfer = _transfer;
     /**
      * Allow to define array of routes, which will receive array of transfered depends 
      * */

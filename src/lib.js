@@ -176,12 +176,18 @@ var s = (function(){
     });
 
     var reduce = _.curry( function(fn, startValue, obj) {
-        if(obj) {
-            return Array.prototype.reduce.call(obj, fn, startValue);
-        } else {
-            return startValue;
+        if ( !obj ) return startValue;
+        if (obj && obj.reduce) Array.prototype.reduce.call(obj, fn, startValue);
+
+        var reduced = {};
+
+        for( var name in obj ) {
+            reduced = fn(reduced, obj[name]);
         }
+
+        return reduced;
     });
+
     var concat = _.curry( function(a, b) {
         return b.concat(a);
     });
