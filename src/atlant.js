@@ -376,12 +376,17 @@ function Atlant(){
     /* depends */
     var depends = function() {
 
+        var treatDep = s.compose(  clientFuncs.convertPromiseD
+                                    ,s.baconTryD
+                                    ,clientFuncs.applyScopeD
+                                );
+
         var createDepStream = function(stream, depName, dep, injects) {
             var ups = new Upstream();
 
             var nameContainer = dependsName.init(depName, State.state);
 
-            var stream = stream
+            stream = stream
                 .map( dependsName.add.bind(dependsName, depName, nameContainer) )
                 .map( ups.fmap(_.extend) )
 
@@ -389,24 +394,45 @@ function Atlant(){
                 stream = stream
                     .map( s.inject(dep) )
             } else {  
-                var treatDep = s.compose(  clientFuncs.convertPromiseD
-                                            ,s.baconTryD
-                                            ,clientFuncs.applyScopeD
-                                        )( dep );
-                
+                var treat = treatDep( dep );        
+
                 stream = stream 
                     .map(clientFuncs.createScope)
                     .flatMap(function(scope) { 
+
+                        // Using data transfered from previous route instead of accessing the dependency
+                        var upstream = ups.getLast();
+                        if (lastData && upstream.ref) {
+                            var mask = upstream.route.mask;
+
+                            // look in lastData only for current mask
+                            var data = s.filterKeys(function(dataMask){ return mask === dataMask }, lastData);
+                            lastData = void 0;
+
+                            // merge all depend names into one list
+                            data = s.reduce(function(xs, x){ return _.merge(xs, x) }, {}, data);
+
+                            if (data.hasOwnProperty(upstream.ref)) {
+                                console.log('using transfered data for ', upstream.ref, data)
+                                return Bacon.constant(data[upstream.ref]);
+                            }
+                            
+
+                            console.log('---data', upstream, data)
+
+                        }
+
+                        // Using cache instead of accessing dependency
                         if (false && depCache.has(depName, scope)) {
                             console.log('Atlant.js: Depends cache enabled: no parameters changed. Skipping accessing of dependation')
                             return Bacon.constant(depCache.get(depName, scope));
                         }
                         else { 
-                            var stream = treatDep(scope)
-                                                        .map(function(upstream){
-                                                            depCache.put(depName, scope, upstream);
-                                                            return upstream;
-                                                        })
+                            var stream = treat(scope)
+                                                    .map(function(upstream){
+                                                        depCache.put(depName, scope, upstream);
+                                                        return upstream;
+                                                    })
                             return stream;
                         }
                     })
