@@ -7,9 +7,9 @@ var browserify = require('browserify')
     ,connect = require('connect')
     ,fs = require('fs')
     ,serveStatic = require('serve-static')
-    ,livescript = require('browserify-livescript')
     ,Promise = require('promise')
-    
+    ,sweetify = require('sweetify')    
+
 var browOpt = {standalone: 'atlant'};
 var dest = 'lib/';
 
@@ -52,12 +52,12 @@ gulp.task('revision', function(done) {
 
 gulp.task('watch', function() {
         return gulp
-            .src(['src/**/*.js', 'src/**/*.ls'])
+            .src(['src/**/*.js', 'src/**/*.sjs', 'src/**/*.ls'])
             .pipe( plumber() )
             .pipe( watch( function(){ 
                 var b = browserify( './src/atlant.js' );
                 b.ignore('react');
-                b.transform(livescript);
+            //    b.transform(sweetify);
                 b.transform(literalify.configure({
                     react: 'window.React'
                     ,lodash: 'window._'

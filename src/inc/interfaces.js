@@ -13,6 +13,7 @@ var dependsName = function() {
     this.add = function(depName, nameContainer, upstream) {
         if( !upstream.refs ) upstream.refs = {};
         upstream.refs[nameContainer.ref] = depName;
+        upstream.ref = nameContainer.ref;
         return upstream
     }
     
