@@ -891,9 +891,11 @@ function Atlant(){
 
         State.state.lastWhen = action
             .map( function(depValue) { 
-                depValue.masks = lastMask;
-                depValue.location = lastPath;
-                depValue.referrer = lastReferrer;
+                if ('object' === typeof depValue) {
+                    depValue.masks = lastMask;
+                    depValue.location = lastPath;
+                    depValue.referrer = lastReferrer;
+                }
 
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
                 resetRouteState();
