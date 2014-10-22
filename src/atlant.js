@@ -205,7 +205,8 @@ function Atlant(){
                 whenRenderedSignal(upstream);
                 return false; 
             } else { 
-                atlantState.viewRendered[upstream.render.viewName] = true;
+                if (upstream.render.renderOperation !== RenderOperation.nope)
+                    atlantState.viewRendered[upstream.render.viewName] = true;
                 return true;
             }
         };
