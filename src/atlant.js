@@ -36,7 +36,6 @@ function Atlant(){
 
     var cache = [];
 
-    var lastData; // Data saved from last route.
     var lastMasks = [];
     var lastFinallyStream;
     var prefs = {
@@ -53,7 +52,11 @@ function Atlant(){
     var transfersGrabber = new interfaces.transfersGrabber();
     var whenCounter = new interfaces.whenCounter();
 
-    var lastPath; // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
+    // State from current route. Updated on route Load.
+    var lastPath // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
+        ,lastData // Data saved from last route.
+        ,lastMask
+        ,lastReferrer;
 
     // var log = s.nop;
     var log = console.log.bind(console, '--');
@@ -592,17 +595,14 @@ function Atlant(){
     var routeChangedStream =  publishStream
         .merge( Bacon.fromBinder(function(sink) {
             if ( 'undefined' !== typeof window) {
-                // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
                 var routeChanged = function(event) { 
                     event.preventDefault();
                     var parsed = ( event.detail ) ? utils.parseURL( event.detail.url ) : void 0;
                     var path = ( parsed ) ?  parsed.pathname + '?' + parsed.search :  utils.getLocation();
                     if (path !== lastPath) {
-                        lastPath = path;
-                        var referrer = (event.detail && event.detail.state ) ? event.detail.state.referrer : void 0;
                         sink({ 
                             path: path 
-                            ,referrer: referrer
+                            ,referrer: lastPath
                         }); 
                     } 
                 };
@@ -618,25 +618,31 @@ function Atlant(){
         })
         .filter(function(upstream) { return upstream && upstream.hasOwnProperty('published') })
         .map(function(upstream){ 
-            if ( upstream.path ) {
-                return upstream;
-            } else {
-                return { 
+            var stream;
+            if ( upstream.path ) { // get from sink
+                stream = upstream;
+            } else { // get from published
+                stream = { 
                     path: utils.getLocation()
                     ,referrer: utils.getReferrer()
                 }
             }
+
+            return stream;
         })
         .filter( s.compose( s.empty, s.flip(matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
-        .map(function(upstream) { // Nil values.
+        .map(function(upstream) { 
+            // Storing here the data for actions.
+            lastPath = upstream.path; 
+            lastReferrer = upstream.referrer;
+            lastMask = [];
+
+            console.log('---The location is:', upstream.path);
+
+            // Nil values.
             resetRouteState();
             renderBeginStream.push();
             return upstream;
-        })
-        .map(function(upstream){
-            console.log('---The location is:', upstream.path);
-            lastPath = upstream.path; // in the case of first load - in that case we come here not from sink, so the lastPath is still undefined!
-            return upstream
         });
 
     var atlantState = {
@@ -731,8 +737,13 @@ function Atlant(){
                         upstream.isMatch = WhenFinally.match === whenType;
                         upstream.finallyStream = finallyStream;
                         whenCount.value++;
+
+                        // Storing here the data for actions.
+                        lastMask.push(upstream.route.mask);
+
                         var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
                         var depData = s.merge( params, {location: upstream.path, mask: upstream.route.mask, referrer: upstream.referrer} );
+
                         var stream = injectsGrabber.add(name, depData, injects, upstream);
                         stream = transfersGrabber.add(transfers, upstream)
                         return stream; 
@@ -837,6 +848,10 @@ function Atlant(){
 
         State.state.lastWhen = otherWiseRootStream
             .map( function(depValue) { 
+                depValue.masks = lastMask;
+                depValue.location = lastPath;
+                depValue.referrer = lastReferrer;
+
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
                 stream.otherwise = true;
                 stream.conditionId = whenId;
@@ -870,6 +885,10 @@ function Atlant(){
 
         State.state.lastWhen = action
             .map( function(depValue) { 
+                depValue.masks = lastMask;
+                depValue.location = lastPath;
+                depValue.referrer = lastReferrer;
+
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
                 resetRouteState();
 
@@ -879,7 +898,7 @@ function Atlant(){
 
                 if ( !isTask ) whenCount.value++;
                 atlantState.viewRendered = {}; // the only thing we can nullify.
-                console.log('---Matched action!!!')
+                console.log('---Matched action!!!', depValue)
 
                 return stream;
             })
@@ -909,6 +928,11 @@ function Atlant(){
         State.state.lastWhen = errorStream
             .map( function(depValue) { 
                 resetRouteState();
+
+                depValue.masks = lastMask;
+                depValue.location = lastPath;
+                depValue.referrer = lastReferrer;
+
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
 
                 stream.error = true;
