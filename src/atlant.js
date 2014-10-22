@@ -96,6 +96,7 @@ function Atlant(){
         ,clear: parseInt(_.uniqueId())
         ,redirect: parseInt(_.uniqueId())
         ,move: parseInt(_.uniqueId())
+        ,nope: parseInt(_.uniqueId())
     }
 
     var clientFuncs = function() {
@@ -235,6 +236,12 @@ function Atlant(){
 
                         // Choose appropriate render.
                         var render;
+                        if (RenderOperation.nope === upstream.render.renderOperation ){
+                            whenRenderedSignal(upstream);
+
+                            return;
+                        }
+
                         if (RenderOperation.redirect === upstream.render.renderOperation ){
                             if ('function' === typeof viewProvider) {
                                 upstream.doLater = function(){utils.goTo(viewProvider(scope))}
@@ -261,7 +268,6 @@ function Atlant(){
                             } 
 
                             var render = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
-
                             render(viewProvider, viewName, scope)
                                 .then(function(component){upstream.render.component = component; return upstream })
                                 .then( whenRenderedSignal )
@@ -1049,7 +1055,7 @@ function Atlant(){
 
             if ( ! State.state.lastOp ) throw new Error('"render" should nest something');
             
-            if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider ) {
+            if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider && renderOperation != RenderOperation.nope ) {
                 throw new Error('Atlant.js: render first param should be function or URI')
             } 
             s.type(viewName, 'string');
@@ -1306,6 +1312,7 @@ function Atlant(){
     this.go =  this.redirect;
     // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
     this.move = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.move);}
+    this.nope = function(){ return _render.bind(this)(void 0, void 0, RenderOperation.nope)}
 
     this.skip =  _skip;
     this.publish =  _publish;
