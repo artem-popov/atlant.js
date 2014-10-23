@@ -130,11 +130,16 @@ var Render = function() {
         renderEnd: function(name) {
             return new Promise( function( resolve, reject) {
                 var instance = state.getThis(name);
+                var resolveUpdate = function() {
+                        console.timeEnd('forcing update of root');
+                        resolve();
+                }
                 try {
                     if (instance) { 
                         console.time('forcing update of root')
-                        instance.forceUpdate(s.compose( console.timeEnd.bind(console, 'forcing update of root'), resolve));
+                        instance.forceUpdate(s.compose( console.timeEnd.bind(console, 'forcing update of root'), resolveUpdate));
                     } else {
+                        console.log('%cno need of root update', 'color: #0000ff');
                         resolve();
                     }
                 } catch(e) { 
