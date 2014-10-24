@@ -1091,7 +1091,6 @@ function Atlant(){
             if( ! viewReady[viewName]) viewReady[viewName] = new Bacon.Bus(); // This will signal that this view is rendered. Will be used in onValue assignment.
 
             if (void 0 !== State.state.lastIf) State.rollback();
-            State.state.lastIf = void 0; // @TODO remove this when .end() will be introduced
 
             State.print('_____renderStateAfter:', State.state);
             return this;
