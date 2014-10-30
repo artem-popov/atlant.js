@@ -1102,7 +1102,7 @@ function Atlant(){
             viewName = viewName || s.tail(prefs.viewState);
 
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
-            if ( renderOperation === RenderOperation.nope || renderOperation === RenderOperation.redirect ) viewName = void 0; 
+            if ( renderOperation === RenderOperation.nope ) viewName = void 0; 
 
             Counter.increase(State.state);
             var renderId = _.uniqueId();
