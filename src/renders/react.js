@@ -49,14 +49,15 @@ var Render = function() {
 
     this.render = function(viewProvider, name, scope ) {
         var rendered = new Promise( function( resolve, reject ){
-            console.time('rendering view ' + name);
+            console.log('%cbegin rendering view ' + name, 'color: #0000ff');
+            console.time('rendered view ' + name);
 
             // get new component somehow.
             state.set(name, viewProvider(scope));  
             var instance = state.getThis('name');
             state.check(name);
 
-            console.timeEnd('rendering view ' + name);
+            console.timeEnd('rendered view ' + name);
             return resolve(state.getInstance(name));  
         });
 
@@ -132,10 +133,11 @@ var Render = function() {
                 var instance = state.getThis(name);
                 try {
                     if (instance) { 
-                        console.time('forcing update of root')
-                        instance.forceUpdate(s.compose( console.timeEnd.bind(console, 'forcing update of root'), resolve));
+                        console.log('%cbegin force update of ' + name, 'color: #0000ff');
+                        console.time('update of ' + name + ' finished')
+                        instance.forceUpdate(s.compose( console.timeEnd.bind(console, 'update of ' + name + ' finished'), resolve));
                     } else {
-                        console.log('%cno need of root update', 'color: #0000ff');
+                        console.log('%cno need of ' + name + ' update', 'color: #0000ff');
                         resolve();
                     }
                 } catch(e) { 

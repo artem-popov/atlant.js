@@ -577,8 +577,13 @@ function Atlant(){
             // end redirect/
 
             if(!redirect.length && Object.keys(upstreams).length) {
-                prefs.render.on
-                    .renderEnd('root')
+
+                var allRendered = Promise.all( 
+                    Object.keys(upstreams)
+                        .map(function(x){ return prefs.render.on.renderEnd(x) })
+                )
+
+                allRendered
                     .then(function(){
                         var scopeMap = s.map(clientFuncs.createScope, upstreams)
                         return onRenderEndStream.push(scopeMap);
