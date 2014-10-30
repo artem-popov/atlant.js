@@ -21,7 +21,6 @@ src/angular/ng-s-atlant-utils.js // internal utilities (do not use :)
 
 ##Which renders available?
 
-- the angular render (obsolete yet)
 - react render
 
 ##Installation
@@ -41,51 +40,13 @@ add to you index.html:
 
 ## API
 
-### atlant.render:
-
-```js
-atlant.render :: function, string
-atlant.render(renderFn [, view]) // renders renderFn to default view or mentioned view if defined.
-```
-
-#### renderFn:
-
-```js
-renderFn :: ( info, scope ) -> promise
-var renderFn = ( info, scope ) => {
-    return new Promise((resolve) => resolve());
-}
-```
-
-### atlant.if:
-
-```js
-atlant.if :: function -> atlant
-atlant.if( ifFn ) // bifurcates flow. the first render/clean/redirect after if will end created leaf of stream
-```
-
-```js
-ifFn :: ( lastDep ) -> boolean
-var ifFn = ( lastDep ) => {
-    return 404 === lastDep.status ? false : true;
-}
-```
-
-### atlant.when:
-
-```js
-atlant.when :: string -> atlant
-atlant.when( routes ) // adds leaf with route mask 
-```
-"routes" are conditional like '/faq || /about', the "&&" and brackets not yet supported.
+On it's way.
 
 ### Flow
 
 Atlant watches when you touch links and manages them. 
 use a attribute data-atlant="ignore" to skip this.
 
-### atlant.onRenderEnd(callback)
-works out when route fully rendered.
 
 ## Examples
 
