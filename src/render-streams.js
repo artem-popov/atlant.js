@@ -33,7 +33,6 @@ module.exports = function(Counter, whenCount)  {
                 oldVal = []
                 return oldVal
             }
-
             oldVal.push(newVal); 
             return oldVal;
         })
@@ -44,24 +43,28 @@ module.exports = function(Counter, whenCount)  {
         .map( ups2.pop )  // Yes the counter now zero, so we can apply gathered streams together
         .changes()
         .merge(nullifyScan)
-        .scan({}, function(oldVal, newVal) {  // creating hash of streams with viewName as key
+        .scan({}, function(sum, newVal) {  // creating hash of streams with viewName as key
             if (newVal == 'nullify') {
-                oldVal = {};
-                return oldVal
+                sum = {};
+                return sum
             }
 
             if ( !(newVal instanceof Array) ) 
                 newVal = [newVal];
             
-            newVal.map(function(val){
-                oldVal[val.render.viewName] = val;
-            })
+            newVal
+                .map(function(val){
+                    sum[val.render.viewName] = val;
+                })
 
-            return oldVal;
+            return sum;
         })
         .filter(s.notEmpty) // Still this hash can be nullified, so stay aware.
         .changes()
         .filter( function(upstream) { return 0 === --whenCount.value; } ) // Here checking is there all whens are ended.
+        .map(function(u){
+            return s.reduce(function(sum, value, key){if ('undefined' !== key) sum[key] = value; return sum}, {}, u)
+        })
         .merge(taskRendered);
 
     return { 

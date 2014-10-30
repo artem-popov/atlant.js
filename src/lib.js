@@ -182,7 +182,7 @@ var s = (function(){
         var reduced = {};
 
         for( var name in obj ) {
-            reduced = fn(reduced, obj[name]);
+            reduced = fn(reduced, obj[name], name);
         }
 
         return reduced;

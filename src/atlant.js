@@ -36,6 +36,7 @@ function Atlant(){
 
     var cache = [];
 
+    var lastCondition;
     var lastMasks = [];
     var lastFinallyStream;
     var prefs = {
@@ -126,7 +127,6 @@ function Atlant(){
             var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
             var joins = s.filter( function(inject){ return inject.hasOwnProperty('injects') }, injects);
             injects = s.filter( function(inject){ return !inject.hasOwnProperty('injects') }, injects);
-            console.log('injects:', injects, joins);
             var injectsData = { object: void 0};
 
             var formatInjects = function(inject) {
@@ -163,7 +163,6 @@ function Atlant(){
             params['mask'] = (upstream.route) ? upstream.route.mask : void 0;    
             params['location'] = upstream.path;
 
-            console.log('joinsData:', joinsData)
             data = s.extend( params, data, joinsData );
             return data;
         };
@@ -428,12 +427,10 @@ function Atlant(){
                             data = s.reduce(function(xs, x){ return _.merge(xs, x) }, {}, data);
 
                             if (data.hasOwnProperty(upstream.ref)) {
-                                console.log('using transfered data for ', upstream.ref, data)
                                 return Bacon.constant(data[upstream.ref]);
                             }
                             
 
-                            console.log('---data', upstream, data)
 
                         }
 
@@ -547,6 +544,8 @@ function Atlant(){
 
             if (window) lastPath = utils.getLocation();
 
+            // collect data for  .transfer() 
+            //@TODO do it only when need
             lastData = s.reduce(function(xs, x){
                 var foldDeps = s.reduce(function(ax, a){
                                     var obj = {};
@@ -559,8 +558,7 @@ function Atlant(){
                 return _.merge(xs, dx);
             }, {}, upstreams)
 
-            console.log('-----Will transfer data:', lastData)
-
+            //@TODO move into module the redirects section
             var redirect = [];
             s.map(function(upstream){ 
                 if(upstream.doLater) {
@@ -571,7 +569,14 @@ function Atlant(){
            redirect
                .filter(function(x){return x}) 
 
-            if(!redirect.length) {
+            if (redirect.length){
+                var scopeMap = s.map(clientFuncs.createScope, upstreams)
+                onRenderEndStream.push(scopeMap);
+                setTimeout(redirect[0]);
+            }
+            // end redirect/
+
+            if(!redirect.length && Object.keys(upstreams).length) {
                 prefs.render.on
                     .renderEnd('root')
                     .then(function(){
@@ -581,11 +586,8 @@ function Atlant(){
                     .catch(function(e){
                         errorStream.push(e);
                     })
-            } else {
-                var scopeMap = s.map(clientFuncs.createScope, upstreams)
-                onRenderEndStream.push(scopeMap);
-                setTimeout(redirect[0]);
             }
+
             return upstreams;
         })
 
@@ -611,6 +613,7 @@ function Atlant(){
                     event.preventDefault();
                     var parsed = ( event.detail ) ? utils.parseURL( event.detail.url ) : void 0;
                     var path = ( parsed ) ?  parsed.pathname + '?' + parsed.search :  utils.getLocation();
+                    console.log('the route is changed!')
                     if (path !== lastPath) {
                         sink({ 
                             path: path 
@@ -649,7 +652,6 @@ function Atlant(){
             lastReferrer = upstream.referrer;
             lastMask = [];
 
-            console.log('---The location is:', upstream.path);
 
             // Nil values.
             resetRouteState();
@@ -987,7 +989,8 @@ function Atlant(){
         var ifId = _.uniqueId();
         var ups = new Upstream();
 
-        var depName = 'if_' + _.uniqueId();
+        var isElse = (lastCondition === fn && lastCondition !== void 0);
+        var depName = isElse ? 'else_' : 'if_' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
 
         var thisIf = State.state.lastOp
@@ -1001,12 +1004,18 @@ function Atlant(){
             .map( function(upstream) { 
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
                 whenCount.value++;
-                console.log('---Matched if!!!')
+                if( isElse) 
+                    console.log('---Matched else!!!')
+                else
+                    console.log('---Matched if!!!')
+
+                console.log('---condition: (', fn, ')(scope) === ', true)
+
                 stream.conditionId = ifId;
                 return stream;
             })
 
-
+        if(!isElse) lastCondition = fn;
         State.state.lastIf = thisIf; 
         State.state.lastOp = State.state.lastIf;
         State.state.lastConditionId = ifId;
@@ -1016,6 +1025,27 @@ function Atlant(){
         return this;
     }
 
+    var _else = function() {
+        if ( !lastCondition ) { throw new Error('"else" should follow if')}
+        var fn = lastCondition;
+        lastCondition = void 0;
+        _if( s.negate.bind(this,fn) );
+        return this
+    }
+
+    var _end = function() {
+        if (void 0 !== State.state.lastIf) State.rollback();
+        return this
+    }
+
+    /**
+    	Received - every depends include this stream after execution
+     * @param fn
+     */
+    var _received = function() {
+
+        return this;
+    }
 
     /**
      * Inject dependency in last route stream. Only one dependency allowed at once.
@@ -1072,13 +1102,13 @@ function Atlant(){
             viewName = viewName || s.tail(prefs.viewState);
 
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
-            
+            if ( renderOperation === RenderOperation.nope || renderOperation === RenderOperation.redirect ) viewName = void 0; 
+
             Counter.increase(State.state);
             var renderId = _.uniqueId();
 
             var ups = new Upstream();
 
-            
             var thisRender = State.state.lastOp
                 .map(ups.fmap(_.extend))
                 .map(function() { return { renderId: renderId, renderProvider: renderProvider, viewName:viewName, renderOperation:renderOperation}; })
@@ -1305,6 +1335,7 @@ function Atlant(){
     this.join = _join;
     // Creates new branch if computated callback is true. Warning: the parent branch will be executed still. Render it with .nope() if no render should happend.
     this.if =  _if;
+
     /**
      * Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
      */
