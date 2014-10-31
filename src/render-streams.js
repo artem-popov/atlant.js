@@ -10,17 +10,12 @@ module.exports = function(Counter, whenCount)  {
     var whenRenderedStream = new Bacon.Bus(); // Stream for finishing purposes
     var nullifyScan = new Bacon.Bus();
     var taskRendered = new Bacon.Bus();
-        // .merge(nullifyScan)
-        // .scan([], function(oldVal, newVal) {  // Gathering the upstreams which come here.
-        //     if (newVal == 'nullify') {
-        //         oldVal = []
-        //         return oldVal
-        //     }
-        //
-        //     oldVal.push(newVal); 
-        //     return oldVal;
-        // })
-        // .changes();
+    var taskRenderedAndMapped = taskRendered
+        .map(function(u){
+            var obj = {};
+            obj[u.render.viewName] = u;
+            return obj;
+        })
 
     /* Counting all renders of all whens. When zero => everything is rendered. */
     var ups = new Upstream();
@@ -65,7 +60,7 @@ module.exports = function(Counter, whenCount)  {
         .map(function(u){
             return s.reduce(function(sum, value, key){if ('undefined' !== key) sum[key] = value; return sum}, {}, u)
         })
-        .merge(taskRendered);
+        .merge(taskRenderedAndMapped);
 
     return { 
         renderEndStream: renderEndStream 
