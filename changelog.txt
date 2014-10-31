@@ -1,3 +1,6 @@
+0.3.1 
+	massive changes: syntax changes, refer to doc for last version.
+	server render not yet included but possible 
 0.3.0
 	massive change: improvements for server render to be reality
 0.2.12 use "decodeURIComponent" instead of deprecated "unescape"
