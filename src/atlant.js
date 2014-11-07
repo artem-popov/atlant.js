@@ -66,8 +66,8 @@ function Atlant(){
     var onRouteChange = function() {
     }
 
-    var State = new StateClass();
-    var TopState = new StateClass();
+    var State = new StateClass(); // State which up to any last conditional: when, if
+    var TopState = new StateClass(); // State which up to when
 
     // Streams specific vars
         var dependViews = {}  // Set the views hirearchy. Both for streams and for render.
@@ -105,7 +105,14 @@ function Atlant(){
             var promise = promiseProvider( upstream );
             if ( s.isPromise( promise ) ){
                 promise = promise
-                    .catch( function(e) {  if (!e.stack) return e; else clientFuncs.catchError(e) } )
+                    .catch( function(e) {  
+                        if (!e.stack) { 
+                            Promise.reject(e);
+                        } else { 
+                            clientFuncs.catchError(e);
+                            Promise.reject(e)
+                        }
+                    })
                 return Bacon.fromPromise( promise );
             } else {
                 return Bacon.constant(promise);
@@ -188,6 +195,9 @@ function Atlant(){
     var assignRenders = function(){
 
         var whenRenderedSignal = function( upstream ) {
+            //deleting the semaphore;
+            if( upstream.isAction ) console.log('action!:', upstream.whenId)
+            if( upstream.isAction ) delete atlantState.actions[upstream.whenId]
             // Signalling that view renders
             if (upstream.isTask)
                 renderStreams.taskRendered.push(upstream); 
@@ -668,6 +678,7 @@ function Atlant(){
         viewRendered: {} // Flag that this view is rendered. Stops other streams to perform render then. 
         ,isLastWasMatched: false // Allow lastWhen to stop other when's execution 
         ,isRedirected: false
+        ,actions: {}
     }
 
     var resetRouteState = function(){
@@ -910,6 +921,10 @@ function Atlant(){
                     depValue.referrer = lastReferrer;
                 }
 
+                // Check if this action now active - prevents double-click
+                console.log(' last actions:', atlantState.actions, atlantState.actions[whenId], depValue);
+
+
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
                 resetRouteState();
 
@@ -920,7 +935,8 @@ function Atlant(){
                 if ( !isTask ) whenCount.value++;
                 atlantState.viewRendered = {}; // the only thing we can nullify.
                 console.log('---Matched action!!!', depValue)
-
+                
+                atlantState.actions[whenId] = depValue;
                 return stream;
             })
 
