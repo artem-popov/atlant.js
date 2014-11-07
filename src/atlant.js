@@ -106,12 +106,10 @@ function Atlant(){
             if ( s.isPromise( promise ) ){
                 promise = promise
                     .catch( function(e) {  
-                        if (!e.stack) { 
-                            Promise.reject(e);
-                        } else { 
+                        if (e.stack) { 
                             clientFuncs.catchError(e);
-                            Promise.reject(e)
                         }
+                        return Promise.reject("HA")
                     })
                 return Bacon.fromPromise( promise );
             } else {
@@ -401,8 +399,7 @@ function Atlant(){
     var depends = function() {
 
         var treatDep = s.compose(  clientFuncs.convertPromiseD
-                                    ,s.baconTryD
-                                    ,clientFuncs.applyScopeD
+                                    ,s.promiseTryD
                                 );
 
         var createDepStream = function(stream, depName, dep, injects) {
@@ -667,7 +664,6 @@ function Atlant(){
             lastReferrer = upstream.referrer;
             lastMask = [];
 
-
             // Nil values.
             resetRouteState();
             renderBeginStream.push();
@@ -682,6 +678,9 @@ function Atlant(){
     }
 
     var resetRouteState = function(){
+        whenCount.value = 0; 
+        renderStreams.nullifyScan.push('nullify');
+
         atlantState.viewRendered = {};
         atlantState.isRedirected = false;
         atlantState.isLastWasMatched = false; 
@@ -922,7 +921,7 @@ function Atlant(){
                 }
 
                 // Check if this action now active - prevents double-click
-                console.log(' last actions:', atlantState.actions, atlantState.actions[whenId], depValue);
+                console.log(' last actions:', whenId, atlantState.actions, atlantState.actions[whenId], depValue);
 
 
                 var stream = injectsGrabber.add(depName, depValue, injects, {})

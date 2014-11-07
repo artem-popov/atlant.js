@@ -1,5 +1,7 @@
 0.3.2 
+	fix - clear counters if route changed and last route not finished
 	fix after task the task view was not forced to update
+	(temporary workaround) do not track rejected depends
 0.3.1 
 	massive changes: syntax changes, refer to doc for last version.
 	server render not yet included but possible 
