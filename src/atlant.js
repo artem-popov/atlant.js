@@ -109,7 +109,7 @@ function Atlant(){
                         if (e.stack) { 
                             clientFuncs.catchError(e);
                         }
-                        return Promise.reject("HA")
+                        return Promise.reject(e)
                     })
                 return Bacon.fromPromise( promise );
             } else {
@@ -665,6 +665,8 @@ function Atlant(){
             lastMask = [];
 
             // Nil values.
+            whenCount.value = 0; 
+            renderStreams.nullifyScan.push('nullify');
             resetRouteState();
             renderBeginStream.push();
             return upstream;
@@ -678,8 +680,6 @@ function Atlant(){
     }
 
     var resetRouteState = function(){
-        whenCount.value = 0; 
-        renderStreams.nullifyScan.push('nullify');
 
         atlantState.viewRendered = {};
         atlantState.isRedirected = false;
