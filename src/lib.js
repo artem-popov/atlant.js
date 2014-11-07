@@ -413,7 +413,11 @@ var s = (function(){
     };
 
     var baconTryD = function(fn) {
-        return tryD(fn, function(e) { return Bacon.Error('Exception') })
+        return tryD(fn, function(e) { return Bacon.Error(e) })
+    }
+
+    var promiseTryD = function(fn) {
+        return tryD(fn, function(e) { return Promise.reject(e) })
     }
 
     this.compose      = _.compose;
@@ -469,6 +473,7 @@ var s = (function(){
     this.simpleType = simpleType;
     this.tryD = tryD;
     this.baconTryD = baconTryD;
+    this.promiseTryD = promiseTryD;
     /**
      * Depreated
      *
