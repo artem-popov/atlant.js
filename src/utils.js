@@ -5,21 +5,9 @@ var s = require('./lib');
 var utils = function() {
     return {
         /**
-         * Redirect to the other path using $location
-         * @param upstream
-         * @returns {*}
-         */
-        goTo: function(url) {
-            if ('undefined' !== typeof window) {
-                if ( (window.location.origin + url) !== window.location.href) {
-                    window.history.pushState(null, null, url);
-                }
-            }
-        }
-        /**
          * @returns interpolation of the redirect path with the parametrs
          */
-        ,interpolate: function(template, params) {
+        interpolate: function(template, params) {
             var result = [];
             template.split(':').map( function(segment, i) {
                 if (i == 0) {
@@ -103,7 +91,12 @@ utils.isIE = function()
  * @param upstream
  * @returns {*}
  */
-utils.goTo = function(awaitLoad, url) {
+utils.goTo = function(awaitLoad, url, awaitLoadForce) {
+
+    if ('undefined' === typeof window) return;
+    if ( (window.location.origin + url) === window.location.href)  return;
+
+    if ('undefined' !== typeof awaitLoadForce) awaitLoad = awaitLoadForce;
 
     if(!awaitLoad) {
         if (utils.isIE()) {
@@ -121,6 +114,7 @@ utils.attachGuardToLinks = function() {
     var linkDefender = function(event){
         if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which ) return;
         var element = event.target;
+        var awaitLoad = false;
 
         while ( 'a' !== element.nodeName.toLowerCase() ){
             if (element === document || ! (element = element.parentNode) ) return; 
@@ -133,6 +127,7 @@ utils.attachGuardToLinks = function() {
 
         var linkProps = element.getAttribute('data-atlant');
         if (linkProps && 'ignore' === linkProps) return;
+        if (linkProps && 'await' === linkProps) awaitLoad = true;
 
         if ( (window.location.origin + loc ) === window.location.href) {
             event.preventDefault();
@@ -143,11 +138,11 @@ utils.attachGuardToLinks = function() {
         // @TODO? don't prevent default and understand that route not changed at routeChanged state?
         if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {
 
-            var element;
+            var elem;
             var begin = loc.indexOf('#');  
             var id = loc.slice( -1 === begin ? 1 : begin + 1, loc.length );
-            if( '' !== id) element = document.getElementById(id)
-            if(element) element.scrollIntoView();
+            if( '' !== id) elem = document.getElementById(id)
+            if(elem) elem.scrollIntoView();
 
             event.preventDefault();
             return false;
@@ -155,7 +150,7 @@ utils.attachGuardToLinks = function() {
 
         if ( loc && element.host === location.host ) {
             event.preventDefault();
-            utils.goTo( loc );
+            utils.goTo( loc, awaitLoad);
         }
     }
     document.addEventListener('click', linkDefender );
