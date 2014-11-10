@@ -1,3 +1,5 @@
+0.3.4
+	IE-10 fixes
 0.3.3 
 	add data-atlant="await" to link for not canceling current downloads
 0.3.2 
