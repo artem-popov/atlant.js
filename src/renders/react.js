@@ -2,6 +2,7 @@
 var React = require('react')
      ,s = require('./../lib')
      ,_ = require('lodash')
+    ,utils = require('../utils')
 
 var State = function(){
     var wrappers = {}
@@ -50,14 +51,14 @@ var Render = function() {
     this.render = function(viewProvider, name, scope ) {
         var rendered = new Promise( function( resolve, reject ){
             console.log('%cbegin rendering view ' + name, 'color: #0000ff');
-            console.time('rendered view ' + name);
+            utils.console.time('rendered view ' + name);
 
             // get new component somehow.
             state.set(name, viewProvider(scope));  
             var instance = state.getThis('name');
             state.check(name);
 
-            console.timeEnd('rendered view ' + name);
+            utils.console.timeEnd('rendered view ' + name);
             return resolve(state.getInstance(name));  
         });
 
@@ -134,8 +135,8 @@ var Render = function() {
                 try {
                     if (instance) { 
                         console.log('%cbegin force update of ' + name, 'color: #0000ff');
-                        console.time('update of ' + name + ' finished')
-                        instance.forceUpdate(s.compose( console.timeEnd.bind(console, 'update of ' + name + ' finished'), resolve));
+                        utils.console.time('update of ' + name + ' finished')
+                        instance.forceUpdate(s.compose( utils.console.timeEnd.bind(console, 'update of ' + name + ' finished'), resolve));
                     } else {
                         console.log('%cno need of ' + name + ' update', 'color: #0000ff');
                         resolve();
