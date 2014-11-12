@@ -47,6 +47,19 @@ On it's way.
 Atlant watches when you touch links and manages them. 
 use a attribute data-atlant="ignore" to skip this.
 
+## How it look's like?
+
+atlant
+    .when('/')   
+        .render(<Home/>)
+    .when('login')
+        .render(<Login/>)
+    .when('profile')
+        .depends($.get('/api/posts'))
+            .inject('posts')
+                .render(<PostsList>)
+
+Awesome isn't it?
 
 ## Examples
 

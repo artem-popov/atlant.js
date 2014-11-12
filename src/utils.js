@@ -137,6 +137,8 @@ utils.attachGuardToLinks = function() {
 
         if ( event instanceof KeyboardEvent && 13 !== event.keyCode) return;
 
+        if(element.getAttribute('target')) return;
+
         var linkProps = element.getAttribute('data-atlant');
         if (linkProps && 'ignore' === linkProps) return;
         if (linkProps && 'await' === linkProps) awaitLoad = true;
