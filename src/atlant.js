@@ -56,7 +56,7 @@ function Atlant(){
     // State from current route. Updated on route Load.
     var lastPath // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
         ,lastData // Data saved from last route.
-        ,lastMask
+        ,lastMask = []
         ,lastReferrer;
 
     // var log = s.nop;
@@ -878,6 +878,7 @@ function Atlant(){
         State.state.lastWhen = otherWiseRootStream
             .map( function(depValue) { 
                 depValue.masks = lastMask;
+                depValue.mask = s.head(lastMask.filter(function(mask){ return '*' !== mask}));
                 depValue.location = lastPath;
                 depValue.referrer = lastReferrer;
 
@@ -916,6 +917,7 @@ function Atlant(){
             .map( function(depValue) { 
                 if ('object' === typeof depValue) {
                     depValue.masks = lastMask;
+                    depValue.mask = s.head(lastMask.filter(function(mask){ return '*' !== mask}));
                     depValue.location = lastPath;
                     depValue.referrer = lastReferrer;
                 }
@@ -966,6 +968,7 @@ function Atlant(){
                 resetRouteState();
 
                 depValue.masks = lastMask;
+                depValue.mask = s.head(lastMask.filter(function(mask){ return '*' !== mask}));
                 depValue.location = lastPath;
                 depValue.referrer = lastReferrer;
 
