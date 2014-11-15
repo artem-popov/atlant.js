@@ -94,6 +94,7 @@ function Atlant(){
 
     var RenderOperation = {
         render: parseInt(_.uniqueId())
+        ,draw: parseInt(_.uniqueId())
         ,clear: parseInt(_.uniqueId())
         ,redirect: parseInt(_.uniqueId())
         ,move: parseInt(_.uniqueId())
@@ -915,6 +916,9 @@ function Atlant(){
 
         State.state.lastWhen = action
             .map( function(depValue) { 
+                if ( 'undefined' === typeof depValue ) {
+                    depValue = {}
+                }
                 if ('object' === typeof depValue) {
                     depValue.masks = lastMask;
                     depValue.mask = s.head(lastMask.filter(function(mask){ return '*' !== mask}));
@@ -1113,7 +1117,6 @@ function Atlant(){
      * @returns {*}
      */
     var _render = function(renderProvider, viewName, renderOperation){
-
             if ( ! State.state.lastOp ) throw new Error('"render" should nest something');
             
             if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider && renderOperation != RenderOperation.nope ) {
@@ -1148,7 +1151,6 @@ function Atlant(){
             State.print('_____renderStateAfter:', State.state);
             return this;
     };
-
 
     var _check = function(isCheck) {
         if ( 'undefined' === typeof isCheck)
@@ -1370,6 +1372,8 @@ function Atlant(){
 
     /* Renders the view. first - render provider, second - view name */
     this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, RenderOperation.render);}
+    /* Renders the view. first - render provider, second - view name. Not waiting for anything - draws immediatelly\ */
+    // this.draw = _draw; 
     /* clears provided viewName */
     this.clear = function(viewName) {return _render.bind(this)(function(){}, viewName, RenderOperation.clear);}
     // Soft atlant-inside redirect.
