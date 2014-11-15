@@ -1380,6 +1380,8 @@ function Atlant(){
     this.redirect = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.redirect);}
     // Alias for redirect
     this.go =  this.redirect;
+    // Force redirect event to current route
+    // this.force = _.force;
     // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
     this.move = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.move);}
     // render which render nothing into nowhere
