@@ -913,6 +913,7 @@ function Atlant(){
         var whenId = _.uniqueId(); 
         var depName = 'action_' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
+        var transfers = transfersGrabber.init(TopState.state);
 
         State.state.lastWhen = action
             .map( function(depValue) { 
@@ -930,7 +931,8 @@ function Atlant(){
                 console.log(' last actions:', whenId, atlantState.actions, atlantState.actions[whenId], depValue);
 
 
-                var stream = injectsGrabber.add(depName, depValue, injects, {})
+                var stream = injectsGrabber.add(depName, depValue, injects, {});
+                stream = transfersGrabber.add(transfers, stream);
                 resetRouteState();
 
                 stream.action = true;
