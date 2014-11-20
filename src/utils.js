@@ -94,8 +94,10 @@ var utils = function() {
 utils.isIE = function()
 {
     var isIE11 = navigator.userAgent.indexOf(".NET") > -1;      
-    var isIE11orLess = isIE11 || navigator.appVersion.indexOf("MSIE") != -1;
-    return isIE11orLess;
+    var isIELess11 = navigator.appVersion.indexOf("MSIE") > -1;
+    var isMobileIE = navigator.userAgent.indexOf('IEMobile') > -1
+    return isIE11 || isIELess11 || isMobileIE;
+     
 }
 
 /**
@@ -118,7 +120,21 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce) {
         }
     }
 
-    setTimeout( history.pushState.bind(this, null, null, url), 0);
+    setTimeout( history.pushState.bind(history, null, null, url), 0);
+}
+
+/**
+ * Redirect to the other path using $location
+ * @param upstream
+ * @returns {*}
+ */
+utils.replace = function(url) {
+
+    if ('undefined' === typeof window) return;
+    if ( (window.location.origin + url) === window.location.href)  return;
+
+    console.log('replace:', arguments)
+    setTimeout( history.replaceState.bind(history, null, null, url), 0);
 }
 
 utils.attachGuardToLinks = function() {

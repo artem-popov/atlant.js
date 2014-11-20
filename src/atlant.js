@@ -94,7 +94,7 @@ function Atlant(){
 
     var RenderOperation = {
         render: parseInt(_.uniqueId())
-        ,draw: parseInt(_.uniqueId())
+        ,replace: parseInt(_.uniqueId())
         ,clear: parseInt(_.uniqueId())
         ,redirect: parseInt(_.uniqueId())
         ,move: parseInt(_.uniqueId())
@@ -262,6 +262,12 @@ function Atlant(){
                             } else {
                                 upstream.doLater = function(){utils.goTo(viewProvider)}
                             }
+
+                            whenRenderedSignal(upstream);
+
+                            return;
+                        } else if (RenderOperation.replace === upstream.render.renderOperation ){
+                            upstream.doLater = function(){utils.replace(s.apply(viewProvider, scope))}
 
                             whenRenderedSignal(upstream);
 
@@ -584,10 +590,11 @@ function Atlant(){
             }
             // end redirect/
 
-            if(!redirect.length && Object.keys(upstreams).length) {
+            if(Object.keys(upstreams).length) {
 
                 var allRendered = Promise.all( 
                     Object.keys(upstreams)
+                        .filter(function(x){ return x.doLater === void 0})
                         .map(function(x){ return prefs.render.on.renderEnd(x) })
                 )
 
@@ -1382,6 +1389,8 @@ function Atlant(){
     this.redirect = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.redirect);}
     // Alias for redirect
     this.go =  this.redirect;
+    //  Fake redirect. Atlant will just change URL but routes will not be restarted.
+    this.replace = function(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, RenderOperation.replace);}
     // Force redirect event to current route
     // this.force = _.force;
     // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.

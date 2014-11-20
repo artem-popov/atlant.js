@@ -420,6 +420,14 @@ var s = (function(){
         return tryD(fn, function(e) { return Promise.reject(e) })
     }
 
+    var _apply = function(doProvider, value) {
+        if ('function' === typeof doProvider) {
+            return doProvider(value);
+        } else {
+            return doProvider;
+        }
+    }
+
     this.compose      = _.compose;
     this.curry        = _.curry;
     this.pass   = pass;
@@ -472,6 +480,8 @@ var s = (function(){
     this.isPromise = isPromise;
     this.simpleType = simpleType;
     this.tryD = tryD;
+    this.apply = _apply;
+
     this.baconTryD = baconTryD;
     this.promiseTryD = promiseTryD;
     /**
