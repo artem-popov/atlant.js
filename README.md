@@ -55,9 +55,19 @@ atlant
     .when('login')
         .render(<Login/>)
     .when('profile')
+        .depends($.get('/api/something'))
+            .inject('something', '.a.b[10].c{id=10}.d')
         .depends($.get('/api/posts'))
             .inject('posts')
-                .render(<PostsList>)
+            .if( u => !u.length )
+                .redirect('/404')
+            .if( u => u.length )
+                .and(u => $get('/api/post/'+ u.posts.unshift().id))
+                    .inject('post')
+                        .render(<PostsList>)
+    .all()
+        .fail()
+            .render(<500/>, 'notificationArea')
 
 Awesome isn't it?
 
