@@ -1,5 +1,7 @@
 0.3.7
 	add .transfer().to for actions
+	add .replace() - fake .redirect() brother
+	add "IEMobile" as recognition if IEMobile
 0.3.6
     provide current route mask in action/task
 0.3.5
