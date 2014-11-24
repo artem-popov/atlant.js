@@ -129,7 +129,7 @@ function Atlant(){
          * Injects depend values from upstream into object which is supplyed first.
          */
         var createScope = function ( upstream ) {
-            var warning = function(inject) { console.log('Atlant warning: inject accessor return nothing:' + inject) }
+            var warning = function(inject) { /*console.log('Atlant warning: inject accessor return nothing:' + inject) */}
             var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
             var joins = s.filter( function(inject){ return inject.hasOwnProperty('injects') }, injects);
             injects = s.filter( function(inject){ return !inject.hasOwnProperty('injects') }, injects);
@@ -195,7 +195,7 @@ function Atlant(){
 
         var whenRenderedSignal = function( upstream ) {
             //deleting the semaphore;
-            if( upstream.isAction ) console.log('action!:', upstream.whenId)
+            // if( upstream.isAction ) console.log('action!:', upstream.whenId)
             if( upstream.isAction ) delete atlantState.actions[upstream.whenId]
             // Signalling that view renders
             if (upstream.isTask)
@@ -287,6 +287,7 @@ function Atlant(){
                                 render = prefs.render.clear
                             } 
 
+                            // console.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
                             var render = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
                             render(viewProvider, viewName, scope)
                                 .then(function(component){upstream.render.component = component; return upstream })
@@ -633,7 +634,7 @@ function Atlant(){
                     event.preventDefault();
                     var parsed = ( event.detail ) ? utils.parseURL( event.detail.url ) : void 0;
                     var path = ( parsed ) ?  parsed.pathname + '?' + parsed.search :  utils.getLocation();
-                    console.log('the route is changed!')
+                    // console.log('the route is changed!')
                     if (path !== lastPath) {
                         sink({ 
                             path: path 
@@ -826,7 +827,7 @@ function Atlant(){
 
             State.state.lastWhen
                 .onValue( function(upstream) {
-                    console.log('----Matched route!', upstream);
+                    // console.log('----Matched route!', upstream);
                     if( upstream.redirectTo) {  // If the route is a "bad clone", then redirecting.
                         log('----------------Redirect:',upstream);
                         utils.goTo(upstream.redirectTo);
@@ -894,7 +895,7 @@ function Atlant(){
                 stream.otherwise = true;
                 stream.conditionId = whenId;
                 whenCount.value++;
-                console.log('---Matched otherwise!!!')
+                // console.log('---Matched otherwise!!!')
                 return stream; 
             })
 
@@ -935,9 +936,6 @@ function Atlant(){
                 }
 
                 // Check if this action now active - prevents double-click
-                console.log(' last actions:', whenId, atlantState.actions, atlantState.actions[whenId], depValue);
-
-
                 var stream = injectsGrabber.add(depName, depValue, injects, {});
                 stream = transfersGrabber.add(transfers, stream);
                 resetRouteState();
@@ -948,7 +946,7 @@ function Atlant(){
 
                 if ( !isTask ) whenCount.value++;
                 atlantState.viewRendered = {}; // the only thing we can nullify.
-                console.log('---Matched action!!!', depValue)
+                // console.log('---Matched action!!!', depValue)
                 
                 atlantState.actions[whenId] = depValue;
                 return stream;
@@ -993,11 +991,11 @@ function Atlant(){
                 atlantState.viewRendered = {}; // the only thing we can nullify.
 
                 whenCount.value++;
-                console.log('---Matched error!!!')
+                // console.log('---Matched error!!!')
                 return stream;
 
             })
-            .map(s.logIt('error stream'))
+            // .map(s.logIt('error stream'))
 
         // whenCounter.add(State.state.lastWhen, whenCount);
 
@@ -1040,12 +1038,12 @@ function Atlant(){
             .map( function(upstream) { 
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
                 whenCount.value++;
-                if( isElse) 
-                    console.log('---Matched else!!!')
-                else
-                    console.log('---Matched if!!!')
+                // if( isElse) 
+                //     console.log('---Matched else!!!')
+                // else
+                //     console.log('---Matched if!!!')
 
-                console.log('---condition: (', fn, ')(scope) === ', true)
+                // console.log('---condition: (', fn, ')(scope) === ', true)
 
                 stream.conditionId = ifId;
                 return stream;
