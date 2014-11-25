@@ -1,3 +1,6 @@
+0.3.8
+	- do not stop tasks renders
+	- action now work as task(synonym) (there was'nt need on action as it was)
 0.3.7
 	add .transfer().to for actions
 	add .replace() - fake .redirect() brother

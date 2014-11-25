@@ -1329,7 +1329,7 @@ function Atlant(){
     // Creates stream which will be called when render error is happend
     this.error = _error;
     // Creates custom stream which accepts Bacon stream
-    this.action = _action;
+    this.action = function(action) { return _action.call(this, action, true); }
     // Creates custom stream which accepts Bacon stream. The difference with action is that this task will be performed immediatelly without waiting of other tasks to execute. ( if action happed and not end till other action happend, then this 2 actions will end zipped, simultaneusly, i.e. first action will wait second to finish).
     this.task = function(action) { return _action.call(this, action, true); }
     // creates branch which can destruct all what declared by .when() or .match()
