@@ -211,7 +211,7 @@ function Atlant(){
 
         // when render applyed, no more renders will be accepted for this .when and viewName
         var renderStopper = function(upstream) {
-            if ( atlantState.viewRendered[upstream.render.viewName] ) { 
+            if ( atlantState.viewRendered[upstream.render.viewName] && !upstream.isTask  ) { 
                 whenRenderedSignal(upstream);
                 return false; 
             } else { 
