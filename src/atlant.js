@@ -432,7 +432,7 @@ function Atlant(){
                         // Using data transfered from previous route instead of accessing the dependency
                         var upstream = ups.getLast();
                         if (lastData && upstream.ref) {
-                            var mask = upstream.route.mask;
+                            var mask = utils.getPattern(lastMask);
 
                             // look in lastData only for current mask
                             var data = s.filterKeys(function(dataMask){ return mask === dataMask }, lastData);
@@ -780,7 +780,13 @@ function Atlant(){
                         lastMask.push(upstream.route.mask);
 
                         var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
-                        var depData = s.merge( params, {location: upstream.path, mask: upstream.route.mask, referrer: upstream.referrer} );
+                        var depData = s.merge( params, {
+                                               location: upstream.path 
+                                              ,mask: upstream.route.mask
+                                              ,masks: lastMask
+                                              ,pattern: utils.getPattern(lastMask)
+                                              ,referrer: upstream.referrer
+                        });
 
                         var stream = injectsGrabber.add(name, depData, injects, upstream);
                         stream = transfersGrabber.add(transfers, upstream)
@@ -887,7 +893,8 @@ function Atlant(){
         State.state.lastWhen = otherWiseRootStream
             .map( function(depValue) { 
                 depValue.masks = lastMask;
-                depValue.mask = s.head(lastMask.filter(function(mask){ return '*' !== mask}));
+                depValue.pattern = utils.getPattern(lastMask);
+                depValue.mask = void 0;
                 depValue.location = lastPath;
                 depValue.referrer = lastReferrer;
 
@@ -930,7 +937,8 @@ function Atlant(){
                 }
                 if ('object' === typeof depValue) {
                     depValue.masks = lastMask;
-                    depValue.mask = s.head(lastMask.filter(function(mask){ return '*' !== mask}));
+                    depValue.pattern = utils.getPattern(lastMask);
+                    depValue.mask = void 0;
                     depValue.location = lastPath;
                     depValue.referrer = lastReferrer;
                 }
@@ -979,7 +987,8 @@ function Atlant(){
                 resetRouteState();
 
                 depValue.masks = lastMask;
-                depValue.mask = s.head(lastMask.filter(function(mask){ return '*' !== mask}));
+                depValue.pattern = utils.getPattern(lastMask);
+                depValue.mask = void 0;
                 depValue.location = lastPath;
                 depValue.referrer = lastReferrer;
 
@@ -1312,6 +1321,11 @@ function Atlant(){
             console.error('Atlant.js: no window object...')
     }
 
+    // Will destruct all data structures.
+    var _destruct = function() {
+        return this;
+    }
+
     // Set view active by default (no need to mention in second parameter of .render
     this.set = _set;
     // Roolback previous set
@@ -1427,6 +1441,7 @@ function Atlant(){
 
     // Will hard redirect to param url (page will be reloaded by browser)
     this.moveTo = _moveTo;
+    this.desctruct = _destruct;
 
     return this;
 

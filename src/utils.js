@@ -137,6 +137,10 @@ utils.replace = function(url) {
     setTimeout( history.replaceState.bind(history, null, null, url), 0);
 }
 
+utils.getPattern = function(masks) {
+    return s.head(masks.filter(function(mask){ return '*' !== mask}));
+}
+
 utils.attachGuardToLinks = function() {
     
     var linkDefender = function(event){
