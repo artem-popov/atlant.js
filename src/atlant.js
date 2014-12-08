@@ -875,7 +875,7 @@ function Atlant(){
     }
 
     var _match = function(masks) {
-        return when.bind(this)( masks, Matching.stop, WhenFinally.match );
+        return when.bind(this)( masks, Matching.continue, WhenFinally.match );
     }
 
     var _finally = function() {

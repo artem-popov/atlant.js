@@ -1,3 +1,5 @@
+0.3.10 
+	-  fix .match() behaviour was like .lastWhen but should like .when()
 0.3.9 
 	- data providers provides 'pattern' - most specific mask of this route.
 	'mask' now undefined in action

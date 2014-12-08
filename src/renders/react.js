@@ -153,7 +153,6 @@ var Render = function() {
         ,error:function(){
             // trying to restore...
             try{
-                console.log('React:', React)
                 // React.renderComponent(React.DOM.div('Hey! Error in the city!'), element, function(){console.log('view restored!')} );
                 //instance.forceUpdate(resolve);
             } catch(e){
