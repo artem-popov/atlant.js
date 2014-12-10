@@ -315,67 +315,11 @@ function Atlant(){
 	/* matchRouteLast */
     var matchRouteLast = function(){
         var matchRouteWrapper = function(path, route){
-            var match = matchRoute(path, route.mask);
+            var match = utils.matchRoute(path, route.mask);
 
             return match ? { params:match, route:route } : null;
         }
 
-        /**
-         * Pure Matching function
-         * @param on - current locatin url
-         * @param when - compare mask
-         * @returns (*)
-         */
-        var matchRoute = s.memoize( function(path, mask){ //@TODO add real match, now works only for routes without params
-            // TODO(i): this code is convoluted and inefficient, we should construct the route matching
-            //   regex only once and then reuse it
-            var negate = '!' === mask[0];
-            if (negate) {
-                mask = mask.slice(1, mask.length-1);
-            }
-
-            var parsed = utils.parseURL( path );
-            path = parsed.pathname;
-            path = decodeURIComponent(path);
-
-            // Successefully find *
-            if ( '*' === mask[0] ) return {};
-
-            // Escape regexp special characters.
-            var when = '^' + mask.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&") + '$';
-            var regex = '',
-                params = [],
-                dst = {};
-
-            var re = /:(\w+)/g,
-                paramMatch,
-                lastMatchedIndex = 0;
-
-            while ((paramMatch = re.exec(when)) !== null) {
-                // Find each :param in `when` and replace it with a capturing group.
-                // Append all other sections of when unchanged.
-                regex += when.slice(lastMatchedIndex, paramMatch.index);
-                regex += '([^\\/]*)';
-                params.push(paramMatch[1]);
-                lastMatchedIndex = re.lastIndex;
-            }
-            // Append trailing path part.
-            regex += when.substr(lastMatchedIndex);
-
-            var match = path.match(new RegExp(regex));
-            if (match) {
-                params.map(function(name, index) {
-                    dst[name] = match[index + 1];
-                });
-                var searches = _.clone( utils.parseSearch(parsed.search), true);
-                dst = _.extend(searches, dst);
-            } else if( negate ) {
-                dst = {}
-                match = true;
-            }
-
-            return match ? dst  : null;
-        });
 
         return s.curry( function(path, matchingBehaviour, route) {
             if ('string' === typeof route) route = {mask:route};
@@ -1321,6 +1265,19 @@ function Atlant(){
             console.error('Atlant.js: no window object...')
     }
 
+    var _parse = function(path, mask){
+        return utils.matchRoute(path, mask)
+    }
+
+    var _parseAll = function(path, masks){
+        return masks
+            .map(function(i){ 
+                return [i, ('/' !== i[i.length-1]) ? i + '/' : i.slice(0, i.length-2)];
+            })
+            .reduce(function(v,i) { return v.concat(i); })
+            .map(utils.matchRoute.bind(utils, path), masks)
+            .reduce( function(v, i) { return _.merge(v, i) }, {})
+    }
     // Will destruct all data structures.
     var _destruct = function() {
         return this;
@@ -1425,6 +1382,9 @@ function Atlant(){
     // After publish and first render the contents will be transferet to callback (first parameter).
     this.stringify =  _stringify;
 
+
+    //These commands doesn't return "this".
+
     // Returns child view component
     this.get =  _get;
     // Returns atlant.js version
@@ -1434,6 +1394,12 @@ function Atlant(){
     // Returns commit id just before current atlant.js commit
     this.revision = require('AtlantRevision');
 
+    this.utils = { 
+        // parse :: path -> mask -> {params}
+        parse: _parse,
+        // parseAll :: path -> [mask] -> {params}
+        parseAll: _parseAll
+    };
     // This command will immediatelly redirect to param url
     this.goTo = _redirectTo;
     // The alias of goTo
@@ -1441,7 +1407,7 @@ function Atlant(){
 
     // Will hard redirect to param url (page will be reloaded by browser)
     this.moveTo = _moveTo;
-    this.desctruct = _destruct;
+    this.destruct = _destruct;
 
     return this;
 

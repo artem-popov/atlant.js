@@ -191,5 +191,61 @@ utils.attachGuardToLinks = function() {
     document.addEventListener('keydown', linkDefender );
 }
 
+/**
+ * Pure Matching function
+ * @param on - current locatin url
+ * @param when - compare mask
+ * @returns (*)
+ */
+utils.matchRoute = s.memoize( function(path, mask){ //@TODO add real match, now works only for routes without params
+    // TODO(i): this code is convoluted and inefficient, we should construct the route matching
+    //   regex only once and then reuse it
+    var negate = '!' === mask[0];
+    if (negate) {
+        mask = mask.slice(1, mask.length-1);
+    }
+
+    var parsed = utils.parseURL( path );
+    path = parsed.pathname;
+    path = decodeURIComponent(path);
+
+    // Successefully find *
+    if ( '*' === mask[0] ) return {};
+
+    // Escape regexp special characters.
+    var when = '^' + mask.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&") + '$';
+    var regex = '',
+        params = [],
+        dst = {};
+
+    var re = /:(\w+)/g,
+        paramMatch,
+        lastMatchedIndex = 0;
+
+    while ((paramMatch = re.exec(when)) !== null) {
+        // Find each :param in `when` and replace it with a capturing group.
+        // Append all other sections of when unchanged.
+        regex += when.slice(lastMatchedIndex, paramMatch.index);
+        regex += '([^\\/]*)';
+        params.push(paramMatch[1]);
+        lastMatchedIndex = re.lastIndex;
+    }
+    // Append trailing path part.
+    regex += when.substr(lastMatchedIndex);
+
+    var match = path.match(new RegExp(regex));
+    if (match) {
+        params.map(function(name, index) {
+            dst[name] = match[index + 1];
+        });
+        var searches = _.clone( utils.parseSearch(parsed.search), true);
+        dst = _.extend(searches, dst);
+    } else if( negate ) {
+        dst = {}
+        match = true;
+    }
+
+    return match ? dst  : null;
+});
 
 module.exports = utils;

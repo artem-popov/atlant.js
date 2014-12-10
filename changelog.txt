@@ -1,3 +1,6 @@
+0.3.11
+	- move matchRoute to utils, and provide atlant.utils.parse('location',
+			'mask' ) and atlant.utils.parseAll('location', ['mask']) for user.
 0.3.10 
 	-  fix .match() behaviour was like .lastWhen but should like .when()
 0.3.9 
