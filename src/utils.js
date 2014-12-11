@@ -76,18 +76,7 @@ var utils = function() {
             }
             return void 0;
         }
-        ,console: { // Need for IE10
-           time: function() {
-               if (console.time) {
-                   return console.time.apply(console, s.a2a(arguments))
-               }
-           } 
-           ,timeEnd: function() {
-               if (console.timeEnd) {
-                   return console.timeEnd.apply(console, s.a2a(arguments))
-               }
-           }
-        }
+       
     };
 }();
 

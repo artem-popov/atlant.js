@@ -2,7 +2,8 @@
 var React = require('react')
      ,s = require('./../lib')
      ,_ = require('lodash')
-    ,utils = require('../utils')
+     ,u = require('../utils')
+     ,l = require('../inc/log')();
 
 var State = function(){
     var wrappers = {}
@@ -50,15 +51,15 @@ var Render = function() {
 
     this.render = function(viewProvider, name, scope ) {
         var rendered = new Promise( function( resolve, reject ){
-            console.log('%cbegin rendering view ' + name, 'color: #0000ff');
-            utils.console.time('rendered view ' + name);
+            l.log('%cbegin rendering view ' + name, 'color: #0000ff');
+            l.logTime('rendered view ' + name);
 
             // get new component somehow.
             state.set(name, viewProvider(scope));  
             var instance = state.getThis('name');
             state.check(name);
 
-            utils.console.timeEnd('rendered view ' + name);
+            l.logTimeEnd('rendered view ' + name);
             return resolve(state.getInstance(name));  
         });
 
@@ -134,11 +135,11 @@ var Render = function() {
                 var instance = state.getThis(name);
                 try {
                     if (instance) { 
-                        console.log('%cbegin force update of ' + name, 'color: #0000ff');
-                        utils.console.time('update of ' + name + ' finished')
-                        instance.forceUpdate(s.compose( utils.console.timeEnd.bind(console, 'update of ' + name + ' finished'), resolve));
+                        l.log('%cbegin force update of ' + name, 'color: #0000ff');
+                        l.logTime('update of ' + name + ' finished')
+                        instance.forceUpdate(s.compose( l.logTimeEnd.bind(l, 'update of ' + name + ' finished'), resolve));
                     } else {
-                        console.log('%cno need of ' + name + ' update', 'color: #0000ff');
+                        l.log('%cno need of ' + name + ' update', 'color: #0000ff');
                         resolve();
                     }
                 } catch(e) { 
@@ -153,7 +154,7 @@ var Render = function() {
         ,error:function(){
             // trying to restore...
             try{
-                // React.renderComponent(React.DOM.div('Hey! Error in the city!'), element, function(){console.log('view restored!')} );
+                // React.renderComponent(React.DOM.div('Hey! Error in the city!'), element, function(){l.log('view restored!')} );
                 //instance.forceUpdate(resolve);
             } catch(e){
                 console.error(e.message, e.stack)

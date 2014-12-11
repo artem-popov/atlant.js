@@ -10,6 +10,7 @@
 
 function Atlant(){
     var s = require('./lib')
+        ,l = require('./inc/log')()
         ,simpleRender = require('./renders/simple')
         ,reactRender = require('./renders/react')
         ,DepCache = require('./inc/dep-cache')
@@ -58,9 +59,6 @@ function Atlant(){
         ,lastData // Data saved from last route.
         ,lastMask = []
         ,lastReferrer;
-
-    // var log = s.nop;
-    var log = console.log.bind(console, '--');
 
     //Action should be performed at route change.
     var onRouteChange = function() {
@@ -129,7 +127,7 @@ function Atlant(){
          * Injects depend values from upstream into object which is supplyed first.
          */
         var createScope = function ( upstream ) {
-            var warning = function(inject) { /*console.log('Atlant warning: inject accessor return nothing:' + inject) */}
+            var warning = function(inject) { l.log('Atlant warning: inject accessor return nothing:' + inject) }
             var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
             var joins = s.filter( function(inject){ return inject.hasOwnProperty('injects') }, injects);
             injects = s.filter( function(inject){ return !inject.hasOwnProperty('injects') }, injects);
@@ -195,7 +193,6 @@ function Atlant(){
 
         var whenRenderedSignal = function( upstream ) {
             //deleting the semaphore;
-            // if( upstream.isAction ) console.log('action!:', upstream.whenId)
             if( upstream.isAction ) delete atlantState.actions[upstream.whenId]
             // Signalling that view renders
             if (upstream.isTask)
@@ -239,7 +236,7 @@ function Atlant(){
                         if( ! renderState[upstream.render.renderId] ) { 
                             renderState[upstream.render.renderId] = scope;
                         } else if ( false  && prefs.checkInjectsEquality && _.isEqual ( scope, renderState[upstream.render.renderId] )) {
-                            console.log('Atlant.js: Render cache enabled: no parameters changed. Skiping rendering of ', viewName)
+                            l.log('Atlant.js: Render cache enabled: no parameters changed. Skiping rendering of ', viewName)
                             whenRenderedSignal(upstream);
                             return;
                         } else {
@@ -287,7 +284,7 @@ function Atlant(){
                                 render = prefs.render.clear
                             } 
 
-                            // console.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
+                            l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
                             var render = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
                             render(viewProvider, viewName, scope)
                                 .then(function(component){upstream.render.component = component; return upstream })
@@ -395,7 +392,7 @@ function Atlant(){
 
                         // Using cache instead of accessing dependency
                         if (false && depCache.has(depName, scope)) {
-                            console.log('Atlant.js: Depends cache enabled: no parameters changed. Skipping accessing of dependation')
+                            l.log('Atlant.js: Depends cache enabled: no parameters changed. Skipping accessing of dependation')
                             return Bacon.constant(depCache.get(depName, scope));
                         }
                         else { 
@@ -474,7 +471,7 @@ function Atlant(){
     }
 
     /* Base and helper streams*/
-    log('registering base streams...');
+    l.log('registering base streams...');
 
     var publishStream = new Bacon.Bus();  // Here we can put init things.
     var errorStream = new Bacon.Bus();
@@ -578,11 +575,12 @@ function Atlant(){
                     event.preventDefault();
                     var parsed = ( event.detail ) ? utils.parseURL( event.detail.url ) : void 0;
                     var path = ( parsed ) ?  parsed.pathname + '?' + parsed.search :  utils.getLocation();
-                    // console.log('the route is changed!')
+                    l.log('the route is changed!')
                     if (path !== lastPath) {
                         sink({ 
                             path: path 
                             ,referrer: lastPath
+                            // ,referrerPattern: lastPattern
                         }); 
                     } 
                 };
@@ -777,9 +775,9 @@ function Atlant(){
 
             State.state.lastWhen
                 .onValue( function(upstream) {
-                    // console.log('----Matched route!', upstream);
+                    l.log('----Matched route!', upstream);
                     if( upstream.redirectTo) {  // If the route is a "bad clone", then redirecting.
-                        log('----------------Redirect:',upstream);
+                        l.log('----------------Redirect:',upstream);
                         utils.goTo(upstream.redirectTo);
                     }
                 });
@@ -846,7 +844,7 @@ function Atlant(){
                 stream.otherwise = true;
                 stream.conditionId = whenId;
                 whenCount.value++;
-                // console.log('---Matched otherwise!!!')
+                l.log('---Matched otherwise!!!')
                 return stream; 
             })
 
@@ -898,7 +896,7 @@ function Atlant(){
 
                 if ( !isTask ) whenCount.value++;
                 atlantState.viewRendered = {}; // the only thing we can nullify.
-                // console.log('---Matched action!!!', depValue)
+                l.log('---Matched action!!!', depValue)
                 
                 atlantState.actions[whenId] = depValue;
                 return stream;
@@ -944,11 +942,10 @@ function Atlant(){
                 atlantState.viewRendered = {}; // the only thing we can nullify.
 
                 whenCount.value++;
-                // console.log('---Matched error!!!')
+                l.log('---Matched error!!!')
                 return stream;
 
             })
-            // .map(s.logIt('error stream'))
 
         // whenCounter.add(State.state.lastWhen, whenCount);
 
@@ -968,7 +965,11 @@ function Atlant(){
      * Adds filter into dependency/when
      * @param fn
      */
-    var _if = function(fn) {
+    var _if = function(boolTransform, fn) {
+        s.type(boolTransform, 'function');
+
+        var oldFn = fn;
+        fn = s.compose(boolTransform, fn);
 
         if ( ! State.state.lastOp ) { throw new Error('"if" should nest something.'); }
 
@@ -991,12 +992,12 @@ function Atlant(){
             .map( function(upstream) { 
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
                 whenCount.value++;
-                // if( isElse) 
-                //     console.log('---Matched else!!!')
-                // else
-                //     console.log('---Matched if!!!')
+                if( isElse) 
+                    l.log('---Matched else!!!')
+                else
+                    l.log('---Matched if!!!')
 
-                // console.log('---condition: (', fn, ')(scope) === ', true)
+                l.log('---condition: (', oldFn, ')(scope) === ', true)
 
                 stream.conditionId = ifId;
                 return stream;
@@ -1247,7 +1248,12 @@ function Atlant(){
 
     var _await = function(shouldAWait) {
         utils.goTo = safeGoToCopy.bind(utils, shouldAWait);
-        return this;
+        return this
+    }
+
+    var _verbose = function(on) {
+        l.verbose(on);
+        return this
     }
 
     var _view = function(name) {
@@ -1299,6 +1305,8 @@ function Atlant(){
     this.otherwise =  _otherwise;
     // Creates stream which will be called when render error is happend
     this.error = _error;
+    // Creates stream which will be called when status!= undefined is happend @TODO change this to : when reject is happend
+    // this.catch = _catch;
     // Creates custom stream which accepts Bacon stream
     this.action = function(action) { return _action.call(this, action, true); }
     // Creates custom stream which accepts Bacon stream. The difference with action is that this task will be performed immediatelly without waiting of other tasks to execute. ( if action happed and not end till other action happend, then this 2 actions will end zipped, simultaneusly, i.e. first action will wait second to finish).
@@ -1337,7 +1345,8 @@ function Atlant(){
     // Will accept the same scope as .and(), .render(), .if()
     this.join = _join;
     // Creates new branch if computated callback is true. Warning: the parent branch will be executed still. Render it with .nope() if no render should happend.
-    this.if =  _if;
+    this.if = _if.bind(this, s.id); 
+    this.unless =  _if.bind(this, s.negate);
 
     /**
      * Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
@@ -1347,6 +1356,9 @@ function Atlant(){
     this.check = _check;
     /* wait or not for resources loading when going to next route when link tapped */
     this.await = _await;
+
+    // Display all internal messages.
+    this.verbose = _verbose;
 
     /* Renders the view. first - render provider, second - view name */
     this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, RenderOperation.render);}
