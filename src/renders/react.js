@@ -76,6 +76,15 @@ var Render = function() {
         });
     }
 
+    this.update = function(viewProvider, name, scope) {
+        return new Promise( function( resolve, reject ){
+
+            // state.check(name);
+
+            return resolve(state.getInstance(name));
+        });
+    }
+
     this.attach = function(name, selector) {
         var attached = new Promise( function( resolve, reject ){
             if ( !window ) throw Error('AtlantJs, React render: attach not possible in browser.')

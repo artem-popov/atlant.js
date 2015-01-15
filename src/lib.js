@@ -191,6 +191,11 @@ var s = (function(){
     var concat = _.curry( function(a, b) {
         return b.concat(a);
     });
+
+    var flatMap = function(arr) {
+        return Array.prototype.concat.apply([], arr);
+    }
+
     var tail = function(arr) {
         if (arr) {
             return arr[arr.length-1];
@@ -428,6 +433,19 @@ var s = (function(){
         }
     }
 
+   this.maybe = function(nothing, fn){
+       return function(){
+           try {
+               return fn.apply(this, this.a2a(arguments))
+           } catch (e) {
+               return nothing
+           }
+       }
+   }
+
+   this.maybeS = this.maybe.bind(this, '')
+   this.maybeV = this.maybe.bind(this, void 0)
+
     this.compose      = _.compose;
     this.curry        = _.curry;
     this.pass   = pass;
@@ -463,6 +481,7 @@ var s = (function(){
     this.concat = concat;
     this.mapD   = mapD;
     this.fmap   = fmap;
+    this.flatMap   = flatMap;
     this.set    = set;
     this.flip = flip;
     this.memoize = memoize;

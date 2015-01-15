@@ -1,8 +1,9 @@
 0.3.12 
+	- begin update
+	- add .unblock() to convert when/lastWhen/etc to non-blocking stream of
+	rendering
 	- add .unless() - the .if() antagonist
-	- add .verbose(true) - to turn off all console.log() : turned off by
-														   default, pass
-																		console.error
+	- add .verbose(true) - to turn off all console.log() : turned off by default, pass console.error
 0.3.11
 	- move matchRoute to utils, and provide atlant.utils.parse('location',
 			'mask' ) and atlant.utils.parseAll('location', ['mask']) for user.

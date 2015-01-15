@@ -122,7 +122,6 @@ utils.replace = function(url) {
     if ('undefined' === typeof window) return;
     if ( (window.location.origin + url) === window.location.href)  return;
 
-    console.log('replace:', arguments)
     setTimeout( history.replaceState.bind(history, null, null, url), 0);
 }
 
