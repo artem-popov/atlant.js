@@ -1,3 +1,5 @@
+0.3.13
+	- only forceUpdate for mounted components (fixes non-drawed inner views)
 0.3.12 
 	- begin update
 	- add .unblock() to convert when/lastWhen/etc to non-blocking stream of

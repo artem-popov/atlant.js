@@ -146,7 +146,7 @@ var Render = function() {
                     if (instance) { 
                         l.log('%cbegin force update of ' + name, 'color: #0000ff');
                         l.logTime('update of ' + name + ' finished')
-                        instance.forceUpdate(s.compose( l.logTimeEnd.bind(l, 'update of ' + name + ' finished'), resolve));
+                        if( instance.isMounted()) instance.forceUpdate(s.compose( l.logTimeEnd.bind(l, 'update of ' + name + ' finished'), resolve));
                     } else {
                         l.log('%cno need of ' + name + ' update', 'color: #0000ff');
                         resolve();
