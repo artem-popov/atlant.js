@@ -766,7 +766,7 @@ function Atlant(){
                         stream = transfersGrabber.add(transfers, upstream)
                         stream.isFinally = true;
                         stream.whenId = whenId;
-                        upstream.isStoppable = true;
+                        stream.isStoppable = true;
                         whenCount.value++;
                         stream.route = { whenNot: masks };
                         return stream;
@@ -859,7 +859,7 @@ function Atlant(){
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
                 stream.otherwise = true;
                 stream.conditionId = whenId;
-                upstream.isStoppable = true;
+                stream.isStoppable = true;
                 whenCount.value++;
                 l.log('---Matched otherwise!!!')
                 return stream; 
@@ -958,7 +958,7 @@ function Atlant(){
 
                 atlantState.viewRendered = {}; // the only thing we can nullify.
 
-                upstream.isStoppable = true;
+                stream.isStoppable = true;
                 whenCount.value++;
 
                 l.log('---Matched error!!!')
