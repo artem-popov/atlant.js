@@ -125,6 +125,20 @@ utils.replace = function(url) {
     setTimeout( history.replaceState.bind(history, null, null, url), 0);
 }
 
+/**
+ * Redirect to the other path using $location
+ * @param upstream
+ * @returns {*}
+ */
+utils.change = function(url) {
+
+    if ('undefined' === typeof window) return;
+    if ( (window.location.origin + url) === window.location.href) return;
+
+    setTimeout( history.pushState.bind(history, { eventless: true }, null, url), 0);
+
+}
+
 utils.getPattern = function(masks) {
     return s.head(masks.filter(function(mask){ return '*' !== mask}));
 }

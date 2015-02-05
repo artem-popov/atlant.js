@@ -1,3 +1,7 @@
+0.3.15
+	- introduce .change(url) which changes location to url and saves the
+	previous location in history
+	(.replace() doesn't save previous location in history)
 0.3.14 
 	- fixes stoppable
 0.3.13

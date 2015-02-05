@@ -32,9 +32,10 @@ var wrapPushState = function(window){
     };
 
     window.history.pushState = function(state, title, url) {
-        var newState;
-        var onpushstate = new CustomEvent('pushstate', { detail: { state: {referrer: window.location.pathname}, title: title, url: url } } );
-        window.dispatchEvent(onpushstate);
+        if ( !state || !('eventless' in state) || !state.eventless ) {
+            var onpushstate = new CustomEvent('pushstate', { detail: { state: {referrer: window.location.pathname}, title: title, url: url } } );
+            window.dispatchEvent(onpushstate);
+        }
 
         return tryState(arguments);
     };
