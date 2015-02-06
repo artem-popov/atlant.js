@@ -92,6 +92,7 @@ function Atlant(){
 
     var RenderOperation = {
         render: parseInt(_.uniqueId())
+        ,draw: parseInt(_.uniqueId())
         ,replace: parseInt(_.uniqueId())
         ,change: parseInt(_.uniqueId())
         ,update: parseInt(_.uniqueId())
@@ -195,7 +196,7 @@ function Atlant(){
 
         var whenRenderedSignal = function( upstream ) {
             // Signalling that view renders
-            if (!upstream.isStoppable)
+            if (upstream.render.renderOperation === RenderOperation.draw)
                 renderStreams.taskRendered.push(upstream); 
             else 
                 renderStreams.whenRenderedStream.push(upstream);
@@ -208,15 +209,15 @@ function Atlant(){
 
         // when render applyed, no more renders will be accepted for this .when and viewName
         var renderStopper = function(upstream) {
-            if ( atlantState.viewRendered[upstream.render.viewName] && upstream.isStoppable  ) { 
+            if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw ) 
+                return true;
+
+            if ( atlantState.viewRendered[upstream.render.viewName]) {  // If this view is already rendered... 
                 whenRenderedSignal(upstream);
                 return false; 
-            } else { 
-                // .nope() operation does nothing so no counting it
-                // the task is non-blocked, so it should not block others
-                if (upstream.render.renderOperation !== RenderOperation.nope && upstream.isStoppable ) 
-                    atlantState.viewRendered[upstream.render.viewName] = true;
-
+            } else { // If this view not yet rendered...
+                atlantState.viewRendered[upstream.render.viewName] = true;
+                
                 return true;
             }
         };
@@ -284,7 +285,7 @@ function Atlant(){
 
                             return;
                         } else {
-                            if ( RenderOperation.render === upstream.render.renderOperation ) {
+                            if ( RenderOperation.render === upstream.render.renderOperation || RenderOperation.draw === upstream.render.renderOperation ) {
                                 render = prefs.render.render 
                             } else if ( RenderOperation.clear === upstream.render.renderOperation ){
                                 render = prefs.render.clear
@@ -681,7 +682,7 @@ function Atlant(){
             var name = '';
             if (whenType === WhenFinally.finally) name = 'finally';
             if (whenType === WhenFinally.match) name = 'match';
-            var name = name + createNameFromMasks(masks) + _.uniqueId();
+            name = name + createNameFromMasks(masks) + _.uniqueId();
 
             var whenId = _.uniqueId();        
             var ups = new Upstream();
@@ -710,7 +711,7 @@ function Atlant(){
                     .map( function(upstream) {
                         return masks
                             .concat(additionalMasks)
-                            .filter(function() { if(WhenFinally.match === whenType) return true; else return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched.
+                            .filter(function() { if(WhenFinally.match === whenType) return true; else return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched. .match() streams are immune.
                             .map( matchRouteLast( upstream.path, matchingBehaviour ) )
                             .filter( s.notEmpty )                              // empty params means fails of route identity.
                     } )
@@ -723,7 +724,6 @@ function Atlant(){
                         upstream.isFinally = false; 
                         upstream.isMatch = WhenFinally.match === whenType;
                         upstream.finallyStream = finallyStream;
-                        upstream.isStoppable = true;
                         whenCount.value++;
 
                         // Storing here the data for actions.
@@ -773,7 +773,6 @@ function Atlant(){
                         stream = transfersGrabber.add(transfers, upstream)
                         stream.isFinally = true;
                         stream.whenId = whenId;
-                        stream.isStoppable = true;
                         whenCount.value++;
                         stream.route = { whenNot: masks };
                         return stream;
@@ -807,20 +806,6 @@ function Atlant(){
         };
     }();
 
-    var _unblock = function(){
-        State.state.lastWhen = State.state.lastWhen
-            .map( function(upstream) { 
-                if (upstream.isStoppable) {
-                    upstream.isStoppable = false;
-                    whenCount.value--;
-                }
-                return upstream; 
-            }); 
-
-        State.state.lastOp = State.state.lastWhen;
-
-        return this;
-    }
     /**
      * Creates route stream by route expression which will prevent other matches after.
      * @param mask - route expression /endpoint/:param1/:param2/endpoint2
@@ -866,7 +851,6 @@ function Atlant(){
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
                 stream.otherwise = true;
                 stream.conditionId = whenId;
-                stream.isStoppable = true;
                 whenCount.value++;
                 l.log('---Matched otherwise!!!')
                 return stream; 
@@ -917,9 +901,8 @@ function Atlant(){
                 stream.action = true;
                 stream.conditionId = whenId;
                 stream.isAction = isAction;
-                stream.isStoppable = !isAction;
 
-                if ( stream.isStoppable ) whenCount.value++;
+                whenCount.value++;
                 atlantState.viewRendered = {}; // the only thing we can nullify.
                 l.log('---Matched action!!!', depValue)
                 
@@ -965,7 +948,6 @@ function Atlant(){
 
                 atlantState.viewRendered = {}; // the only thing we can nullify.
 
-                stream.isStoppable = true;
                 whenCount.value++;
 
                 l.log('---Matched error!!!')
@@ -1117,14 +1099,14 @@ function Atlant(){
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             if ( renderOperation === RenderOperation.nope ) viewName = void 0; 
 
-            Counter.increase(State.state);
+            if ( renderOperation !== RenderOperation.draw ) Counter.increase(State.state);
             var renderId = _.uniqueId();
 
             var ups = new Upstream();
 
             var thisRender = State.state.lastOp
                 .map(ups.fmap(_.extend))
-                .map(function() { return { renderId: renderId, renderProvider: renderProvider, viewName:viewName, renderOperation:renderOperation}; })
+                .map(function() { return { renderId: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation}; })
                 .map(ups.join('render', void 0))
 
             // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewName.
@@ -1339,8 +1321,6 @@ function Atlant(){
     this.task = function(action) { return _action.call(this, action, true); }
     // creates branch which can destruct all what declared by .when() or .match()
     this.finally =  _finally;
-    // Defined after when/match, allows to non-block render.
-    this.unblock = _unblock;
     // side-effect
     this.depends =  _depends;
     /*
@@ -1391,8 +1371,8 @@ function Atlant(){
 
     /* Renders the view. first - render provider, second - view name */
     this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, RenderOperation.render);}
-    /* Renders the view. first - render provider, second - view name. Not waiting for anything - draws immediatelly\ */
-    // this.draw = _draw; 
+    /* Renders the view. first - render provider, second - view name. Not waiting for anything - draws immediatelly */
+    this.draw = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, RenderOperation.draw);}
     /* clears default or provided viewName */
     this.clear = function(viewName) {return _render.bind(this)(function(){}, viewName, RenderOperation.clear);}
     // Update the current or passed view
