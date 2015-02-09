@@ -1,6 +1,6 @@
 {
   "name": "Atlant.js",
-  "version": "0.3.16",
+  "version": "0.3.17",
   "description": "Atlant.js is an application flow/routing framework for React.js. It provides robust routing and dependency injection mechanism. It uses bacon.js streams to rule all out.",
   "homepage": "",
   "main": "src/atlant.js",

@@ -10,6 +10,7 @@ module.exports = function(Counter, whenCount)  {
     var whenRenderedStream = new Bacon.Bus(); // Stream for finishing purposes
     var nullifyScan = new Bacon.Bus();
     var taskRendered = new Bacon.Bus();
+    var drawEnd = new Bacon.Bus();
     var taskRenderedAndMapped = taskRendered
         .map(function(u){
             var obj = {};
@@ -60,12 +61,13 @@ module.exports = function(Counter, whenCount)  {
         .map(function(u){
             return s.reduce(function(sum, value, key){if ('undefined' !== key) sum[key] = value; return sum}, {}, u)
         })
-        .merge(taskRenderedAndMapped);
+        .merge(taskRenderedAndMapped)
 
     return { 
         renderEndStream: renderEndStream 
         ,whenRenderedStream: whenRenderedStream  
         ,nullifyScan: nullifyScan 
         ,taskRendered: taskRendered
+        ,drawEnd: drawEnd
     }
 }

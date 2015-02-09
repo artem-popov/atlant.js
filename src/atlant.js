@@ -196,10 +196,15 @@ function Atlant(){
 
         var whenRenderedSignal = function( upstream ) {
             // Signalling that view renders
-            if (upstream.render.renderOperation === RenderOperation.draw)
+
+            if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction)
+                renderStreams.whenRenderedStream.push(upstream); // This will count the renders
+
+            if (upstream.render.renderOperation === RenderOperation.draw && !upstream.isAction) // Special draw stream
+                renderStreams.drawEnd.push(upstream); 
+
+            if ( upstream.render.renderOperation !== RenderOperation.draw && upstream.isAction) 
                 renderStreams.taskRendered.push(upstream); 
-            else 
-                renderStreams.whenRenderedStream.push(upstream);
 
             // signal for finally construct
             if ( !upstream.isFinally && upstream.finallyStream) {
@@ -502,61 +507,87 @@ function Atlant(){
     var whenCount = { value: 0 };
     var renderStreams = require('./render-streams')(Counter, whenCount);
 
+    // collect data for  .transfer() 
+    //@TODO side effect!
+    var collectTransferData = function(upstreams) {
+        lastData = s.reduce(function(xs, x){
+            var foldDeps = s.reduce(function(ax, a){
+                                var obj = {};
+                                obj[a] = x.depends[x.refs[a]];
+                                return _.merge(ax, obj) }
+                               , {});
+
+            var dx = s.map( foldDeps, x.transfers);
+
+            return _.merge(xs, dx);
+        }, {}, upstreams)
+    }
+
+    var doRedirects = function(upstreams) {
+        var redirect = [];
+        s.map(function(upstream){ 
+            if(upstream.doLater) {
+                redirect.push(upstream.doLater);   
+            } 
+        }, upstreams);
+
+       redirect
+           .filter(function(x){return x}) 
+
+        if (redirect.length){
+            var scopeMap = s.map(clientFuncs.createScope, upstreams)
+            onRenderEndStream.push(scopeMap); // collecting the scope for onRenderEnd user callbacks
+            setTimeout(redirect[0]);
+        }
+    }
+
+    var performRender = function(upstreams) {
+        if(Object.keys(upstreams).length) {
+            console.log('--we are here!', upstreams)
+            return Promise.all( 
+                Object.keys(upstreams)
+                    .filter(function(x){ return x.doLater === void 0})
+                    .map(function(x){ return prefs.render.on.renderEnd(x) })
+            )
+        }
+        return void 0
+    }
+
+    var performCallback = function(upstreams, allRendered) {
+        if(Object.keys(upstreams).length) {
+            allRendered
+                .then(function(){
+                    var scopeMap = s.map(clientFuncs.createScope, upstreams)
+                    return onRenderEndStream.push(scopeMap);
+                })
+                .catch(function(e){
+                    errorStream.push(e);
+                })
+        }
+    }
+
+    renderStreams.drawEnd
+        .onValue( function(upstream){
+            var obj = {};
+            obj[upstream.render.viewName] = upstream;
+            performRender(obj);
+        });
+
+    /* Except .draw() every render get this*/
     renderStreams.renderEndStream
         .onValue( function(upstreams){
             renderStreams.nullifyScan.push('nullify');
 
             if (window) lastPath = utils.getLocation();
 
-            // collect data for  .transfer() 
+            // collecting transfers data
             //@TODO do it only when need
-            lastData = s.reduce(function(xs, x){
-                var foldDeps = s.reduce(function(ax, a){
-                                    var obj = {};
-                                    obj[a] = x.depends[x.refs[a]];
-                                    return _.merge(ax, obj) }
-                                   , {});
+            collectTransferData(upstreams);
 
-                var dx = s.map( foldDeps, x.transfers);
+            doRedirects(upstreams);
 
-                return _.merge(xs, dx);
-            }, {}, upstreams)
-
-            //@TODO move into module the redirects section
-            var redirect = [];
-            s.map(function(upstream){ 
-                if(upstream.doLater) {
-                    redirect.push(upstream.doLater);   
-                } 
-            }, upstreams);
-
-           redirect
-               .filter(function(x){return x}) 
-
-            if (redirect.length){
-                var scopeMap = s.map(clientFuncs.createScope, upstreams)
-                onRenderEndStream.push(scopeMap);
-                setTimeout(redirect[0]);
-            }
-            // end redirect/
-
-            if(Object.keys(upstreams).length) {
-
-                var allRendered = Promise.all( 
-                    Object.keys(upstreams)
-                        .filter(function(x){ return x.doLater === void 0})
-                        .map(function(x){ return prefs.render.on.renderEnd(x) })
-                )
-
-                allRendered
-                    .then(function(){
-                        var scopeMap = s.map(clientFuncs.createScope, upstreams)
-                        return onRenderEndStream.push(scopeMap);
-                    })
-                    .catch(function(e){
-                        errorStream.push(e);
-                    })
-            }
+            var allRendered = performRender(upstreams);
+            if (allRendered) performCallback(upstreams, allRendered);
 
             return upstreams;
         })
@@ -1106,7 +1137,7 @@ function Atlant(){
 
             var thisRender = State.state.lastOp
                 .map(ups.fmap(_.extend))
-                .map(function() { return { renderId: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation}; })
+                .map(function() { return { renderId: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, RenderOperation: RenderOperation}; })
                 .map(ups.join('render', void 0))
 
             // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewName.
@@ -1115,7 +1146,7 @@ function Atlant(){
 
             if( ! viewReady[viewName]) viewReady[viewName] = new Bacon.Bus(); // This will signal that this view is rendered. Will be used in onValue assignment.
 
-            if (void 0 !== State.state.lastIf) State.rollback();
+            if (void 0 !== State.state.lastIf && renderOperation !== RenderOperation.draw) State.rollback();
 
             State.print('_____renderStateAfter:', State.state);
             return this;
