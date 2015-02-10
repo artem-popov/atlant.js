@@ -490,6 +490,7 @@ function Atlant(){
     var publishStream = new Bacon.Bus();  // Here we can put init things.
     var errorStream = new Bacon.Bus();
     var onRenderEndStream = new Bacon.Bus();
+    var onDrawEndStream = new Bacon.Bus();
 
     // Browser specific actions.
     if ('undefined' !== typeof window) {
@@ -543,7 +544,6 @@ function Atlant(){
 
     var performRender = function(upstreams) {
         if(Object.keys(upstreams).length) {
-            console.log('--we are here!', upstreams)
             return Promise.all( 
                 Object.keys(upstreams)
                     .filter(function(x){ return x.doLater === void 0})
@@ -553,12 +553,12 @@ function Atlant(){
         return void 0
     }
 
-    var performCallback = function(upstreams, allRendered) {
+    var performCallback = function(upstreams, allRendered, callbackStream) {
         if(Object.keys(upstreams).length) {
             allRendered
                 .then(function(){
                     var scopeMap = s.map(clientFuncs.createScope, upstreams)
-                    return onRenderEndStream.push(scopeMap);
+                    return callbackStream.push(scopeMap);
                 })
                 .catch(function(e){
                     errorStream.push(e);
@@ -568,9 +568,11 @@ function Atlant(){
 
     renderStreams.drawEnd
         .onValue( function(upstream){
-            var obj = {};
-            obj[upstream.render.viewName] = upstream;
-            performRender(obj);
+            var upstreams = {};
+            upstreams[upstream.render.viewName] = upstream;
+
+            var allRendered = performRender(upstreams);
+            if (allRendered) performCallback(upstreams, allRendered, onDrawEndStream);
         });
 
     /* Except .draw() every render get this*/
@@ -587,7 +589,7 @@ function Atlant(){
             doRedirects(upstreams);
 
             var allRendered = performRender(upstreams);
-            if (allRendered) performCallback(upstreams, allRendered);
+            if (allRendered) performCallback(upstreams, allRendered, onRenderEndStream);
 
             return upstreams;
         })
@@ -1249,6 +1251,11 @@ function Atlant(){
         return this;
     }
 
+    var _onDrawEnd = function(callback) {
+        onDrawEndStream.onValue(s.baconTryD(callback));
+        return this;
+    }
+
     var _onRenderEnd = function(callback) {
         onRenderEndStream.onValue(s.baconTryD(callback));
         return this;
@@ -1431,6 +1438,10 @@ function Atlant(){
 
     // Called everytime when route/action is rendered.
     this.onRenderEnd =  _onRenderEnd;
+
+    // Called everytime when draw renders. 
+    this.onDrawEnd =  _onDrawEnd;
+
     // Accepts element. After publish and first render the contents will be attached to this element.
     this.attachTo =  _attachTo;
     // After publish and first render the contents will be transferet to callback (first parameter).
