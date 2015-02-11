@@ -1,3 +1,7 @@
+0.3.20
+	- actions now not increase/decrease when counter
+	- nopes not call onRenderEnd
+	- redirect refreshed
 0.3.19
 	- actions now not increase/decrease render counter.
 	- fix actions not lowered whenCount 
