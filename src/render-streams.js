@@ -35,6 +35,7 @@ module.exports = function(Counter, whenCount)  {
         .map( s.compose( ups2.push, ups2.clear ) )
         .map( ups.pop ) // Restoring stream which initially come
         .map( Counter.decrease )
+        .map(s.logIt('---Counter or renders:')) // NaN means nullify call
         .filter( function(value) { return 0 === value; })
         .map( ups2.pop )  // Yes the counter now zero, so we can apply gathered streams together
         .changes()
@@ -55,13 +56,16 @@ module.exports = function(Counter, whenCount)  {
 
             return sum;
         })
+        .map(s.logIt('---Recovering the streams hash'))
         .filter(s.notEmpty) // Still this hash can be nullified, so stay aware.
         .changes()
         .filter( function(upstream) { return 0 === --whenCount.value; } ) // Here checking is there all whens are ended.
         .map(function(u){
             return s.reduce(function(sum, value, key){if ('undefined' !== key) sum[key] = value; return sum}, {}, u)
         })
+        .map(s.logIt('---end!:'))
         .merge(taskRenderedAndMapped)
+        .map(s.logIt('---end task!:'))
 
     return { 
         renderEndStream: renderEndStream 

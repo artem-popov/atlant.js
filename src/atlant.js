@@ -52,7 +52,6 @@ function Atlant(){
     var injectsGrabber = new interfaces.injectsGrabber();
     var dependsName = new interfaces.dependsName();
     var transfersGrabber = new interfaces.transfersGrabber();
-    var whenCounter = new interfaces.whenCounter();
 
     // State from current route. Updated on route Load.
     var lastPath // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
@@ -214,7 +213,7 @@ function Atlant(){
 
         // when render applyed, no more renders will be accepted for this .when and viewName
         var renderStopper = function(upstream) {
-            if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw ) 
+            if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw || upstream.isAction) 
                 return true;
 
             if ( atlantState.viewRendered[upstream.render.viewName]) {  // If this view is already rendered... 
@@ -578,7 +577,13 @@ function Atlant(){
     /* Except .draw() every render get this*/
     renderStreams.renderEndStream
         .onValue( function(upstreams){
-            renderStreams.nullifyScan.push('nullify');
+            console.log('---looking for upstreams!!!!', upstreams)
+            var isAction = false;
+            var firstUpstream = _(Object.keys(upstreams)).first();
+            if (firstUpstream) firstUpstream = upstreams[firstUpstream];
+            if ('isAction' in firstUpstream && firstUpstream.isAction) isAction = true;
+            
+            if (!isAction) renderStreams.nullifyScan.push('nullify'); // Do not nullify anything of action
 
             if (window) lastPath = utils.getLocation();
 
@@ -667,14 +672,12 @@ function Atlant(){
     var atlantState = {
         viewRendered: {} // Flag that this view is rendered. Stops other streams to perform render then. 
         ,isLastWasMatched: false // Allow lastWhen to stop other when's execution 
-        ,isRedirected: false
         ,actions: {}
     }
 
     var resetRouteState = function(){
 
         atlantState.viewRendered = {};
-        atlantState.isRedirected = false;
         atlantState.isLastWasMatched = false; 
         Counter.reset(); // reset to default values the counter of render/clear. 
     }
@@ -824,13 +827,12 @@ function Atlant(){
                 });
 
                 
-            // whenCounter.add(State.state.lastWhen, whenCount);
-
             State.state.lastIf = void 0;
             State.state.lastDep = void 0;
             State.state.lastDepName = name;
             State.state.lastOp = State.state.lastWhen;
             State.state.lastConditionId = whenId;
+            State.state.lastWhenType = 'when';
 
             State.print('___When:'+JSON.stringify(masks), State.state);
 
@@ -894,8 +896,7 @@ function Atlant(){
         State.state.lastDepName = void 0;
         State.state.lastOp = State.state.lastWhen;
         State.state.lastConditionId = whenId; 
-
-        // whenCounter.add(State.state.lastOp, whenCount);
+        State.state.lastWhenType = 'otherwise';
 
         State.print('___Otherwise:', State.state);
 
@@ -929,25 +930,22 @@ function Atlant(){
                 // Check if this action now active - prevents double-click
                 var stream = injectsGrabber.add(depName, depValue, injects, {});
                 stream = transfersGrabber.add(transfers, stream);
-                resetRouteState();
 
                 stream.action = true;
                 stream.conditionId = whenId;
                 stream.isAction = isAction;
 
                 whenCount.value++;
-                atlantState.viewRendered = {}; // the only thing we can nullify.
                 l.log('---Matched action!!!', depValue)
                 
                 return stream;
             })
 
-        // whenCounter.add(State.state.lastWhen, whenCount);
-
         State.state.lastIf = void 0;
         State.state.lastDep = void 0;
         State.state.lastDepName = depName;
         State.state.lastOp = State.state.lastWhen;
+        State.state.lastWhenType = 'action';
         State.state.lastConditionId = whenId; 
 
         State.print('___action:', State.state);
@@ -966,7 +964,6 @@ function Atlant(){
 
         State.state.lastWhen = errorStream
             .map( function(depValue) { 
-                resetRouteState();
 
                 depValue.masks = lastMask;
                 depValue.pattern = utils.getPattern(lastMask);
@@ -979,8 +976,6 @@ function Atlant(){
                 stream.error = true;
                 stream.conditionId = whenId;
 
-                atlantState.viewRendered = {}; // the only thing we can nullify.
-
                 whenCount.value++;
 
                 l.log('---Matched error!!!')
@@ -988,13 +983,12 @@ function Atlant(){
 
             })
 
-        // whenCounter.add(State.state.lastWhen, whenCount);
-
         State.state.lastIf = void 0;
         State.state.lastDep = void 0;
         State.state.lastDepName = depName;
         State.state.lastOp = State.state.lastWhen;
         State.state.lastConditionId = whenId; 
+        State.state.lastWhenType = 'error';
 
         State.print('__error:', State.state);
 
@@ -1132,7 +1126,7 @@ function Atlant(){
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             if ( renderOperation === RenderOperation.nope ) viewName = void 0; 
 
-            if ( renderOperation !== RenderOperation.draw ) Counter.increase(State.state);
+            if ( renderOperation !== RenderOperation.draw && 'action' !== State.state.lastWhenType) Counter.increase(State.state);
             var renderId = _.uniqueId();
 
             var ups = new Upstream();
@@ -1146,7 +1140,7 @@ function Atlant(){
             if ( ! renders[viewName] ) renders[viewName] = [];
             renders[viewName].push(thisRender);
 
-            if( ! viewReady[viewName]) viewReady[viewName] = new Bacon.Bus(); // This will signal that this view is rendered. Will be used in onValue assignment.
+            if( ! viewReady[viewName] && renderOperation !== RenderOperation.draw) viewReady[viewName] = new Bacon.Bus(); // This will signal that this view is rendered. Will be used in onValue assignment.
 
             if (void 0 !== State.state.lastIf && renderOperation !== RenderOperation.draw) State.rollback();
 
