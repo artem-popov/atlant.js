@@ -1,3 +1,6 @@
+0.3.19
+	- actions now not increase/decrease render counter.
+	- fix actions not lowered whenCount 
 0.3.18
 	- implement .onDrawEnd() 
 0.3.17
