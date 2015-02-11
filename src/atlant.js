@@ -577,7 +577,6 @@ function Atlant(){
     /* Except .draw() every render get this*/
     renderStreams.renderEndStream
         .onValue( function(upstreams){
-            console.log('---looking for upstreams!!!!', upstreams)
             var isAction = false;
             var firstUpstream = _(Object.keys(upstreams)).first();
             if (firstUpstream) firstUpstream = upstreams[firstUpstream];
