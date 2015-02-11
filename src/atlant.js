@@ -523,7 +523,7 @@ function Atlant(){
         }, {}, upstreams)
     }
 
-    var doRedirects = function(upstreams) {
+    var getRedirects = function(upstreams) {
         var redirect = [];
         s.map(function(upstream){ 
             if(upstream.doLater) {
@@ -531,14 +531,9 @@ function Atlant(){
             } 
         }, upstreams);
 
-       redirect
+       return redirect
            .filter(function(x){return x}) 
 
-        if (redirect.length){
-            var scopeMap = s.map(clientFuncs.createScope, upstreams)
-            onRenderEndStream.push(scopeMap); // collecting the scope for onRenderEnd user callbacks
-            setTimeout(redirect[0]);
-        }
     }
 
     var performRender = function(upstreams) {
@@ -552,14 +547,20 @@ function Atlant(){
         return void 0
     }
 
-    var performCallback = function(upstreams, allRendered, callbackStream) {
+    var performCallback = function(upstreams, allRendered, callbackStream, redirects) {
         if(Object.keys(upstreams).length) {
             allRendered
                 .then(function(){
                     var scopeMap = s.map(clientFuncs.createScope, upstreams)
-                    return callbackStream.push(scopeMap);
+                    callbackStream.push(scopeMap);
+
+                    if (redirects && redirects.length){
+                        setTimeout(redirects[0]);
+                    }
+
                 })
                 .catch(function(e){
+                    log.error('Atlant Error:', e)
                     errorStream.push(e);
                 })
         }
@@ -590,10 +591,10 @@ function Atlant(){
             //@TODO do it only when need
             collectTransferData(upstreams);
 
-            doRedirects(upstreams);
 
+            var redirects = getRedirects(upstreams);
             var allRendered = performRender(upstreams);
-            if (allRendered) performCallback(upstreams, allRendered, onRenderEndStream);
+            if (allRendered) performCallback(upstreams, allRendered, onRenderEndStream, redirects);
 
             return upstreams;
         })
@@ -934,7 +935,7 @@ function Atlant(){
                 stream.conditionId = whenId;
                 stream.isAction = isAction;
 
-                whenCount.value++;
+                // whenCount.value++;
                 l.log('---Matched action!!!', depValue)
                 
                 return stream;
@@ -975,7 +976,8 @@ function Atlant(){
                 stream.error = true;
                 stream.conditionId = whenId;
 
-                whenCount.value++;
+                stream.isAction = true;
+                // whenCount.value++;
 
                 l.log('---Matched error!!!')
                 return stream;
@@ -1025,7 +1027,7 @@ function Atlant(){
             .map( ups.pop )
             .map( function(upstream) { 
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
-                whenCount.value++;
+                if ( !upstream.isAction ) whenCount.value++;
                 if( isElse) 
                     l.log('---Matched else!!!')
                 else
