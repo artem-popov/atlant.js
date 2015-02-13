@@ -193,6 +193,7 @@ utils.attachGuardToLinks = function() {
     document.addEventListener('keydown', linkDefender );
 }
 
+
 /**
  * Pure Matching function
  * @param on - current locatin url
@@ -235,19 +236,21 @@ utils.matchRoute = s.memoize( function(path, mask){ //@TODO add real match, now 
     // Append trailing path part.
     regex += when.substr(lastMatchedIndex);
 
+    var isMatched = false;
     var match = path.match(new RegExp(regex));
     if (match) {
+        isMatched = true;
         params.map(function(name, index) {
             dst[name] = match[index + 1];
         });
-        var searches = _.clone( utils.parseSearch(parsed.search), true);
+        var searches = _.clone( utils.parseSearch(parsed.search), true); // add search params
         dst = _.extend(searches, dst);
     } else if( negate ) {
         dst = {}
-        match = true;
+        isMatched = true;
     }
 
-    return match ? dst  : null;
+    return isMatched ? dst  : null;
 });
 
 module.exports = utils;

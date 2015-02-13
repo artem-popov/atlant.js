@@ -1312,17 +1312,30 @@ function Atlant(){
             console.error('Atlant.js: no window object...')
     }
 
+    var _test = function(path, mask){
+        if ( !path || !mask ) return false;
+
+        return null !== utils.matchRoute(path, mask)
+    }
+
     var _parse = function(path, mask){
-        return utils.matchRoute(path, mask)
+        if ( !path || !mask ) return {};
+
+        var params = utils.matchRoute(path, mask);
+        var parsed = utils.parseURL( path );
+        var searches = _.clone( utils.parseSearch(parsed.search), true); // add search params
+        return _.extend(searches, params);
     }
 
     var _parseAll = function(path, masks){
+        if ( !path || !masks || 0 === masks.length) return {};
+
         return masks
             .map(function(i){ 
                 return [i, ('/' !== i[i.length-1]) ? i + '/' : i.slice(0, i.length-2)];
             })
             .reduce(function(v,i) { return v.concat(i); })
-            .map(utils.matchRoute.bind(utils, path), masks)
+            .map(_parse.bind(void 0, path), masks)
             .reduce( function(v, i) { return _.merge(v, i) }, {})
     }
     // Will destruct all data structures.
@@ -1455,6 +1468,8 @@ function Atlant(){
     this.revision = require('AtlantRevision');
 
     this.utils = { 
+        // test :: path -> mask -> Bool
+        test: _test,
         // parse :: path -> mask -> {params}
         parse: _parse,
         // parseAll :: path -> [mask] -> {params}
