@@ -213,7 +213,7 @@ function Atlant(){
 
         // when render applyed, no more renders will be accepted for this .when and viewName
         var renderStopper = function(upstream) {
-            if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw || upstream.isAction) 
+            if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw || upstream.isAction || upstream.render.renderOperation !== RenderOperation.move || upstream.render.renderOperation !== RenderOperation.redirect || upstream.render.renderOperation !== RenderOperation.replace || upstream.render.renderOperation !== RenderOperation.change  ) 
                 return true;
 
             if ( atlantState.viewRendered[upstream.render.viewName]) {  // If this view is already rendered... 

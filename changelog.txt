@@ -1,3 +1,5 @@
+0.3.23
+	- nothing can stop .replace(), change(), move(), redirect()
 0.3.22 
 	- fix .change() and .replace() wasn't provide .referrer information and
 	correct .location		
