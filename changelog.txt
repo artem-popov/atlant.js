@@ -1,3 +1,6 @@
+0.3.22 
+	- fix .change() and .replace() wasn't provide .referrer information and
+	correct .location		
 0.3.21
 	- better interface of utils.parse/test
 0.3.20
