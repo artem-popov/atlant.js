@@ -94,7 +94,6 @@ function Atlant(){
         ,draw: parseInt(_.uniqueId())
         ,replace: parseInt(_.uniqueId())
         ,change: parseInt(_.uniqueId())
-        ,update: parseInt(_.uniqueId())
         ,clear: parseInt(_.uniqueId())
         ,redirect: parseInt(_.uniqueId())
         ,move: parseInt(_.uniqueId())
@@ -302,8 +301,6 @@ function Atlant(){
                                 render = prefs.render.render 
                             } else if ( RenderOperation.clear === upstream.render.renderOperation ){
                                 render = prefs.render.clear
-                            } else if ( RenderOperation.update === upstream.render.renderOperation ){
-                                render = prefs.render.update
                             } 
 
                             l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
@@ -1352,13 +1349,12 @@ function Atlant(){
         return this;
     }
 
-    // Set view active by default (no need to mention in second parameter of .render
-    this.set = _set;
-    // Roolback previous set
-    this.unset = _unset;
-    // Use another render. simple render is default
-    this.use = _use;
-    this.view = _view;
+
+    /**
+     * Atlant API
+     *
+     */
+
 
     this.when =  _when;
     this.lastWhen =  _lastWhen;
@@ -1386,6 +1382,9 @@ function Atlant(){
      * Allows give name for .depends()
      */
     this.name = _name;
+
+
+    // @TODO DEPRECATED transfer/to
     /**
      * Allow to define array of depend names which will be transfered if user goes from current when/action to route/action defined in .to()
      * */
@@ -1413,25 +1412,16 @@ function Atlant(){
     this.unless =  _if.bind(this, s.negate);
 
     /**
-     * Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
+     * Renders declaratins
      */
+    //Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
     this.log =  _log;
-    /* If true then view will be re-rendered only when injects are changed. Accepts boolean. Default true */
-    this.check = _check;
-    /* wait or not for resources loading when going to next route when link tapped */
-    this.await = _await;
-
-    // Display all internal messages.
-    this.verbose = _verbose;
-
     /* Renders the view. first - render provider, second - view name */
     this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, RenderOperation.render);}
     /* Renders the view. first - render provider, second - view name. Not waiting for anything - draws immediatelly */
     this.draw = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, RenderOperation.draw);}
     /* clears default or provided viewName */
     this.clear = function(viewName) {return _render.bind(this)(function(){}, viewName, RenderOperation.clear);}
-    // Update the current or passed view
-    this.update = function(viewName) { return _render.bind(this)(function(){}, viewName, RenderOperation.update)}
     // Soft atlant-inside redirect.
     this.redirect = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.redirect);}
     //  Fake redirect. Atlant will just change URL but routes will not be restarted. Referrer stays the same.
@@ -1445,28 +1435,55 @@ function Atlant(){
     // render which render nothing into nowhere
     this.nope = function(){ return _render.bind(this)(void 0, void 0, RenderOperation.nope)}
 
+    /**
+     * Setups
+     */
+    /* If true then view will be re-rendered only when injects are changed. Accepts boolean. Default true */
+    this.check = _check;
+    /* wait or not for resources loading when going to next route when link tapped */
+    this.await = _await;
+    // Display all internal messages.
+    this.verbose = _verbose;
     // This routes will be ignored by atlant even if they are declared by .when() or .match()
     this.skip =  _skip;
+    // Set view active by default (no need to mention in second parameter of .render
+    this.set = _set;
+    // Roolback previous set
+    this.unset = _unset;
+    // Use another render. simple render is default
+    this.use = _use;
 
+
+    /**
+     * Commands!
+     */
     // Use this when you finished declaring routes and want to start routing. Can be used for drawing another route at current route without redirect (accepts url).
     this.publish =  _publish;
+
+    /**
+     * Plugins!
+     */
     // Contains available renders
     this.renders =  { react :  reactRender, simple :  simpleRender };
 
+
+    /**
+     * Events!
+     */
     // Called everytime when route/action is rendered.
     this.onRenderEnd =  _onRenderEnd;
-
     // Called everytime when draw renders. 
     this.onDrawEnd =  _onDrawEnd;
-
     // Accepts element. After publish and first render the contents will be attached to this element.
     this.attachTo =  _attachTo;
     // After publish and first render the contents will be transferet to callback (first parameter).
     this.stringify =  _stringify;
 
 
-    //These commands doesn't return "this".
-
+    /**
+     * Utils
+     * These commands doesn't return "this".
+     */
     // Returns child view component
     this.get =  _get;
     // Returns atlant.js version
@@ -1475,7 +1492,6 @@ function Atlant(){
     this.build = require('AtlantBuild');
     // Returns commit id just before current atlant.js commit
     this.revision = require('AtlantRevision');
-
     this.utils = { 
         // test :: path -> mask -> Bool
         test: _test,
@@ -1488,10 +1504,13 @@ function Atlant(){
     this.goTo = _redirectTo;
     // The alias of goTo
     this.redirectTo = _redirectTo;
-
     // Will hard redirect to param url (page will be reloaded by browser)
     this.moveTo = _moveTo;
     this.destruct = _destruct;
+
+    // Return view with viewName
+    // this.view :: viewName 
+    this.view = _view;
 
     return this;
 
