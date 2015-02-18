@@ -391,12 +391,12 @@ function Atlant(){
 
                         // Using data transfered from previous route instead of accessing the dependency
                         var upstream = ups.getLast();
-                        if (lastData && upstream.ref) {
+                        if (lastData && Object.keys(lastData).length && upstream.ref) {
                             var mask = utils.getPattern(lastMask);
 
                             // look in lastData only for current mask
                             var data = s.filterKeys(function(dataMask){ return mask === dataMask }, lastData);
-                            lastData = void 0;
+                            delete lastData[mask];
 
                             // merge all depend names into one list
                             data = s.reduce(function(xs, x){ return _.merge(xs, x) }, {}, data);
@@ -516,7 +516,8 @@ function Atlant(){
     // collect data for  .transfer() 
     //@TODO side effect!
     var collectTransferData = function(upstreams) {
-        lastData = s.reduce(function(xs, x){
+        var oldData = lastData ? lastData : {};
+        var newData = s.reduce(function(xs, x){
             var foldDeps = s.reduce(function(ax, a){
                                 var obj = {};
                                 obj[a] = x.depends[x.refs[a]];
@@ -527,6 +528,8 @@ function Atlant(){
 
             return _.merge(xs, dx);
         }, {}, upstreams)
+
+        lastData = _.merge( oldData, newData);
     }
 
     var getRedirects = function(upstreams) {
