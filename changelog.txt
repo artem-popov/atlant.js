@@ -1,3 +1,7 @@
+0.3.25
+	- add .as('name') = inject all previous depends value into 'name' - can be
+	used in .join() = overwrited by successive injects and joins (not exactly
+			synonym of .inject - it will replace inject)
 0.3.24
 	- fix .transfer().to()
 0.3.23

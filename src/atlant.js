@@ -124,10 +124,23 @@ function Atlant(){
         };
 
         
+        var getRefsData = function( upstream ) {
+            if ( !upstream.refs ) return {}
+
+            var fn = function(res, depName, refName) {
+                if ( 'undefined' !== refName && depName in upstream.depends ) res[refName] = upstream.depends[depName];
+
+                return res;
+            }
+
+            return s.reduce( fn, {}, upstream.refs)
+        }
         /**
          * Injects depend values from upstream into object which is supplyed first.
          */
         var createScope = function ( upstream ) {
+            var refsData = getRefsData( upstream ); 
+
             var warning = function(inject) { l.log('Atlant warning: inject accessor return nothing:' + inject) }
             var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
             var joins = s.filter( function(inject){ return inject.hasOwnProperty('injects') }, injects);
@@ -149,7 +162,7 @@ function Atlant(){
                     })
                 } else {  
                     return s.baconTryD(function() {
-                        return inject.expression(injectsData.object) 
+                        return inject.expression( s.extend( JSON.parse(JSON.stringify(refsData)), injectsData.object) ) 
                     })
                 }
             }
@@ -168,7 +181,8 @@ function Atlant(){
             params['mask'] = (upstream.route) ? upstream.route.mask : void 0;    
             params['location'] = upstream.path;
 
-            data = s.extend( params, data, joinsData );
+            data = s.extend( refsData, params, data, joinsData ); 
+
             return data;
         };
 
@@ -474,7 +488,7 @@ function Atlant(){
         };
     }();
 
-    var _name = function(name) {
+    var _as = function(name) {
         dependsName.tailFill(name, State.state);            
         return this
     }
@@ -1384,7 +1398,8 @@ function Atlant(){
     /*
      * Allows give name for .depends()
      */
-    this.name = _name;
+    this.name = _as;
+    this.as = _as;
 
 
     // @TODO DEPRECATED transfer/to
