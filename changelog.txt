@@ -1,3 +1,5 @@
+0.3.26
+	- fix render stopper
 0.3.25
 	- add .as('name') = inject all previous depends value into 'name' - can be
 	used in .join() = overwrited by successive injects and joins (not exactly
