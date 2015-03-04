@@ -1,6 +1,5 @@
 "use strict";
 /**
-
  *
  * @TODO: fast switching generate console.error.
  * @TODO: #hashes are ignored

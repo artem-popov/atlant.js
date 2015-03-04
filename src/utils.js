@@ -148,7 +148,7 @@ utils.attachGuardToLinks = function() {
     var linkDefender = function(event){
         if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which ) return;
         var element = event.target;
-        var awaitLoad = false;
+        var awaitLoad = void 0;
 
         while ( 'a' !== element.nodeName.toLowerCase() ){
             if (element === document || ! (element = element.parentNode) ) return; 
