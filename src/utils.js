@@ -253,4 +253,15 @@ utils.matchRoute = s.memoize( function(path, mask){ //@TODO add real match, now 
     return isMatched ? dst  : null;
 });
 
+// Utility function
+// Adding slashes at the end, i.e. ['/story'] became [['/story/', '/story']]
+// addSlashes :: [mask] -> [mask]
+utils.addSlashes = function(masks){
+    return masks
+        .map(function(i){ 
+            return [i, ('/' !== i[i.length-1]) ? i + '/' : i.slice(0, i.length-1)];  
+        })
+        .reduce(function(v, i) { return v.concat(i); }, [])
+}
+
 module.exports = utils;

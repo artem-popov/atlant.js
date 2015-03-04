@@ -1340,6 +1340,14 @@ function Atlant(){
         return null !== utils.matchRoute(path, mask)
     }
 
+    var _testAll = function(path, masks){
+        if ( !path || !masks || 0 === masks.length) return false;
+
+        return utils.addSlashes(masks)
+            .map(_test.bind(void 0, path))
+            .reduce( function(v, i) { return v || i }, false)
+    }
+
     var _parse = function(path, mask){
         if ( !path || !mask ) return {};
 
@@ -1352,12 +1360,8 @@ function Atlant(){
     var _parseAll = function(path, masks){
         if ( !path || !masks || 0 === masks.length) return {};
 
-        return masks
-            .map(function(i){ 
-                return [i, ('/' !== i[i.length-1]) ? i + '/' : i.slice(0, i.length-2)];
-            })
-            .reduce(function(v,i) { return v.concat(i); })
-            .map(_parse.bind(void 0, path), masks)
+        return utils.addSlashes(masks)
+            .map(_parse.bind(void 0, path))
             .reduce( function(v, i) { return _.merge(v, i) }, {})
     }
     // Will destruct all data structures.
@@ -1512,6 +1516,8 @@ function Atlant(){
     this.utils = { 
         // test :: path -> mask -> Bool
         test: _test,
+        // testAll :: path -> [mask] -> Bool
+        testAll: _testAll,
         // parse :: path -> mask -> {params}
         parse: _parse,
         // parseAll :: path -> [mask] -> {params}
