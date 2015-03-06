@@ -63,7 +63,7 @@ gulp.task('watch', function() {
                     ,lodash: 'window._'
                     ,baconjs: 'window.Bacon'
                     ,promise: 'window.Promise'
-                    ,AtlantVersion: "'0.3.28'"
+                    ,AtlantVersion: "'0.4.0'"
                     ,AtlantBuild: '"' + (new Date().getTime()) + '"'
                     ,AtlantRevision: '"' + commitCode.trim() + '"'
                 }));

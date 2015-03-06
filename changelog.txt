@@ -1,3 +1,6 @@
+0.4.0 
+	- first of "adult" features: atlant.interceptor(), which provides scope
+	with { name: interceptedDependsName, value, interceptedValue }
 0.3.28
 	- add .testAll() method
 0.3.27
