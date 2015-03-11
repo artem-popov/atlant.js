@@ -728,6 +728,8 @@ function Atlant(){
             State.first();
             TopState.first();
 
+            if (masks.filter(function(mask){ return '*' === mask}).length && whenType === WhenFinally.when) { throw new Error( 'Atlant.js: Error! You using atlant.when("*") which is prohibited. For astericks use atlant.match("*")' ); }
+
             var name = '';
             if (whenType === WhenFinally.finally) name = 'finally';
             if (whenType === WhenFinally.match) name = 'match';
@@ -1135,7 +1137,7 @@ function Atlant(){
             s.type(viewName, 'string');
             s.type(renderOperation, 'number')
 
-            viewName = viewName || s.tail(prefs.viewState);
+            viewName = viewName || s.last(prefs.viewState);
 
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             if ( renderOperation === RenderOperation.nope ) viewName = void 0; 
