@@ -196,7 +196,7 @@ var s = (function(){
         return Array.prototype.concat.apply([], arr);
     }
 
-    var tail = function(arr) {
+    var last = function(arr) {
         if (arr) {
             return arr[arr.length-1];
         } else {
@@ -477,7 +477,7 @@ var s = (function(){
     this.a2a    = a2a;
     this.replace = replace;
     this.head   = head;
-    this.tail   = tail;
+    this.last   = last;
     this.concat = concat;
     this.mapD   = mapD;
     this.fmap   = fmap;

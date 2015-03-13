@@ -323,9 +323,6 @@ function Atlant(){
                             if (data.hasOwnProperty(streamData.ref)) {
                                 return Bacon.constant(data[streamData.ref]);
                             }
-                            
-
-
                         }
 
                         var data = (streamData.with && 'value' in streamData.with) ? streamData.with.value : scope;
@@ -409,6 +406,7 @@ function Atlant(){
     var errorStream = new Bacon.Bus();
     var onRenderEndStream = new Bacon.Bus();
     var onDrawEndStream = new Bacon.Bus();
+    var interceptorBus = new Bacon.Bus();
 
     // Browser specific actions.
     if ('undefined' !== typeof window) {
@@ -636,6 +634,8 @@ function Atlant(){
             if ( 0 === masks.length || 1 === masks.length && '' === masks[0] ) throw new Error('At least one route mask should be specified.');
             State.first();
             TopState.first();
+
+            if (masks.filter(function(mask){ return '*' === mask}).length && whenType === WhenFinally.when) { throw new Error( 'Atlant.js: Error! You using atlant.when("*") which is prohibited. For astericks use atlant.match("*")' ); }
 
             var name = '';
             if (whenType === WhenFinally.finally) name = 'finally';
@@ -1035,7 +1035,7 @@ function Atlant(){
             s.type(viewName, 'string');
             s.type(renderOperation, 'number')
 
-            viewName = viewName || s.tail(prefs.viewState);
+            viewName = viewName || s.last(prefs.viewState);
 
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             if ( renderOperation === RenderOperation.nope ) viewName = void 0; 
@@ -1098,7 +1098,50 @@ function Atlant(){
         return this;
     }
 
+    var _interceptor = function(){
+        State.first();
+        TopState.first();
 
+        var whenId = _.uniqueId(); 
+        var depName = 'interceptor' + _.uniqueId();
+        var injects = injectsGrabber.init(depName, State.state);
+        var transfers = transfersGrabber.init(TopState.state);
+
+        State.state.lastWhen = interceptorBus
+            .map( function(obj) { 
+
+                var depValue = {};  // @TODO RETHINK
+                depValue.name = obj.upstream.ref;
+                depValue.value = obj.scope;
+                depValue.masks = lastMask;
+                depValue.pattern = utils.getPattern(lastMask);
+                depValue.mask = void 0;
+                depValue.location = lastPath;
+                depValue.referrer = lastReferrer;
+
+                var stream = injectsGrabber.add(depName, depValue, injects, {});
+                stream = transfersGrabber.add(transfers, stream);
+
+                stream.action = true;
+                stream.isInterceptor = true;
+                stream.isAction = true;
+                stream.conditionId = whenId;
+
+                l.log('---Matched interceptor!!!', depValue)
+                
+                return stream;
+            })
+
+        State.state.lastIf = void 0;
+        State.state.lastDep = void 0;
+        State.state.lastDepName = depName;
+        State.state.lastOp = State.state.lastWhen;
+        State.state.lastWhenType = 'action';
+        State.state.lastConditionId = whenId; 
+
+        return this;
+
+    };
 
     /* Not ordered commands */
 
@@ -1258,6 +1301,10 @@ function Atlant(){
         return this;
     }
 
+    var _push = function(actionName) {
+        throw new Error('atlant.push() not implemented');
+        return this;
+    }
 
     /**
      * Atlant API
@@ -1288,11 +1335,16 @@ function Atlant(){
      * */
     this.and =  _and;
     /*
+     * .data() allow catch every peace of data which where piped with .depends(), .and()
+     **/
+    this.interceptor = _interceptor;
+    /*
      * Allows give name for .depends()
      */
     this.name = _as;
     this.as = _as;
 
+    this.push = _push;
 
     // @TODO DEPRECATED transfer/to
     /**
