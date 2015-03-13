@@ -19,7 +19,8 @@ function Atlant(){
         ,Bacon = require('baconjs')
         ,_ = require('lodash')
         ,interfaces = require('./inc/interfaces')
-        ,StateClass = require('./inc/state');
+        ,StateClass = require('./inc/state')
+        ,clientFuncs = require('./inc/clientFuncs')
 
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
@@ -33,6 +34,10 @@ function Atlant(){
         ,routes = []  // Routes collected
         ,renderNames = []
         ,viewNames = [];
+
+    var stores = {};
+    window.stores = stores; //@TODO remove
+    var emitStreams = {};
 
     var cache = [];
 
@@ -51,6 +56,7 @@ function Atlant(){
     var injectsGrabber = new interfaces.injectsGrabber();
     var dependsName = new interfaces.dependsName();
     var transfersGrabber = new interfaces.transfersGrabber();
+    var withGrabber = new interfaces.withGrabber();
 
     // State from current route. Updated on route Load.
     var lastPath // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
@@ -99,108 +105,6 @@ function Atlant(){
         ,nope: parseInt(_.uniqueId())
     }
 
-    var clientFuncs = function() {
-        var convertPromiseD = s.curry(function(promiseProvider, upstream) {
-            var promise = promiseProvider( upstream );
-            if ( s.isPromise( promise ) ){
-                promise = promise
-                    .catch( function(e) {  
-                        if (e.stack) { 
-                            clientFuncs.catchError(e);
-                        }
-                        return Promise.reject(e)
-                    })
-                return Bacon.fromPromise( promise );
-            } else {
-                return Bacon.constant(promise);
-            }
-        });
-
-        var applyScopeD = function(fn) {
-            return function(scope) {
-                return fn.call(this, scope)
-            }
-        };
-
-        
-        var getRefsData = function( upstream ) {
-            if ( !upstream.refs ) return {}
-
-            var fn = function(res, depName, refName) {
-                if ( 'undefined' !== refName && depName in upstream.depends ) res[refName] = upstream.depends[depName];
-
-                return res;
-            }
-
-            return s.reduce( fn, {}, upstream.refs)
-        }
-        /**
-         * Injects depend values from upstream into object which is supplyed first.
-         */
-        var createScope = function ( upstream ) {
-            var refsData = getRefsData( upstream ); 
-
-            var warning = function(inject) { l.log('Atlant warning: inject accessor return nothing:' + inject) }
-            var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
-            var joins = s.filter( function(inject){ return inject.hasOwnProperty('injects') }, injects);
-            injects = s.filter( function(inject){ return !inject.hasOwnProperty('injects') }, injects);
-            var injectsData = { object: void 0};
-
-            var formatInjects = function(inject) {
-                var container = ( inject.hasOwnProperty('injects') ) ? '' : '.depends.' + inject.name;
-
-                if ('string' === typeof inject.expression)
-                    return container + (inject.expression ? inject.expression : '' );
-
-                if ('undefined' === typeof inject.expression)
-                    return container;
-
-                if ( !inject.hasOwnProperty('injects') ) {
-                    return s.baconTryD(function() {
-                        return inject.expression(upstream.depends[inject.name]) 
-                    })
-                } else {  
-                    return s.baconTryD(function() {
-                        return inject.expression( s.extend( JSON.parse(JSON.stringify(refsData)), injectsData.object) ) 
-                    })
-                }
-            }
-
-            var takeAccessor = s.compose( s.if(s.eq(void 0), warning), s.flipDot(upstream) );
-            var takeFunction = function(fn){return fn.apply();}
-            var fullfil = s.map( s.compose( s.ifelse(s.typeOf('string'), takeAccessor, takeFunction)
-                                            , formatInjects)); 
-
-            injectsData.object = fullfil( injects );
-            var data = injectsData.object;
-            var joinsData = fullfil( joins );
-
-            // Injecting of mask and location.
-            var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
-            params['mask'] = (upstream.route) ? upstream.route.mask : void 0;    
-            params['location'] = upstream.path;
-
-            data = s.extend( refsData, params, data, joinsData ); 
-
-            return data;
-        };
-
-        var catchError = function(e) {
-            if (e && e.stack) {
-                console.error(e.message, e.stack);
-            } else {
-                console.error(e);
-            }
-            return e;
-        }
-
-        return { 
-            convertPromiseD: convertPromiseD
-            ,applyScopeD: applyScopeD
-            ,createScope: createScope
-            ,catchError: catchError
-       };
-    }();
 
     /* Helpers */
     var assignRenders = function(){
@@ -387,6 +291,7 @@ function Atlant(){
             var ups = new Upstream();
 
             var nameContainer = dependsName.init(depName, State.state);
+            var withs = withGrabber.init(State.state);
 
             stream = stream
                 .map( dependsName.add.bind(dependsName, depName, nameContainer) )
@@ -403,8 +308,9 @@ function Atlant(){
                     .flatMap(function(scope) { 
 
                         // Using data transfered from previous route instead of accessing the dependency
-                        var upstream = ups.getLast();
-                        if (lastData && Object.keys(lastData).length && upstream.ref) {
+                        var streamData = ups.getLast();
+
+                        if (lastData && Object.keys(lastData).length && streamData.ref) {
                             var mask = utils.getPattern(lastMask);
 
                             // look in lastData only for current mask
@@ -414,27 +320,21 @@ function Atlant(){
                             // merge all depend names into one list
                             data = s.reduce(function(xs, x){ return _.merge(xs, x) }, {}, data);
 
-                            if (data.hasOwnProperty(upstream.ref)) {
-                                return Bacon.constant(data[upstream.ref]);
+                            if (data.hasOwnProperty(streamData.ref)) {
+                                return Bacon.constant(data[streamData.ref]);
                             }
                             
 
 
                         }
 
-                        // Using cache instead of accessing dependency
-                        if (false && depCache.has(depName, scope)) {
-                            l.log('Atlant.js: Depends cache enabled: no parameters changed. Skipping accessing of dependation')
-                            return Bacon.constant(depCache.get(depName, scope));
-                        }
-                        else { 
-                            var stream = treat(scope)
-                                                    .map(function(upstream){
-                                                        depCache.put(depName, scope, upstream);
-                                                        return upstream;
-                                                    })
-                            return stream;
-                        }
+                        var data = (streamData.with && 'value' in streamData.with) ? streamData.with.value : scope;
+                        return treat(data)
+                            .map(function(results){
+                                streamData = ups.getLast();
+                                if ( !streamData.isInterceptor ) interceptorBus.push({upstream: streamData, scope: results}); // pushing into global data .interceptor() 
+                                return results;
+                            })
                     })
             }
 
@@ -442,6 +342,7 @@ function Atlant(){
                 .map( ups.join('depends', depName) )
                 .map(function(upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
                     var stream = injectsGrabber.add(depName, upstream.depends[depName], injects, upstream);
+                    stream = withGrabber.add(withs, stream);
 
                     return stream;
                 });
@@ -482,7 +383,6 @@ function Atlant(){
             State.state.lastDepName = depName;
             State.state.lastOp = State.state.lastDep;
 
-            State.print(depName, State.state);
             return this;
         };
     }();
@@ -797,7 +697,8 @@ function Atlant(){
                         });
 
                         var stream = injectsGrabber.add(name, depData, injects, upstream);
-                        stream = transfersGrabber.add(transfers, upstream)
+                        stream = transfersGrabber.add(transfers, upstream);
+
                         return stream; 
                     })
             } else {
@@ -855,9 +756,6 @@ function Atlant(){
             State.state.lastOp = State.state.lastWhen;
             State.state.lastConditionId = whenId;
             State.state.lastWhenType = 'when';
-
-            State.print('___When:'+JSON.stringify(masks), State.state);
-
 
             return this;
         };
@@ -920,8 +818,6 @@ function Atlant(){
         State.state.lastConditionId = whenId; 
         State.state.lastWhenType = 'otherwise';
 
-        State.print('___Otherwise:', State.state);
-
         return this;
 
     };
@@ -970,8 +866,6 @@ function Atlant(){
         State.state.lastWhenType = 'action';
         State.state.lastConditionId = whenId; 
 
-        State.print('___action:', State.state);
-
         return this;
 
     };
@@ -1013,8 +907,6 @@ function Atlant(){
         State.state.lastConditionId = whenId; 
         State.state.lastWhenType = 'error';
 
-        State.print('__error:', State.state);
-
         return this;
     };
 
@@ -1049,6 +941,7 @@ function Atlant(){
             .map( ups.pop )
             .map( function(upstream) { 
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
+
                 if ( !upstream.isAction ) whenCount.value++;
                 if( isElse) 
                     l.log('---Matched else!!!')
@@ -1065,8 +958,6 @@ function Atlant(){
         State.state.lastIf = thisIf; 
         State.state.lastOp = State.state.lastIf;
         State.state.lastConditionId = ifId;
-
-        State.print('_if__After:', State.state);
 
         return this;
     }
@@ -1167,7 +1058,6 @@ function Atlant(){
 
             if (void 0 !== State.state.lastIf && renderOperation !== RenderOperation.draw) State.rollback();
 
-            State.print('_____renderStateAfter:', State.state);
             return this;
     };
 
@@ -1204,7 +1094,6 @@ function Atlant(){
             }.bind(this));
 
         State.state.lastOp = thisDo;
-        State.print('_do__After:', State.state);
 
         return this;
     }
@@ -1414,6 +1303,109 @@ function Atlant(){
      * Allow to define array of routes, which will receive array of transfered depends 
      * */
     this.to = _to;
+
+
+    var _store = function(storeName) {
+        TopState.first();
+        TopState.state.lastStoreName = storeName;
+        if ( !(storeName in stores) ) stores[storeName] = { updaters: {}, parts: {} };
+        return this;
+    };
+
+    var _constructor = function(constructorProvider){
+        if (!TopState.state.lastStoreName) { throw new Error('.constructor() should be after .store()') }
+        if ( '_constructor' in stores[TopState.state.lastStoreName] ) { throw new Error("Contructor already implemented in store ", TopState.state.lastStoreName, stores)}
+
+        stores[TopState.state.lastStoreName]._constructor = constructorProvider;
+
+        return this;
+    }
+
+    var _updater = function(updaterName, updater){
+        if (!TopState.state.lastStoreName) { throw new Error('.updater() should be after .store()') }
+        if ( updaterName in stores[TopState.state.lastStoreName].updaters ) { throw new Error("Cannot reimplement updater ", updaterName, " in store ", TopState.state.lastStoreName)}
+
+        stores[TopState.state.lastStoreName].updaters[updaterName] = updater;
+
+        if( !(updaterName in emitStreams ) ) emitStreams[updaterName] = new Bacon.Bus();
+        emitStreams[updaterName].onValue(function(scope){
+            // console.log('-----we get new emit of data into store!!!! ', scope)
+        });
+
+        return this;
+    }
+
+    var _part = function(partName, partProvider){
+        if (!TopState.state.lastStoreName) { throw new Error('.part() should be after .store()') }
+        if ( partName in stores[TopState.state.lastStoreName].parts ) { throw new Error("Cannot reimplement part ", partName, " in store ", TopState.state.lastStoreName)}
+
+        stores[TopState.state.lastStoreName].parts[partName] = partProvider;
+
+        return this;
+    }
+
+    var _update = function( key ) {
+        if ( ! State.state.lastOp ) throw new Error('"update" should nest something');
+        s.type(key, 'string');
+
+        var withs = withGrabber.init(State.state);
+
+        var thisOp = State.state.lastOp
+            .map( function(upstream){
+                return withGrabber.add(withs, upstream)
+            })
+            .onValue( function(upstream) { 
+                var refsData = clientFuncs.getRefsData( upstream ); 
+                
+                var data = ( upstream.with && 'value' in upstream.with ) ? upstream.with.value( refsData ) : refsData;
+                if ( key in emitStreams ) emitStreams[key].push(data);
+                else console.log("Atlant.js: Warning: event key" + key + " is not defined");
+            });
+
+        return this;
+    }
+
+    var _select = function(partName, storeName, idProvider){
+        return this;
+    }
+
+    // Create scope for prefixed method (currently .select(), .update(), .depends())
+    var _with = function(scopeProvider){
+        s.type(scopeProvider, 'function');
+
+        if (State.state.lastWith && 'value' in State.state.lastWith) throw new Error('too many .with() after scope receiver')
+
+        withGrabber.tail(scopeProvider, State.state);
+
+        return this;
+    }
+
+
+    var _asAtom = function(atomName){
+        return this;
+    }
+
+    /**
+     * Stores! 
+     */
+    // Store registration
+    this.store = _store;
+    // Register key-based dispatcher
+    // Store registration
+    this.constructor = _constructor;
+    // Register updater for store/dispatch event
+    this.updater = _updater;
+    // Register receiver for atom
+    this.part = _part;
+    // Store dispatch
+    this.update = _update;
+    // Atom reveiver
+    this.select = _select;
+
+    // create scope for data provider
+    this.with = _with;
+    // connect as Atom
+    this.asAtom = _asAtom;
 
     /*
      * Injects variables into ".render()".

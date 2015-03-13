@@ -1,7 +1,6 @@
+"use strict";
     
 var dependsName = function() {
-
-
     this.init = function(depName, state) {
         if (!depName) throw new Error('Atlant.js: developer: you forgot the "depName"!')
         var nameContainer = {};
@@ -21,6 +20,24 @@ var dependsName = function() {
         state.lastNameContainer.ref = value;
     }
 
+    return this;
+}
+
+var withGrabber = function() {
+    this.init = function(state) {
+        var data = {};
+        state.lastWith = data // Here we will store further injects with ".transfers"
+        return data;
+    }
+    // Add invocation when mapping stream.
+    this.add = function(data, upstream) {
+        upstream.with = data;
+        return upstream
+    }
+    this.tail = function(data, state) {
+        if (void 0 === state.lastWith) throw new Error('Atlant.js: incompatible "with" provider! ')
+        state.lastWith.value = data;
+    }
     return this;
 }
 
@@ -84,4 +101,5 @@ module.exports = {
                 ,whenCounter: whenCounter
                 ,dependsName: dependsName
                 ,transfersGrabber: transfersGrabber
+                ,withGrabber: withGrabber
 }

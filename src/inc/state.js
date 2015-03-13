@@ -1,7 +1,7 @@
 "use strict";
 
 var StateType = function(state) {
-    _.extend( this, {lastWhen: void 0, lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0} );
+    _.extend( this, {lastWhen: void 0, lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0, lastStoreName: void 0} );
     _.merge( this, state );
 };
 
