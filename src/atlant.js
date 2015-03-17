@@ -35,8 +35,9 @@ function Atlant(){
         ,renderNames = []
         ,viewNames = [];
 
-    var stores = {};
-    window.stores = stores; //@TODO remove
+    var stores = {}
+        ,storesData = {};
+    window.storesData = storesData; //@TODO remove
     var emitStreams = {};
 
     var cache = [];
@@ -1369,6 +1370,7 @@ function Atlant(){
         if ( '_constructor' in stores[TopState.state.lastStoreName] ) { throw new Error("Contructor already implemented in store ", TopState.state.lastStoreName, stores)}
 
         stores[TopState.state.lastStoreName]._constructor = constructorProvider;
+        storesData[TopState.state.lastStoreName] = constructorProvider();
 
         return this;
     }
@@ -1380,8 +1382,11 @@ function Atlant(){
         stores[TopState.state.lastStoreName].updaters[updaterName] = updater;
 
         if( !(updaterName in emitStreams ) ) emitStreams[updaterName] = new Bacon.Bus();
+
+        var lastStoreName = TopState.state.lastStoreName;
+        
         emitStreams[updaterName].onValue(function(scope){
-            // console.log('-----we get new emit of data into store!!!! ', scope)
+            storesData[lastStoreName] = updater( storesData[lastStoreName], scope);
         });
 
         return this;
