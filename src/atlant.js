@@ -91,7 +91,7 @@ function Atlant(){
 
     // Depends enum
     var Depends = {
-        parallel: _.uniqueId()
+        async: _.uniqueId()
         ,continue: _.uniqueId()
     }
 
@@ -282,7 +282,7 @@ function Atlant(){
     }
 
     /* depends */
-    var depends = function() {
+    var _depends = function() {
 
         var treatDep = s.compose(  clientFuncs.convertPromiseD
                                     ,s.promiseTryD
@@ -296,6 +296,7 @@ function Atlant(){
 
             stream = stream
                 .map( dependsName.add.bind(dependsName, depName, nameContainer) )
+                .map( withGrabber.add.bind(withGrabber, withs) )
                 .map( ups.fmap(_.extend) )
 
             if ('function' !== typeof dep) {
@@ -326,8 +327,8 @@ function Atlant(){
                             }
                         }
 
-                        var data = (streamData.with && 'value' in streamData.with) ? streamData.with.value : scope;
-                        return treat(data)
+                        var scopeData = (streamData.with && 'value' in streamData.with) ? streamData.with.value(scope) : scope;
+                        return treat(scopeData)
                             .map(function(results){
                                 streamData = ups.getLast();
                                 if ( !streamData.isInterceptor ) interceptorBus.push({upstream: streamData, scope: results}); // pushing into global data .interceptor() 
@@ -340,7 +341,6 @@ function Atlant(){
                 .map( ups.join('depends', depName) )
                 .map(function(upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
                     var stream = injectsGrabber.add(depName, upstream.depends[depName], injects, upstream);
-                    stream = withGrabber.add(withs, stream);
 
                     return stream;
                 });
@@ -364,8 +364,8 @@ function Atlant(){
             var depName = (State.state.lastDepName ? State.state.lastDepName + prefix : 'depend_') + _.uniqueId();
 
             var lastOp = State.state.lastOp;
-            if (dependsBehaviour === Depends.parallel) {
-                lastOp = State.state.lastIf || State.state.lastWhen;
+            if (dependsBehaviour === Depends.async) {
+                lastOp = State.state.lastContDep || State.state.lastIf || State.state.lastWhen;
             }
 
              
@@ -373,7 +373,11 @@ function Atlant(){
 
             var thisDep = createDepStream(lastOp, depName, dependency, State.state.lastInjects )
 
-            if( dependsBehaviour === Depends.parallel && State.state.lastDep) { // if deps was before then we need to zip all of them to be arrived simultaneously
+            if (dependsBehaviour !== Depends.async) {
+                State.state.lastContDep = thisDep;
+            }  
+
+            if( dependsBehaviour === Depends.async && State.state.lastDep) { // if deps was before then we need to zip all of them to be arrived simultaneously
                 thisDep = State.state.lastDep.zip( thisDep, zippersJoin( State.state.lastDepName, depName ) );
             }
 
@@ -986,20 +990,17 @@ function Atlant(){
     }
 
     /**
-     * Inject dependency in last route stream. Only one dependency allowed at once.
-     * @name name - name of dependency. Should be unique, will be injected into controller.
-     * @param dependency - promise (for first version).
-     * @returns {*}
+     *  Continuesly run the dependency. First executed previous dependency, and only after - this one.
      */
-    var _depends = function( dependency ) {
-        return depends.bind(this)( dependency, Depends.parallel);
+    var __depends = function( dependency ) {
+        return _depends.bind(this)( dependency, Depends.continue);
     }
 
     /**
-     *  Continuesly run the dependency. First executed previous dependency, and only after - this one.
+     *  Asyncroniously run the dependency. 
      */
-    var _and = function( dependency ) {
-        return depends.bind(this)( dependency, Depends.continue);
+    var _async = function( dependency ) {
+        return _depends.bind(this)( dependency, Depends.async);
     }
 
     var _inject = function( key, expression ) {
@@ -1330,11 +1331,12 @@ function Atlant(){
     // creates branch which can destruct all what declared by .when() or .match()
     this.finally =  _finally;
     // side-effect
-    this.depends =  _depends;
+    this.depends =  _async;
+    this.dep =  _async;
     /*
-     * The same as ".depends()", but executes only after last ".depends()" or ".and()" ends.
+     * Blocking .depends(): the same as ".depends()", but executes only after last ".depends()" or ".and()" ends.
      * */
-    this.and =  _and;
+    this.and =  __depends;
     /*
      * .data() allow catch every peace of data which where piped with .depends(), .and()
      **/
@@ -1419,11 +1421,17 @@ function Atlant(){
                 else console.log("Atlant.js: Warning: event key" + key + " is not defined");
             });
 
+
         return this;
     }
 
-    var _select = function(partName, storeName, idProvider){
-        return this;
+    var _select = function(dependsBehaviour, partName, storeName) {
+        if (!(storeName in stores)) throw new Error('atlant.js: store ', storeName, ' is not defined. Use atlant.store(', storeName, ')');
+        if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: store ', storeName, ' is not defined. Use atlant.store(', storeName, ')');
+
+        return _depends.bind(this)( function(id){
+            return stores[storeName].parts[partName](storesData[storeName], id);
+        }, dependsBehaviour );
     }
 
     // Create scope for prefixed method (currently .select(), .update(), .depends())
@@ -1456,8 +1464,9 @@ function Atlant(){
     this.part = _part;
     // Store dispatch
     this.update = _update;
-    // Atom reveiver
-    this.select = _select;
+    // Query store
+    this.select = _select.bind(this, Depends.continue);
+    this.selectAsync = _select.bind(this, Depends.async);
 
     // create scope for data provider
     this.with = _with;
