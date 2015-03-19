@@ -40,6 +40,23 @@ var getRefsData = function( upstream ) {
     return s.reduce( fn, {}, upstream.refs)
 }
 
+var patchScope = function( scope, atomValue ){
+    var patched = JSON.parse(JSON.stringify(patched));
+
+    return patched;
+}
+
+var getScopeDataFromStream = function( upstream ){
+    var scope = Object.create(null);
+    scope.refs = upstream.refs;
+    scope.depends = upstream.depends;
+    scope.injects = upstream.injects;
+    scope.params = upstream.params;
+    scope.path = upstream.path;
+    scope.route = upstream.route;
+    return scope;
+}
+
 /**
     * Injects depend values from upstream into object which is supplyed first.
     */
@@ -106,5 +123,7 @@ module.exports = {
     ,createScope: createScope
     ,getRefsData: getRefsData
     ,catchError: catchError
+    ,getScopeDataFromStream: getScopeDataFromStream
+    ,patchScope: patchScope
 };
 

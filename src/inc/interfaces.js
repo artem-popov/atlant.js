@@ -8,16 +8,18 @@ var dependsName = function() {
         return nameContainer;
     }
 
-    // Add invocation when mapping stream.
-    this.add = function(depName, nameContainer, upstream) {
+    // Add invocation when mapping stream, i.e. all data already exist
+   this.add = function(depName, nameContainer, upstream) {
         if( !upstream.refs ) upstream.refs = {};
         upstream.refs[nameContainer.ref] = depName;
         upstream.ref = nameContainer.ref;
+        upstream.atomType = nameContainer.atomType;
         return upstream
     }
     
-    this.tailFill = function(value, state){
+    this.tailFill = function(atomType, value, state){
         state.lastNameContainer.ref = value;
+        state.lastNameContainer.atomType = atomType;
     }
 
     return this;
