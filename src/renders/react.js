@@ -87,7 +87,7 @@ var Render = function() {
 
     this.attach = function(name, selector) {
         var attached = new Promise( function( resolve, reject ){
-            if ( !window ) throw Error('AtlantJs, React render: attach not possible in browser.')
+            if ( typeof window === 'undefined') throw Error('AtlantJs, React render: attach not possible in browser.')
 
             var element = document.querySelector(selector);
             if ( !element )   throw Error('AtlantJs, React render: can\'t find the selector' + selector )
@@ -171,9 +171,6 @@ var Render = function() {
             }
         }
     }
-
-    window.render = this.on.renderEnd;
-
 }
 
 module.exports = Render;

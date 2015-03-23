@@ -1,5 +1,9 @@
-0.4.1
+0.4.2
 	- prohibit use of atlant.when("*")
+0.4.1
+	- compatibility with server render
+	- atlant version another way + remove revision
+	- npmjs compat: lowercase package name
 0.4.0 
 	- first of "adult" features: atlant.interceptor(), which provides scope
 	with { name: interceptedDependsName, value, interceptedValue }
