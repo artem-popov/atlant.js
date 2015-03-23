@@ -598,7 +598,7 @@ function Atlant(){
             
             if (!isAction) renderStreams.nullifyScan.push('nullify'); // Do not nullify anything of action
 
-            if (window) lastPath = utils.getLocation();
+            if (typeof window !== 'undefined') lastPath = utils.getLocation();
 
             // collecting transfers data
             //@TODO do it only when need

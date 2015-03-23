@@ -1,6 +1,7 @@
 "use strict";
 
 var s = require('./lib');
+var _ = require('lodash')
 
 var utils = function() {
     return {
