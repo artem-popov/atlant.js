@@ -8,7 +8,7 @@ var browserify = require('browserify')
     ,fs = require('fs')
     ,serveStatic = require('serve-static')
     ,Promise = require('promise')
-    ,sweetify = require('sweetify')    
+    ,sweetify = require('sweetify')
 
 var browOpt = {standalone: 'atlant'};
 var dest = 'lib/';
@@ -54,7 +54,7 @@ gulp.task('watch', function() {
         return gulp
             .src(['src/**/*.js', 'src/**/*.sjs', 'src/**/*.ls'])
             .pipe( plumber() )
-            .pipe( watch( function(){ 
+            .pipe( watch( function(){
                 var b = browserify( './src/atlant.js' );
                 b.ignore('react');
             //    b.transform(sweetify);
@@ -63,9 +63,9 @@ gulp.task('watch', function() {
                     ,lodash: 'window._'
                     ,baconjs: 'window.Bacon'
                     ,promise: 'window.Promise'
-                    ,AtlantVersion: "'0.4.0'"
-                    ,AtlantBuild: '"' + (new Date().getTime()) + '"'
-                    ,AtlantRevision: '"' + commitCode.trim() + '"'
+                    // ,AtlantVersion: "'0.4.0'"
+                    // ,AtlantBuild: '"' + (new Date().getTime()) + '"'
+                    // ,AtlantRevision: '"' + commitCode.trim() + '"'
                 }));
 
                 b.bundle({ standalone: 'Atlant' }).pipe(source('./atlant.js'))
