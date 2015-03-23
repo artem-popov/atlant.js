@@ -1553,9 +1553,7 @@ function Atlant(){
     // Returns atlant.js version
     this.version = require('./atlant-version');
     // Returns timestamp of the creation time
-    // this.build = require('AtlantBuild');
-    // Returns commit id just before current atlant.js commit
-    // this.revision = require('AtlantRevision');
+    this.build = require('./atlant-build');
     this.utils = {
         // test :: path -> mask -> Bool
         test: _test,
