@@ -1566,6 +1566,19 @@ function Atlant(){
         // parseAll :: path -> [mask] -> {params}
         parseAll: _parseAll
     };
+    this.data = {
+        get routes() { return _(routes) 
+            .map( function(route){ return route.mask } )
+            .map(function(route){ 
+                if ('/' === route[route.length-1]) 
+                    return route.substring(0, route.length -1) 
+                else 
+                    return route;
+            })
+            .uniq() // @TODO better not to double it for info :)  
+            .value() 
+        }    
+    }
     // This command will immediatelly redirect to param url
     this.goTo = _redirectTo;
     // The alias of goTo
