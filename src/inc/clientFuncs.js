@@ -31,19 +31,20 @@ var applyScopeD = function(fn) {
 var getRefsData = function( upstream ) {
     if ( !upstream.refs ) return {}
 
+    // console.log('---upstream refs:', upstream)
     var fn = function(res, depName, refName) {
-        if ( 'undefined' !== refName && depName in upstream.depends ) res[refName] = upstream.depends[depName];
+        if ( 'undefined' !== refName && depName in upstream.depends ) {
+            res[refName] = upstream.depends[depName];
+            if ('function' === typeof res[refName]) { 
+                // console.log('---the refName:', res)
+                res[refName] = res[refName]()
+            };
+        }
 
         return res;
     }
 
     return s.reduce( fn, {}, upstream.refs)
-}
-
-var patchScope = function( scope, atomValue ){
-    var patched = JSON.parse(JSON.stringify(patched));
-
-    return patched;
 }
 
 var getScopeDataFromStream = function( upstream ){
@@ -124,6 +125,5 @@ module.exports = {
     ,getRefsData: getRefsData
     ,catchError: catchError
     ,getScopeDataFromStream: getScopeDataFromStream
-    ,patchScope: patchScope
 };
 

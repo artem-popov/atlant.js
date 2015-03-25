@@ -443,6 +443,8 @@ var s = (function(){
        }
    }
 
+   var copy = _.compose( JSON.parse, JSON.stringify );
+
    this.maybeS = this.maybe.bind(this, '')
    this.maybeV = this.maybe.bind(this, void 0)
 
@@ -510,6 +512,7 @@ var s = (function(){
     this.guardWithTrue = guardWithTrue;
     this.resolveGuard = resolveGuard;
     this.Herald = Herald;
+    this.copy = copy;
 
     return this;
 
