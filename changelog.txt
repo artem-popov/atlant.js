@@ -1,3 +1,5 @@
+0.4.2
+	- add .refresh() - soft reload current page
 0.4.1
 	- compatibility with server render
 	- atlant version another way + remove revision
