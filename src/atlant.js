@@ -1136,7 +1136,7 @@ function Atlant(){
     var _render = function(renderProvider, viewName, renderOperation){
             if ( ! State.state.lastOp ) throw new Error('"render" should nest something');
 
-            if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider && renderOperation != RenderOperation.nope ) {
+            if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider && renderOperation != RenderOperation.nope && renderOperation != RenderOperation.refresh ) {
                 throw new Error('Atlant.js: render first param should be function or URI')
             }
             s.type(viewName, 'string');
