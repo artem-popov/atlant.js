@@ -95,6 +95,7 @@ function Atlant(){
         ,change: parseInt(_.uniqueId())
         ,clear: parseInt(_.uniqueId())
         ,redirect: parseInt(_.uniqueId())
+        ,refresh: parseInt(_.uniqueId())
         ,move: parseInt(_.uniqueId())
         ,nope: parseInt(_.uniqueId())
     }
@@ -275,6 +276,16 @@ function Atlant(){
                                 upstream.doLater = function(){utils.goTo(viewProvider(scope))}
                             } else {
                                 upstream.doLater = function(){utils.goTo(viewProvider)}
+                            }
+
+                            whenRenderedSignal(upstream);
+
+                            return;
+                        } if (RenderOperation.refresh === upstream.render.renderOperation ){
+                            if ('function' === typeof viewProvider) {
+                                upstream.doLater = function(){utils.goTo(viewProvider(scope), void(0), true)}
+                            } else {
+                                upstream.doLater = function(){utils.goTo(viewProvider, void(0), true)}
                             }
 
                             whenRenderedSignal(upstream);
@@ -635,7 +646,8 @@ function Atlant(){
                     var parsed = ( event.detail ) ? utils.parseURL( event.detail.url ) : void 0;
                     var path = ( parsed ) ?  parsed.pathname + '?' + parsed.search :  utils.getLocation();
                     l.log('the route is changed!')
-                    if (path !== lastPath) {
+                    console.log( "event.detail", event.detail );
+                    if (path !== lastPath || event.detail.state.forceRouteChange) {
                         sink({
                             path: path
                             ,referrer: lastPath
@@ -1488,6 +1500,8 @@ function Atlant(){
     this.clear = function(viewName) {return _render.bind(this)(function(){}, viewName, RenderOperation.clear);}
     // Soft atlant-inside redirect.
     this.redirect = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.redirect);}
+    // Soft atlant-inside refresh.
+    this.refresh = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.refresh);}
     //  Fake redirect. Atlant will just change URL but routes will not be restarted. Referrer stays the same.
     this.replace = function(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, RenderOperation.replace);}
     // Same as replace, but store the replaced url in html5 location history. Referrer also changed.

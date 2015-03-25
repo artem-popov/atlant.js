@@ -95,10 +95,10 @@ utils.isIE = function()
  * @param upstream
  * @returns {*}
  */
-utils.goTo = function(awaitLoad, url, awaitLoadForce) {
+utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) {
 
     if ('undefined' === typeof window) return;
-    if ( (window.location.origin + url) === window.location.href)  return;
+    if ( !redirectForce && (window.location.origin + url) === window.location.href )  return;
 
     if ('undefined' !== typeof awaitLoadForce) awaitLoad = awaitLoadForce;
 
@@ -110,7 +110,7 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce) {
         }
     }
 
-    setTimeout( history.pushState.bind(history, null, null, url), 0);
+    setTimeout( history.pushState.bind(history, { forceRouteChange: redirectForce }, null, url), 0);
 }
 
 /**

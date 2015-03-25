@@ -33,7 +33,7 @@ var wrapPushState = function(window){
 
     window.history.pushState = function(state, title, url) {
         if ( !state || !('eventless' in state) || !state.eventless ) {
-            var onpushstate = new CustomEvent('pushstate', { detail: { state: {referrer: window.location.pathname}, title: title, url: url } } );
+            var onpushstate = new CustomEvent('pushstate', { detail: { state: {referrer: window.location.pathname, forceRouteChange: state.forceRouteChange}, title: title, url: url } } );
             window.dispatchEvent(onpushstate);
         }
 
