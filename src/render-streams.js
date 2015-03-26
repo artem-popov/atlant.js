@@ -57,8 +57,7 @@ module.exports = function(Counter, whenCount)  {
         })
         .filter(s.notEmpty) // Still this hash can be nullified, so stay aware.
         .changes()
-        .map(s.logIt('is zero?'))
-        .filter( function(_) { console.log('---whenCount:', whenCount.value); return 0 === --whenCount.value; } ) // Here checking is there all whens are ended.
+        .filter( function(_) { return 0 === --whenCount.value; } ) // Here checking is there all whens are ended.
         .merge(taskRenderedAndMapped)
         .map(function(u){
             return s.reduce(function(sum, value, key){if ('undefined' !== key) sum[key] = value; return sum}, {}, u)
