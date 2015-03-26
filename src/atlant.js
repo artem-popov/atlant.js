@@ -113,13 +113,15 @@ function Atlant(){
         var whenRenderedSignal = function( upstream ) {
             // Signalling that view renders
 
-            if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction)
+            console.log('whenrendered:', upstream)
+
+            if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction && !upstream.isAtom )
                 renderStreams.whenRenderedStream.push(upstream); // This will count the renders
 
-            if (upstream.render.renderOperation === RenderOperation.draw && !upstream.isAction) // Special draw stream
+            if (upstream.render.renderOperation === RenderOperation.draw && !upstream.isAction || 'isAtom' in upstream && upstream.isAtom ) // Special draw stream also applyes to atoms: don't count these renders - they are brilliant.
                 renderStreams.drawEnd.push(upstream);
 
-            if ( upstream.render.renderOperation !== RenderOperation.draw && upstream.isAction)
+            if ( upstream.render.renderOperation !== RenderOperation.draw && upstream.isAction && !upstream.isAtom )
                 renderStreams.taskRendered.push(upstream);
 
             // signal for finally construct
@@ -130,7 +132,7 @@ function Atlant(){
 
         // when render applyed, no more renders will be accepted for this .when and viewName
         var renderStopper = function(upstream) {
-            if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw || upstream.isAction || upstream.render.renderOperation === RenderOperation.move || upstream.render.renderOperation === RenderOperation.redirect || upstream.render.renderOperation === RenderOperation.replace || upstream.render.renderOperation === RenderOperation.change  )
+            if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw || upstream.isAction || upstream.render.renderOperation === RenderOperation.move || upstream.render.renderOperation === RenderOperation.redirect || upstream.render.renderOperation === RenderOperation.replace || upstream.render.renderOperation === RenderOperation.change || upstream.isAtom )
                 return true;
 
             if ( atlantState.viewRendered[upstream.render.viewName]) {  // If this view is already rendered...
@@ -155,18 +157,6 @@ function Atlant(){
                         savedViewScope[viewName] = clientFuncs.getScopeDataFromStream(upstream);
 
                         var scope = function() { return clientFuncs.createScope(savedViewScope[viewName]) };
-
-                        // If the data is not changed then there is no any point to redraw.
-                        if( ! renderState[upstream.render.renderId] ) { 
-                            renderState[upstream.render.renderId] = scope();
-                        } else if ( false  && prefs.checkInjectsEquality && _.isEqual ( scope(), renderState[upstream.render.renderId] )) {
-                            l.log('Atlant.js: Render cache enabled: no parameters changed. Skiping rendering of ', viewName)
-                            whenRenderedSignal(upstream);
-                            return;
-                        } else {
-                            renderState[upstream.render.renderId] = scope();
-                        }
-
                         var viewProvider = s.dot('.render.renderProvider', upstream);
 
                         // Choose appropriate render.
@@ -223,7 +213,6 @@ function Atlant(){
                                 render = prefs.render.clear
                             }
 
-                            var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
 
                             // turn off all subscriptions of atoms for this view
                             if( viewSubscriptions[viewName] ) viewSubscriptionsUnsubscribe[viewName](); // finish Bus if it exists;
@@ -243,20 +232,40 @@ function Atlant(){
                                             merge( atom.bus.map(putInfo) ); // these buses are not merged: we don't need to wait for all of them to continue
                                 }, viewSubscriptions[viewName])
 
-                            var renderIntoView = function(scope) {
+                            var renderIntoView = function(scope, isAtom) {
+                                var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
                                 // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
-                                if('mainView' === viewName) console.log('---rendering', viewProvider, scope)
+                                console.log('---rendering', viewName, s.copy(scope), isAtom)
                                 renderD(viewProvider, viewName, scope)
-                                    .then(function(component){upstream.render.component = component; return upstream })
+                                    .then(function(component){
+                                        console.log('---render stream:', upstream);
+                                        window.upstream = upstream;
+
+                                        // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
+                                        var finallyStream = upstream.finallyStream;
+                                        var atoms = upstream.atoms;
+                                        upstream.finallyStream = void 0;
+                                        upstream.atoms = void 0;
+                                        var stream = s.copy(upstream); 
+                                        stream.finallyStream = finallyStream;
+                                        upstream.finallyStream = finallyStream;
+                                        stream.atoms = atoms;
+                                        upstream.atoms = atoms;
+
+                                        stream.render.component = component;  // pass rendered component. it stale hold before streams get zipped.
+                                        stream.isAtom = isAtom;
+                                        return stream 
+                                    })
                                     .then( whenRenderedSignal )
                                     .catch( clientFuncs.catchError )
                             }
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ // Actually we don't use streamed values, we just re-run scope creation on previous saved data. All values of atoms will be updated because they are the functions which retrieve data straightforvard from store.
-                                renderIntoView(scope()); // Here we using scope updated from store!
+                                console.log('---!Got!', viewName)
+                                renderIntoView(scope(), true); // Here we using scope updated from store!
                             });
 
-                            renderIntoView(scope());
+                            renderIntoView(scope(), false);
                         }
 
                     } catch (e) {
