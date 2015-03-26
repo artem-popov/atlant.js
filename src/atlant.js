@@ -84,11 +84,6 @@ function Atlant(){
         ,continue: _.uniqueId()
     }
 
-    var AtomType = {
-        flat: _.uniqueId()
-        ,atom: _.uniqueId()
-    }
-
     var WhenFinally = {
         when: _.uniqueId()
         ,match: _.uniqueId()
@@ -230,8 +225,6 @@ function Atlant(){
 
                             var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
 
-                            console.log('---the atoms in render:', upstream.atoms, viewName)
-
                             // turn off all subscriptions of atoms for this view
                             if( viewSubscriptions[viewName] ) viewSubscriptionsUnsubscribe[viewName](); // finish Bus if it exists;
 
@@ -239,30 +232,28 @@ function Atlant(){
                             viewSubscriptions[viewName] = new Bacon.Bus();
                             viewSubscriptions[viewName] = _(upstream.atoms) // Add all atoms into this view stream
                                 .reduce( function(bus, atom) {
-                                    return bus
-                                        .merge(atom.bus)
-                                        .map(function(pushedValue){  // When data arrived, get info from static scope of atom details
-                                            console.log('aaaaaaaaa:', upstream.atoms)
-                                            var atom = Object.create(null);
-                                            atom.value = pushedValue;
-                                            atom.atom = atom.atom;
-                                            atom.store = atom.store;
-                                            return atom;
-                                        });
+                                    var putInfo = function(pushedValue){  // When data arrived, get info from static scope of atom details
+                                            var stream = Object.create(null);
+                                            stream.value = pushedValue;
+                                            stream.name = atom.atom;
+                                            stream.store = atom.store;
+                                            return stream;
+                                    };
+                                    return bus.
+                                            merge( atom.bus.map(putInfo) ); // these buses are not merged: we don't need to wait for all of them to continue
                                 }, viewSubscriptions[viewName])
 
                             var renderIntoView = function(scope) {
-                                l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
+                                // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
+                                if('mainView' === viewName) console.log('---rendering', viewProvider, scope)
                                 renderD(viewProvider, viewName, scope)
                                     .then(function(component){upstream.render.component = component; return upstream })
                                     .then( whenRenderedSignal )
                                     .catch( clientFuncs.catchError )
                             }
 
-                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atomValue){
-                                console.log('---ATOM:', atomValue)
-                                // savedViewScope[viewName] = clientFuncs.patchScope( savedViewScope[viewName], atomValue );
-                                renderIntoView(scope()); // Here we using patched scope!
+                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ // Actually we don't use streamed values, we just re-run scope creation on previous saved data. All values of atoms will be updated because they are the functions which retrieve data straightforvard from store.
+                                renderIntoView(scope()); // Here we using scope updated from store!
                             });
 
                             renderIntoView(scope());
@@ -369,7 +360,7 @@ function Atlant(){
 
                         var scopeData = (streamData.with && 'value' in streamData.with) ? streamData.with.value(scope) : scope;
                         
-                        if ( streamData.atomType == AtomType.atom ) atomId = scopeData; 
+                        if ( 'undefined' !== typeof store ) atomId = scopeData; 
 
                         return treat(scopeData)
                             .map(function(results){
@@ -387,20 +378,18 @@ function Atlant(){
 
                     if ( !stream.atoms ) stream.atoms = {};
 
-                    if (store && atomId) {
-                        console.log('--registering the stream for ', store.partName)
+                    if ('undefined' !== typeof store) {
                         var atomBus = store.bus.map(function(storeValue){
                             try {
-                                console.log('--accessing part ', store.partName, s.copy(store.partProvider(storeValue, atomId)) )
                                 return s.copy(store.partProvider(storeValue, atomId));
                             } catch (e) {
                                 console.log('atom ' + store.partName + ' was failed...')
                                 return void 0;
                             }
                         }).skipDuplicates(function(oldValue, newValue){
-                            console.log('---oldValue, newValue:', oldValue, newValue, _.isEqual(oldValue, newValue))
+                            // console.log('---oldValue, newValue:', oldValue, newValue, _.isEqual(oldValue, newValue))
                             return _.isEqual(oldValue, newValue)
-                        }).startWith(void 0);
+                        }).startWith(void 0); // @TODO contructore should be here. Use force my podovan.
 
                         atomBus.onValue(function(value){
                             console.log('atom ', store.partName, ' got value!', value)
@@ -1464,10 +1453,9 @@ function Atlant(){
         if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: store ', storeName, ' is not defined. Use atlant.store(', storeName, ')');
 
         return _depends.bind(this)( function(id){
-            console.log('---the results:', storeName, partName, stores[storeName].staticValue, id);
             return function(){
                 try{
-                    console.log('select ', partName, ' from ', storeName, ' where id = ', id, ' in ', stores[storeName].staticValue, ' === ',  stores[storeName].parts[partName](stores[storeName].staticValue))
+                    // console.log(partName, ' has value!:', stores[storeName].parts[partName](stores[storeName].staticValue, id))
                     return stores[storeName].parts[partName](stores[storeName].staticValue, id);
                 } catch(e) {
                     return void 0;
@@ -1488,13 +1476,8 @@ function Atlant(){
     }
 
     var _as = function(name) {
-        dependsName.tailFill(AtomType.flat, name, State.state);            
+        dependsName.tailFill(name, State.state);            
         return this
-    }
-
-    var _asAtom = function(atomName){
-        dependsName.tailFill(AtomType.atom, name, State.state);            
-        return this;
     }
 
     /**
@@ -1567,9 +1550,8 @@ function Atlant(){
      * Allows give name for .depends()
      */
     this.name = _as;
+    // value can be deferred if used with .select()
     this.as = _as;
-    // the value of depends are deferred 
-    this.asAtom = _asAtom;
 
     // create scope for data provider .select(), .depends() are supported
     this.with = _with;

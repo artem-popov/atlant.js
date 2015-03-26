@@ -13,13 +13,11 @@ var dependsName = function() {
         if( !upstream.refs ) upstream.refs = {};
         upstream.refs[nameContainer.ref] = depName;
         upstream.ref = nameContainer.ref;
-        upstream.atomType = nameContainer.atomType;
         return upstream
     }
     
-    this.tailFill = function(atomType, value, state){
+    this.tailFill = function(value, state){
         state.lastNameContainer.ref = value;
-        state.lastNameContainer.atomType = atomType;
     }
 
     return this;

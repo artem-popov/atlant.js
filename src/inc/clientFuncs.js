@@ -31,20 +31,18 @@ var applyScopeD = function(fn) {
 var getRefsData = function( upstream ) {
     if ( !upstream.refs ) return {}
 
-    // console.log('---upstream refs:', upstream)
     var fn = function(res, depName, refName) {
         if ( 'undefined' !== refName && depName in upstream.depends ) {
             res[refName] = upstream.depends[depName];
             if ('function' === typeof res[refName]) { 
-                // console.log('---the refName:', res)
                 res[refName] = res[refName]()
-            };
+            }
         }
 
         return res;
     }
 
-    return s.reduce( fn, {}, upstream.refs)
+    return s.reduce( fn, Object.create(null), upstream.refs)
 }
 
 var getScopeDataFromStream = function( upstream ){
@@ -104,7 +102,7 @@ var createScope = function ( upstream ) {
     params['mask'] = (upstream.route) ? upstream.route.mask : void 0;    
     params['location'] = upstream.path;
 
-    data = s.extend( refsData, params, data, joinsData ); 
+    data = s.extend( s.copy(refsData), params, data, joinsData ); 
 
     return data;
 };
