@@ -1,4 +1,5 @@
 0.4.3
+	- implement data-flow ( store, part, constructor, updater, update, select, with )
 	- prohibit use of atlant.when("*")
 0.4.2
 	- add .refresh() - soft reload current page
