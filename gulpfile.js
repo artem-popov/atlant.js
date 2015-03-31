@@ -20,16 +20,6 @@ var getLocalIndex = function(req, res, next){
         .pipe(res);
 }
 
-var exec = require('child_process').exec;
-function execute(command, callback){
-    exec(command, function(error, stdout, stderr){ callback(stdout); });
-}
-
-var getCommit = new Promise( function(resolve, reject) {
-    execute("git rev-parse HEAD", function(commitCode){
-        resolve(commitCode)
-    });
-});
 
 /** Examples local server */
 // not in use actually

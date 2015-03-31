@@ -1,3 +1,5 @@
+0.4.3
+	- prohibit use of atlant.when("*")
 0.4.2
 	- add .refresh() - soft reload current page
 0.4.1

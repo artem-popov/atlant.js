@@ -196,7 +196,7 @@ var s = (function(){
         return Array.prototype.concat.apply([], arr);
     }
 
-    var tail = function(arr) {
+    var last = function(arr) {
         if (arr) {
             return arr[arr.length-1];
         } else {
@@ -443,6 +443,8 @@ var s = (function(){
        }
    }
 
+   var copy = _.compose( JSON.parse, JSON.stringify );
+
    this.maybeS = this.maybe.bind(this, '')
    this.maybeV = this.maybe.bind(this, void 0)
 
@@ -477,7 +479,7 @@ var s = (function(){
     this.a2a    = a2a;
     this.replace = replace;
     this.head   = head;
-    this.tail   = tail;
+    this.last   = last;
     this.concat = concat;
     this.mapD   = mapD;
     this.fmap   = fmap;
@@ -510,6 +512,7 @@ var s = (function(){
     this.guardWithTrue = guardWithTrue;
     this.resolveGuard = resolveGuard;
     this.Herald = Herald;
+    this.copy = copy;
 
     return this;
 
