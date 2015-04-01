@@ -83,7 +83,7 @@ var createScope = function ( upstream ) {
             })
         } else {  
             return s.baconTryD(function() {
-                return inject.expression( s.extend( JSON.parse(JSON.stringify(refsData)), injectsData.object) ) 
+                return inject.expression( s.extend( s.copy(refsData), injectsData.object) ) 
             })
         }
     }

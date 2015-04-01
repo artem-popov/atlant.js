@@ -242,16 +242,22 @@ function Atlant(){
                                 // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
                                 renderD(viewProvider, viewName, scope)
                                     .then(function(component){
+                                        // @TODO make it better
                                         // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
                                         var finallyStream = upstream.finallyStream;
                                         var atoms = upstream.atoms;
+                                        var injects = upstream.injects; // injects contains functions which cannot be copyed natively
                                         upstream.finallyStream = void 0;
                                         upstream.atoms = void 0;
+                                        upstream.injects = void 0;
+
                                         var stream = s.copy(upstream); 
                                         stream.finallyStream = finallyStream;
-                                        upstream.finallyStream = finallyStream;
                                         stream.atoms = atoms;
+                                        stream.injects = injects;
+                                        upstream.finallyStream = finallyStream;
                                         upstream.atoms = atoms;
+                                        upstream.injects = injects;
 
                                         stream.render.component = component;  // pass rendered component. it stale hold before streams get zipped.
                                         stream.isAtom = isAtom;
@@ -1054,6 +1060,7 @@ function Atlant(){
     var _inject = function( key, expression ) {
         s.type(key, 'string');
         if ( ! State.state.lastDepName ) throw new Error('.inject should follow .depends');
+
 
         State.state.lastInjects[key] = { name: State.state.lastDepName, expression: expression };
 
