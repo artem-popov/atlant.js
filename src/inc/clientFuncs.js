@@ -1,6 +1,7 @@
 "use strict";
 
 var s = require('../lib')
+        ,_ = require('lodash')
         ,l = require('./log')()
         ,Bacon = require('baconjs')
 

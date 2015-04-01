@@ -1,5 +1,5 @@
 #Atlant.js
-Atlant.js is a micro-routing framework for Angular.js / React.js
+Atlant.js is a micro-routing framework for React.js
 
 It provides robust routing and dependency injection mechanism. 
 

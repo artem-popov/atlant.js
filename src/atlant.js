@@ -21,6 +21,7 @@ function Atlant(){
         ,interfaces = require('./inc/interfaces')
         ,StateClass = require('./inc/state')
         ,clientFuncs = require('./inc/clientFuncs')
+        ,baseStreams = require('./inc/base-streams')
 
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
@@ -665,7 +666,9 @@ function Atlant(){
                 assignRenders();
                 sink(upstream);
             });
-        }).map(function(upstream){upstream.id = _.uniqueId(); return upstream;})
+        })
+        .takeUntil(baseStreams.destructorStream)
+        .map(function(upstream){upstream.id = _.uniqueId(); return upstream;})
 
     var otherWiseRootStream = rootStream
         .filter( s.compose( s.empty, s.flip(matchRoutes)(Matching.stop, routes), s.dot('path') ) )
@@ -1353,10 +1356,7 @@ function Atlant(){
             .map(_parse.bind(void 0, path))
             .reduce( function(v, i) { return _.merge(v, i) }, {})
     }
-    // Will destruct all data structures.
-    var _destruct = function() {
-        return this;
-    }
+
 
     var _push = function(actionName) {
         throw new Error('atlant.push() not implemented');
@@ -1662,13 +1662,14 @@ function Atlant(){
     this.build = require('./atlant-build');
     this.utils = {
         // test :: path -> mask -> Bool
-        test: _test,
+        test: _test
         // testAll :: path -> [mask] -> Bool
-        testAll: _testAll,
+        ,testAll: _testAll
         // parse :: path -> mask -> {params}
-        parse: _parse,
+        ,parse: _parse
         // parseAll :: path -> [mask] -> {params}
-        parseAll: _parseAll
+        ,parseAll: _parseAll
+        ,destruct: function() { baseStreams.destructorStream.push(); return }
     };
     this.data = {
         get routes() { return _(routes) 
@@ -1689,7 +1690,6 @@ function Atlant(){
     this.redirectTo = _redirectTo;
     // Will hard redirect to param url (page will be reloaded by browser)
     this.moveTo = _moveTo;
-    this.destruct = _destruct;
 
     // Return view with viewName
     // this.view :: viewName
