@@ -2,11 +2,8 @@
 
 var Bacon = require('baconjs');
 
-module.exports = function()  {
+var baseStreams = Object.create(null);
 
-    var baseStreams = Object.create(null);
+baseStreams.destructorStream = new Bacon.Bus();
 
-    baseStreams.destructorStream = new Bacon.Bus();
-
-    return baseStreams;
-}
+module.exports = baseStreams;

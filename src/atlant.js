@@ -674,7 +674,6 @@ function Atlant(){
         .filter( s.compose( s.empty, s.flip(matchRoutes)(Matching.stop, routes), s.dot('path') ) )
         .map( s.logIt('Otherwise is in work.') );
 
-
     /* Base */
 
     /**
