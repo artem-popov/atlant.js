@@ -12,7 +12,6 @@ function Atlant(){
         ,l = require('./inc/log')()
         ,simpleRender = require('./renders/simple')
         ,reactRender = require('./renders/react')
-        ,DepCache = require('./inc/dep-cache')
         ,utils = require('./utils')
         ,Upstream = require('./upstream.js')
         ,Counter = require('./counter.js')()
@@ -26,7 +25,6 @@ function Atlant(){
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
 
-    var depCache = new DepCache();
     //    ,State = require('./state.js')
 
     // Initialization specific vars
@@ -149,9 +147,9 @@ function Atlant(){
 
         // Registering render for view.
         var assignRender = function(stream) {
-            stream
-                .filter( renderStopper )
-                .onValue( function(upstream){
+            var theStream = stream.filter( renderStopper );
+
+            baseStreams.onValue( theStream, function(upstream){
                     try{ 
                         var viewName = s.dot('.render.viewName', upstream);
                         savedViewScope[viewName] = clientFuncs.getScopeDataFromStream(upstream);
@@ -224,7 +222,7 @@ function Atlant(){
                             if( viewSubscriptions[viewName] ) viewSubscriptionsUnsubscribe[viewName](); // finish Bus if it exists;
 
                             // subscribe for every atom upstream to rerender view if need
-                            viewSubscriptions[viewName] = new Bacon.Bus();
+                            viewSubscriptions[viewName] = baseStreams.bus();
                             viewSubscriptions[viewName] = _(upstream.atoms) // Add all atoms into this view stream
                                 .reduce( function(bus, atom) {
                                     var putInfo = function(pushedValue){  // When data arrived, get info from static scope of atom details
@@ -278,7 +276,7 @@ function Atlant(){
                     } catch (e) {
                         console.error(e.message, e.stack);
                     }
-                });
+            });
         };
 
         return function() {
@@ -461,11 +459,11 @@ function Atlant(){
     /* Base and helper streams*/
     l.log('registering base streams...');
 
-    var publishStream = new Bacon.Bus();  // Here we can put init things.
-    var errorStream = new Bacon.Bus();
-    var onRenderEndStream = new Bacon.Bus();
-    var onDrawEndStream = new Bacon.Bus();
-    var interceptorBus = new Bacon.Bus();
+    var publishStream = baseStreams.bus();  // Here we can put init things.
+    var errorStream = baseStreams.bus();
+    var onRenderEndStream = baseStreams.bus();
+    var onDrawEndStream = baseStreams.bus();
+    var interceptorBus = baseStreams.bus();
 
     // Browser specific actions.
     if ('undefined' !== typeof window) {
@@ -476,7 +474,7 @@ function Atlant(){
         document.addEventListener("DOMContentLoaded", onRouteChange);
         window.addEventListener("popstate", onRouteChange);
 
-        publishStream.onValue(utils.attachGuardToLinks);
+        baseStreams.onValue(publishStream, utils.attachGuardToLinks);
     }
 
 
@@ -545,18 +543,17 @@ function Atlant(){
         }
     }
 
-    renderStreams.drawEnd
-        .onValue( function(upstream){
+    baseStreams.onValue( renderStreams.drawEnd, function(upstream){
             var upstreams = {};
             upstreams[upstream.render.viewName] = upstream;
 
             var allRendered = performRender(upstreams);
             if (allRendered) performCallback(upstreams, allRendered, onDrawEndStream);
-        });
+    });
 
     /* Except .draw() every render get this*/
-    renderStreams.renderEndStream
-        .onValue( function(upstreams){
+    
+    baseStreams.onValue( renderStreams.renderEndStream, function(upstreams){
             var isAction = false;
             var firstUpstream = _(Object.keys(upstreams)).first();
             if (firstUpstream) firstUpstream = upstreams[firstUpstream];
@@ -578,11 +575,10 @@ function Atlant(){
             return upstreams;
         })
 
-    var renderBeginStream = new Bacon.Bus();
+    var renderBeginStream = baseStreams.bus();
 
-    var firstRender = renderStreams.renderEndStream
-        .take(1)
-        .onValue(function(value) { // value contains all rendered upstreams.
+    var firstRender = renderStreams.renderEndStream.take(1);
+    baseStreams.onValue(firstRender, function(value) { // value contains all rendered upstreams.
             if( 'undefined' !== typeof window && prefs.rootSelector )   {
                 prefs
                     .render.attach('root', prefs.rootSelector )
@@ -662,7 +658,7 @@ function Atlant(){
     }
 
     var rootStream = Bacon.fromBinder(function(sink) {
-            routeChangedStream.onValue(function(upstream) {
+            baseStreams.onValue(routeChangedStream, function(upstream) {
                 assignRenders();
                 sink(upstream);
             });
@@ -705,7 +701,7 @@ function Atlant(){
             var whenId = _.uniqueId();
             var ups = new Upstream();
             var additionalMasks = [];
-            var finallyStream = ( WhenFinally.finally !== whenType ) ? new Bacon.Bus() : lastFinallyStream;
+            var finallyStream = ( WhenFinally.finally !== whenType ) ? baseStreams.bus() : lastFinallyStream;
 
             // Allows attaching injects to .when().
             var injects = injectsGrabber.init(name, State.state);
@@ -799,14 +795,13 @@ function Atlant(){
 
             State.state.lastWhen = State.state.lastWhen.map( function(stream) { stream.conditionId = whenId; return stream; })
 
-            State.state.lastWhen
-                .onValue( function(upstream) {
+            baseStreams.onValue( State.state.lastWhen, function(upstream) {
                     l.log('----Matched route!', upstream);
                     if( upstream.redirectTo) {  // If the route is a "bad clone", then redirecting.
                         l.log('----------------Redirect:',upstream);
                         utils.goTo(upstream.redirectTo);
                     }
-                });
+            });
 
 
             State.state.lastIf = void 0;
@@ -1113,7 +1108,7 @@ function Atlant(){
             if ( ! renders[viewName] ) renders[viewName] = [];
             renders[viewName].push(thisRender);
 
-            if( ! viewReady[viewName] && renderOperation !== RenderOperation.draw) viewReady[viewName] = new Bacon.Bus(); // This will signal that this view is rendered. Will be used in onValue assignment.
+            if( ! viewReady[viewName] && renderOperation !== RenderOperation.draw) viewReady[viewName] = baseStreams.bus(); // This will signal that this view is rendered. Will be used in onValue assignment.
 
             if (void 0 !== State.state.lastIf && renderOperation !== RenderOperation.draw) State.rollback();
 
@@ -1260,12 +1255,12 @@ function Atlant(){
     }
 
     var _onDrawEnd = function(callback) {
-        onDrawEndStream.onValue(s.baconTryD(callback));
+        baseStreams.onValue(onDrawEndStream, s.baconTryD(callback));
         return this;
     }
 
     var _onRenderEnd = function(callback) {
-        onRenderEndStream.onValue(s.baconTryD(callback));
+        baseStreams.onValue(onRenderEndStream, s.baconTryD(callback));
         return this;
     }
 
@@ -1384,10 +1379,12 @@ function Atlant(){
         if( 'function' !== typeof constructorProvider ) { throw new Error("Constructor should be a function for ", storeName)}
 
         stores[storeName]._constructor = constructorProvider;
-        stores[storeName].updater = new Bacon.Bus();
+        stores[storeName].updater = baseStreams.bus();
         stores[storeName].bus = stores[storeName].updater.scan(constructorProvider(), function(state, updater){ return updater(state) } ).changes()  
 
-        stores[storeName].bus.onValue( function(value) { 
+        baseStreams.onValue(stores[storeName].bus, function(value) { 
+            if (!window.stores) window.stores = {};
+            window.stores[storeName] = value
             stores[storeName].staticValue = value
         })
 
@@ -1403,10 +1400,9 @@ function Atlant(){
 
         stores[storeName].updaters[updaterName] = updater;
 
-        if( !(updaterName in emitStreams ) ) emitStreams[updaterName] = new Bacon.Bus();
-
+        if( !(updaterName in emitStreams ) ) emitStreams[updaterName] = baseStreams.bus();
         
-        emitStreams[updaterName].onValue(function(scope){
+        baseStreams.onValue(emitStreams[updaterName], function(scope){
             stores[storeName].updater.push( function(state){ 
                 try{ 
                     return s.copy(updater( state, scope)) }
@@ -1442,13 +1438,14 @@ function Atlant(){
             .map( function(upstream){
                 return withGrabber.add(withs, upstream)
             })
-            .onValue( function(upstream) { 
+
+        baseStreams.onValue( thisOp, function(upstream) { 
                 var refsData = clientFuncs.getRefsData( upstream ); 
                 
                 var data = ( upstream.with && 'value' in upstream.with ) ? upstream.with.value( refsData ) : refsData;
                 if ( key in emitStreams ) emitStreams[key].push(data);
                 else console.log("\nAtlant.js: Warning: event key" + key + " is not defined");
-            });
+        });
 
 
         return this;
@@ -1668,7 +1665,13 @@ function Atlant(){
         ,parse: _parse
         // parseAll :: path -> [mask] -> {params}
         ,parseAll: _parseAll
-        ,destruct: function() { baseStreams.destructorStream.push(); return }
+        ,destroy: function() {
+            baseStreams.destroy(); 
+            baseStreams = null;
+
+            s = l = simpleRender = reactRender = utils = Upstream = Counter = Bacon = _ = interfaces = StateClass = clientFuncs =  baseStreams = safeGoToCopy = null;// @TODO more
+            return 
+        }
     };
     this.data = {
         get routes() { return _(routes) 
