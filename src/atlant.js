@@ -42,6 +42,7 @@ function Atlant(){
     var savedViewScope = {};
     var cache = [];
 
+    var activeStreamId = { value: void 0 }; // Used to store active stream id. If route changed again then we need something to compare with current id and cancel our current stream if it is obsolete.
     var lastCondition;
     var lastMasks = [];
     var lastFinallyStream;
@@ -111,8 +112,11 @@ function Atlant(){
     var assignRenders = function(){
 
         var whenRenderedSignal = function( upstream ) {
-            // Signalling that view renders
+            if (!upstream.isAction && upstream.id !== activeStreamId.value) {console.log('---STOP-Z!', upstream, upstream.id, activeStreamId.value); return}; // this streams should not be counted.
 
+            // Signalling that view renders
+            if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction && !upstream.isAtom )
+                console.log('---i will push into WhenRenderedStream:', upstream.render.viewName, upstream.id, activeStreamId.value)
             if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction && !upstream.isAtom )
                 renderStreams.whenRenderedStream.push(upstream); // This will count the renders
 
@@ -147,7 +151,8 @@ function Atlant(){
 
         // Registering render for view.
         var assignRender = function(stream) {
-            var theStream = stream.filter( renderStopper );
+            var theStream = stream
+                .filter( renderStopper );
 
             baseStreams.onValue( theStream, function(upstream){
                     try{ 
@@ -239,8 +244,8 @@ function Atlant(){
                             var renderIntoView = function(scope, isAtom) {
                                 var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
                                 // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
-                                renderD(viewProvider, viewName, scope)
-                                    .then(function(component){
+                                renderD(viewProvider, upstream, activeStreamId, viewName, scope)
+                                    .then(function(_){
                                         // @TODO make it better
                                         // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
                                         var finallyStream = upstream.finallyStream;
@@ -258,8 +263,11 @@ function Atlant(){
                                         upstream.atoms = atoms;
                                         upstream.injects = injects;
 
-                                        stream.render.component = component;  // pass rendered component. it stale hold before streams get zipped.
-                                        stream.isAtom = isAtom;
+                                        if(_.code && 'notActiveStream' === _.code){
+                                        } else {
+                                            stream.render.component = _;  // pass rendered component. it stale hold before streams get zipped.
+                                            stream.isAtom = isAtom;
+                                        }
                                         return stream 
                                     })
                                     .then( whenRenderedSignal )
@@ -267,7 +275,7 @@ function Atlant(){
                             }
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ // Actually we don't use streamed values, we just re-run scope creation on previous saved data. All values of atoms will be updated because they are the functions which retrieve data straightforvard from store.
-                                renderIntoView(scope(), true); // Here we using scope updated from store!
+                                return renderIntoView(scope(), true) // Here we using scope updated from store!
                             });
 
                             renderIntoView(scope(), false);
@@ -333,31 +341,30 @@ function Atlant(){
                                 );
 
         var createDepStream = function(stream, depName, dep, injects, store) {
-            var ups = new Upstream();
-
             var nameContainer = dependsName.init(depName, State.state);
             var withs = withGrabber.init(State.state);
-            var atomId;
 
             stream = stream
                 .map( dependsName.add.bind(dependsName, depName, nameContainer) )
                 .map( withGrabber.add.bind(withGrabber, withs) )
-                .map( ups.fmap(_.extend) )
+                // .filter( function(_) { if(activeStreamId.value !== _.id && !_.isAction) console.log('---STOPPED1!', _.render.viewName, _.id, activeStreamId.value); return _.id === activeStreamId.value || _.isAction } ) // Checking, should we continue or this stream already obsolete.
 
             if ('function' !== typeof dep) {
                 stream = stream
-                    .map( s.inject(dep) )
+                    .map( function(upstream) { 
+                        if (!upstream.depends) upstream.depends = {};
+                        upstream.depends[depName] = dep;
+                        return upstream;
+                    })
             } else {
                 var treat = treatDep( dep );
 
                 stream = stream
-                    .map(clientFuncs.createScope)
-                    .flatMap(function(scope) {
-
+                    .flatMap(function(upstream) {
+                        var scope = clientFuncs.createScope(upstream);
                         // Using data transfered from previous route instead of accessing the dependency
-                        var streamData = ups.getLast();
 
-                        if (lastData && Object.keys(lastData).length && streamData.ref) {
+                        if (lastData && Object.keys(lastData).length && upstream.ref) {
                             var mask = utils.getPattern(lastMask);
 
                             // look in lastData only for current mask
@@ -367,26 +374,28 @@ function Atlant(){
                             // merge all depend names into one list
                             data = s.reduce(function(xs, x){ return _.merge(xs, x) }, {}, data);
 
-                            if (data.hasOwnProperty(streamData.ref)) {
-                                return Bacon.constant(data[streamData.ref]);
+                            if (data.hasOwnProperty(upstream.ref)) {
+                                return Bacon.constant(data[upstream.ref]);
                             }
                         }
 
-                        var scopeData = (streamData.with && 'value' in streamData.with) ? streamData.with.value(scope) : scope;
+                        var scopeData = (upstream.with && 'value' in upstream.with) ? upstream.with.value(scope) : scope;
                         
-                        if ( 'undefined' !== typeof store ) atomId = scopeData; 
-
                         return treat(scopeData)
                             .map(function(results){
-                                streamData = ups.getLast();
-                                if ( !streamData.isInterceptor ) interceptorBus.push({upstream: streamData, scope: results}); // pushing into global data .interceptor() 
-                                return results;
+                                if ( !upstream.isInterceptor ) interceptorBus.push({upstream: upstream, scope: results}); // pushing into global data .interceptor() 
+                                if (!upstream.depends) upstream.depends = {};
+                                upstream.depends[depName] = results;
+
+                                if ( 'undefined' !== typeof store ) upstream.atomId = scopeData; 
+
+                                console.log('the depends stream is:', upstream)
+                                return upstream;
                             })
                     })
             }
 
             stream = stream
-                .map( ups.join('depends', depName) )
                 .map(function(upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
                     var stream = injectsGrabber.add(depName, upstream.depends[depName], injects, upstream);
 
@@ -395,17 +404,18 @@ function Atlant(){
                     if ('undefined' !== typeof store) {
                         var atomBus = store.bus.map(function(storeValue){
                             try {
-                                return s.copy(store.partProvider(storeValue, atomId));
+                                return s.copy(store.partProvider(storeValue, upstream.atomId));
                             } catch (e) {
                                 return void 0;
                             }
                         }).skipDuplicates(_.isEqual).startWith(void 0); // @TODO contructore should be here. Use force my podovan.
 
-                        stream.atoms[store.storeName + '.' + store.partName] = { id: atomId, store: store.storeName, atom: store.partName, bus: atomBus };
+                        stream.atoms[store.storeName + '.' + store.partName] = { id: upstream.atomId, store: store.storeName, atom: store.partName, bus: atomBus };
                     } 
 
                     return stream;
-                });
+                })
+                // .filter( function(_) { if(activeStreamId.value !== _.id && !_.isAction) console.log('---STOPPED2!', _.render.viewName, _.id, activeStreamId.value); return _.id === activeStreamId.value || _.isAction } ) // Checking, should we continue or this stream already obsolete.
 
             return stream;
         }
@@ -637,9 +647,14 @@ function Atlant(){
             lastMask = [];
 
             // Nil values.
+            console.log('---Nullify when:', 0, upstream.id, activeStreamId.value)
             whenCount.value = 0;
+            activeStreamId.value = 0;
+            Counter.reset();
             renderStreams.nullifyScan.push('nullify');
-            resetRouteState();
+
+            atlantState.viewRendered = {};
+            atlantState.isLastWasMatched = false;
             renderBeginStream.push();
             return upstream;
         });
@@ -650,21 +665,18 @@ function Atlant(){
         ,actions: {}
     }
 
-    var resetRouteState = function(){
-
-        atlantState.viewRendered = {};
-        atlantState.isLastWasMatched = false;
-        Counter.reset(); // reset to default values the counter of render/clear.
-    }
-
     var rootStream = Bacon.fromBinder(function(sink) {
-            baseStreams.onValue(routeChangedStream, function(upstream) {
+            baseStreams.onValue(routeChangedStream, function(_) {
                 assignRenders();
-                sink(upstream);
+                sink(_);
             });
         })
         .takeUntil(baseStreams.destructorStream)
-        .map(function(upstream){upstream.id = _.uniqueId(); return upstream;})
+        .map(function(upstream){
+            upstream.id = _.uniqueId();
+            activeStreamId.value = upstream.id;
+            return upstream;
+        })
 
     var otherWiseRootStream = rootStream
         .filter( s.compose( s.empty, s.flip(matchRoutes)(Matching.stop, routes), s.dot('path') ) )
@@ -699,17 +711,11 @@ function Atlant(){
             name = name + createNameFromMasks(masks) + _.uniqueId();
 
             var whenId = _.uniqueId();
-            var ups = new Upstream();
-            var additionalMasks = [];
             var finallyStream = ( WhenFinally.finally !== whenType ) ? baseStreams.bus() : lastFinallyStream;
 
             // Allows attaching injects to .when().
             var injects = injectsGrabber.init(name, State.state);
             var transfers = transfersGrabber.init(TopState.state);
-
-            masks.forEach(function(mask) {
-                s.push(utils.getPossiblePath(mask), additionalMasks);
-            });
 
             if( WhenFinally.when === whenType || WhenFinally.finally === whenType )
                 masks.forEach(function(mask) {
@@ -717,28 +723,39 @@ function Atlant(){
                     s.push({mask: utils.getPossiblePath(mask), redirectTo: mask}, routes);
                 });
 
+            masks = _(masks).map(function(mask){return [mask, utils.getPossiblePath(mask)]}).flatten().value();
+
+
             if ( WhenFinally.when === whenType || WhenFinally.match === whenType ) {
                 lastFinallyStream = finallyStream;
 
                 State.state.lastWhen = rootStream
-                    .map(ups.fmap(_.extend))
                     .map( function(upstream) {
-                        return masks
-                            .concat(additionalMasks)
-                            .filter(function() { if(WhenFinally.match === whenType) return true; else return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched. .match() streams are immune.
-                            .map( matchRouteLast( upstream.path, matchingBehaviour ) )
-                            .filter( s.notEmpty )                              // empty params means fails of route identity.
-                    } )
-                    .map(s.head)
-                    .filter( s.notEmpty )
-                    .map(ups.join(void 0, void 0))
+                        var mask = _(masks)
+                                        .filter(function() { if(WhenFinally.match === whenType) return true; else return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched. .match() streams are immune.
+                                        .map( matchRouteLast( upstream.path, matchingBehaviour ) )
+                                        // .map(s.logIt('---matched routes!!!', upstream))
+                                        .filter( s.notEmpty )                              // empty params means fails of route identity.
+                                        .head()
+
+                            console.log('the value2!:', mask)
+                            if (!mask) { 
+                                return void 0;
+                            } else { 
+                                upstream.params = mask.params;
+                                upstream.route = mask.route;
+                                return upstream;
+                            }
+                    })
+                    .filter(s.id)
                     .map(function (upstream) {
                         upstream.whenId = whenId;
                         upstream.route.when = masks;
                         upstream.isFinally = false;
                         upstream.isMatch = WhenFinally.match === whenType;
                         upstream.finallyStream = finallyStream;
-                        whenCount.value++;
+                        console.log('---when counting up', whenCount.value, upstream.id, activeStreamId.value);
+                        if(activeStreamId.value === upstream.id) whenCount.value++;
 
                         // Storing here the data for actions.
                         lastMask.push(upstream.route.mask);
@@ -756,14 +773,13 @@ function Atlant(){
                         stream = transfersGrabber.add(transfers, upstream)
                         return stream;
                     })
-            } else {
+            } else { // Finally processing. Currently is not working bacause of (1)
                 lastFinallyStream = void 0;
 
                 State.state.lastWhen = rootStream
-                    .map(ups.fmap(_.extend))
+                    .map(ups.fmap(_.extend)) // (1) is deprecated and not working
                     .map( function(upstream) {
                         var result = masks
-                            .concat(additionalMasks)
                             .map( s.compose( s.negate, matchRouteLast( upstream.path, matchingBehaviour ) ) )
                             .reduce( function(x, y) { return x && y; }, true )
                         return result;
@@ -787,6 +803,7 @@ function Atlant(){
                         stream = transfersGrabber.add(transfers, upstream)
                         stream.isFinally = true;
                         stream.whenId = whenId;
+                        console.log('---when counting up', whenCount.value, stream.id, activeStreamId.value);
                         whenCount.value++;
                         stream.route = { whenNot: masks };
                         return stream;
@@ -860,7 +877,8 @@ function Atlant(){
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
                 stream.otherwise = true;
                 stream.conditionId = whenId;
-                whenCount.value++;
+                console.log('---otherwise counting up', whenCount.value, stream.id, activeStreamId.value);
+                if(activeStreamId.value === whenCount.value) whenCount.value++;
                 l.log('---Matched otherwise!!!')
                 return stream;
             })
@@ -909,7 +927,6 @@ function Atlant(){
                 stream.conditionId = whenId;
                 stream.isAction = isAction;
 
-                // whenCount.value++;
                 l.log('---Matched action!!!', depValue)
 
                 return stream;
@@ -949,7 +966,6 @@ function Atlant(){
                 stream.conditionId = whenId;
 
                 stream.isAction = true;
-                // whenCount.value++;
 
                 l.log('---Matched error!!!')
                 return stream;
@@ -981,24 +997,24 @@ function Atlant(){
 
         State.divide();
         var ifId = _.uniqueId();
-        var ups = new Upstream();
 
         var isElse = (lastCondition === fn && lastCondition !== void 0);
         var depName = isElse ? 'else_' : 'if_' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
 
         var thisIf = State.state.lastOp
-            .map( ups.push )
-            .map(clientFuncs.createScope)
-            .filter(s.compose(
-                                clientFuncs.applyScopeD
-                                ,s.tryD
-                              )(fn))
-            .map( ups.pop )
+            .map(function(upstream){
+                var scope = clientFuncs.createScope(upstream);
+                var checkCondition = s.compose(clientFuncs.applyScopeD, s.tryD)(fn);
+                if ( checkCondition(scope) ) return upstream;
+                else return void 0;
+            })
+            .filter( s.id )
             .map( function(upstream) {
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
 
-                if ( !upstream.isAction ) whenCount.value++;
+                if ( !upstream.isAction && activeStreamId.value === upstream.id) console.log('---if counting up', whenCount.value, upstream.id, activeStreamId.value);
+                if ( !upstream.isAction && activeStreamId.value === upstream.id ) whenCount.value++; // increasing counter only if this stream is not yet obsolete
                 if( isElse)
                     l.log('---Matched else!!!')
                 else
@@ -1097,12 +1113,14 @@ function Atlant(){
             if ( renderOperation !== RenderOperation.draw && 'action' !== State.state.lastWhenType) Counter.increase(State.state);
             var renderId = _.uniqueId();
 
-            var ups = new Upstream();
 
             var thisRender = State.state.lastOp
-                .map(ups.fmap(_.extend))
-                .map(function() { return { renderId: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, RenderOperation: RenderOperation}; })
-                .map(ups.join('render', void 0))
+                .map(function(u) { 
+                    var ups = new Upstream();
+                    ups.fmap(_.extend)(u);
+                    var a = { renderId: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, RenderOperation: RenderOperation};
+                    return ups.join('render', void 0)(a)
+                })
 
             // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewName.
             if ( ! renders[viewName] ) renders[viewName] = [];
@@ -1503,7 +1521,7 @@ function Atlant(){
     // Creates custom stream which accepts Bacon stream. The difference with action is that this task will be performed immediatelly without waiting of other tasks to execute. ( if action happed and not end till other action happend, then this 2 actions will end zipped, simultaneusly, i.e. first action will wait second to finish).
     this.task = function(action) { return _action.call(this, action, true); }
     // creates branch which can destruct all what declared by .when() or .match()
-    this.finally =  _finally;
+    // this.finally =  _finally; // not supported because used ups = new Upstream() which is deprecated.
     // side-effect
     this.depends =  _async;
     this.dep =  _async;
@@ -1669,7 +1687,7 @@ function Atlant(){
             baseStreams.destroy(); 
             baseStreams = null;
 
-            s = l = simpleRender = reactRender = utils = Upstream = Counter = Bacon = _ = interfaces = StateClass = clientFuncs =  baseStreams = safeGoToCopy = null;// @TODO more
+            s = l = simpleRender = reactRender = utils = Counter = Bacon = _ = interfaces = StateClass = clientFuncs =  baseStreams = safeGoToCopy = null;// @TODO more
             return 
         }
     };

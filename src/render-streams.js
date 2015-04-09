@@ -1,6 +1,7 @@
 "use strict";
 
 var Bacon = require('baconjs');
+var l = require('lodash');
 
 module.exports = function(Counter, whenCount)  {
 
@@ -25,8 +26,9 @@ module.exports = function(Counter, whenCount)  {
         .map( s.compose( ups.push, ups.clear ) )
         .merge(nullifyScan)
         .scan([], function(oldVal, newVal) {  // Gathering the upstreams which come here.
-            if (newVal == 'nullify') {
+            if (newVal === 'nullify') {
                 oldVal = []
+                ups.clear();
                 return oldVal
             }
             oldVal.push(newVal); 
@@ -40,8 +42,9 @@ module.exports = function(Counter, whenCount)  {
         .changes()
         .merge(nullifyScan)
         .scan({}, function(sum, newVal) {  // creating hash of streams with viewName as key
-            if (newVal == 'nullify') {
+            if (newVal === 'nullify') {
                 sum = {};
+                ups2.clear();
                 return sum
             }
 
@@ -57,12 +60,13 @@ module.exports = function(Counter, whenCount)  {
         })
         .filter(s.notEmpty) // Still this hash can be nullified, so stay aware.
         .changes()
-        .filter( function(_) { return 0 === --whenCount.value; } ) // Here checking is there all whens are ended.
+        .filter( function(_) { console.log('---whenCount:', whenCount.value-1, _, l(_).map(function(x){return x.id}).flatten().unique().value() ); return 0 === --whenCount.value; } ) // Here checking is there all whens are ended.
         .merge(taskRenderedAndMapped)
         .map(function(u){
             return s.reduce(function(sum, value, key){if ('undefined' !== key) sum[key] = value; return sum}, {}, u)
         })
         .filter(s.notEmpty) // nopes.
+        .map(s.logIt('---finish'))
 
     return { 
         renderEndStream: renderEndStream 

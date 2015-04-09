@@ -86,19 +86,9 @@ var injectsGrabber = function() {
     return this;
 }
 
-var whenCounter = function() {
-    this.add = function(stream, whenCount) {
-        return stream // counter for whens 
-            .onValue(function(upstream) {
-                whenCount.value++;
-            });
-    }
-    return this;
-}
 
 module.exports = { 
                 injectsGrabber:injectsGrabber
-                ,whenCounter: whenCounter
                 ,dependsName: dependsName
                 ,transfersGrabber: transfersGrabber
                 ,withGrabber: withGrabber
