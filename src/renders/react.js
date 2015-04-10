@@ -56,8 +56,9 @@ var Render = function() {
 
             if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.  
                 // get new component somehow.
+                // if('headerView'===name)console.log('---wrint the component', name, scope)
                 state.set(name, viewProvider(scope));  
-            } 
+            }//else { console.log('---stopping the component...', name, scope)}
             var instance = state.getThis('name');
             state.check(name);
 

@@ -149,14 +149,19 @@ function Atlant(){
         // Registering render for view.
         var assignRender = function(stream) {
             var theStream = stream
+                .map(function(upstream){
+                    var stream = {};
+                    stream = _.extend(stream, upstream);
+                    return stream
+                })
                 .filter( renderStopper );
 
             baseStreams.onValue( theStream, function(upstream){
                     try{ 
                         var viewName = s.dot('.render.viewName', upstream);
-                        savedViewScope[viewName] = clientFuncs.getScopeDataFromStream(upstream);
-
-                        var scope = function() { return clientFuncs.createScope(savedViewScope[viewName]) };
+                        savedViewScope[viewName+upstream.render.renderId] = clientFuncs.getScopeDataFromStream(upstream);
+                        if(viewName==='headerView')console.log('---============savedViewScope', viewName+upstream.render.renderId)
+                        var scope = function() { return clientFuncs.createScope(savedViewScope[viewName+upstream.render.renderId]) };
                         var viewProvider = s.dot('.render.renderProvider', upstream);
 
                         // Choose appropriate render.
@@ -221,11 +226,11 @@ function Atlant(){
 
 
                             // turn off all subscriptions of atoms for this view
-                            if( viewSubscriptions[viewName] ) viewSubscriptionsUnsubscribe[viewName](); // finish Bus if it exists;
+                            if( viewSubscriptions[viewName+upstream.render.renderId] ) viewSubscriptionsUnsubscribe[viewName+upstream.render.renderId](); // finish Bus if it exists;
 
                             // subscribe for every atom upstream to rerender view if need
-                            viewSubscriptions[viewName] = baseStreams.bus();
-                            viewSubscriptions[viewName] = _(upstream.atoms) // Add all atoms into this view stream
+                            viewSubscriptions[viewName+upstream.render.renderId] = baseStreams.bus();
+                            viewSubscriptions[viewName+upstream.render.renderId] = _(upstream.atoms) // Add all atoms into this view stream
                                 .reduce( function(bus, atom) {
                                     var putInfo = function(pushedValue){  // When data arrived, get info from static scope of atom details
                                             var stream = Object.create(null);
@@ -236,27 +241,20 @@ function Atlant(){
                                     };
                                     return bus.
                                             merge( atom.bus.map(putInfo) ); // these buses are not merged: we don't need to wait for all of them to continue
-                                }, viewSubscriptions[viewName])
+                                }, viewSubscriptions[viewName+upstream.render.renderId])
 
                             var renderIntoView = function(scope, isAtom) {
                                 var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
                                 // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
                                 renderD(viewProvider, upstream, activeStreamId, viewName, scope)
-                                    .then(function(_){
-                                        // @TODO make it better
-                                        // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
-                                        var atoms = upstream.atoms;
-                                        upstream.finallyStream = void 0;
-                                        upstream.atoms = void 0;
+                                    .then(function(component){
+                                        // using copy of upstream otherwise the glitches occur. 
+                                        var stream = {};
+                                        stream = _.extend(stream, upstream);
 
-                                        var stream = s.clone(upstream); 
-                                        
-                                        stream.atoms = atoms;
-                                        upstream.atoms = atoms;
-
-                                        if(_.code && 'notActiveStream' === _.code){
+                                        if(stream.code && 'notActiveStream' === stream.code){
                                         } else {
-                                            stream.render.component = _;  // pass rendered component. it stale hold before streams get zipped.
+                                            stream.render.component = component;  // pass rendered component. it stale hold before streams get zipped.
                                             stream.isAtom = isAtom;
                                         }
                                         return stream 
@@ -265,12 +263,16 @@ function Atlant(){
                                     .catch( clientFuncs.catchError )
                             }
 
-                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ // Actually we don't use streamed values, we just re-run scope creation on previous saved data. All values of atoms will be updated because they are the functions which retrieve data straightforvard from store.
+                            viewSubscriptionsUnsubscribe[viewName+upstream.render.renderId] = viewSubscriptions[viewName+upstream.render.renderId].onValue(function(atom){ // Actually we don't use streamed values, we just re-run scope creation on previous saved data. All values of atoms will be updated because they are the functions which retrieve data straightforvard from store.
                                 var data = scope();
+                                if('headerView'===viewName)console.log('---i will update compoentn!:', data)
                                 return renderIntoView(data, true) // Here we using scope updated from store!
                             });
 
-                            renderIntoView(scope(), false);
+                            var data = scope();
+                                // if('headerView'===viewName)console.log('---i will update compoentn!----', s.copy(data));
+
+                            renderIntoView(data, false);
                         }
 
                     } catch (e) {
