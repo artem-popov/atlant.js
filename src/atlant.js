@@ -62,7 +62,6 @@ function Atlant(){
 
     // State from current route. Updated on route Load.
     var lastPath // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
-        ,lastData // Data saved from last route.
         ,lastMask = []
         ,lastReferrer;
 
@@ -111,10 +110,10 @@ function Atlant(){
     /* Helpers */
     var assignRenders = function(){
 
+        // Signalling that view renders
         var whenRenderedSignal = function( upstream ) {
             if (!upstream.isAction && upstream.id !== activeStreamId.value) {console.log('---STOP-Z!', upstream, upstream.id, activeStreamId.value); return}; // this streams should not be counted.
 
-            // Signalling that view renders
             if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction && !upstream.isAtom )
                 console.log('---i will push into WhenRenderedStream:', upstream.render.viewName, upstream.id, activeStreamId.value)
             if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction && !upstream.isAtom )
@@ -357,28 +356,11 @@ function Atlant(){
                         return upstream;
                     })
             } else {
-                var treat = treatDep( dep );
 
                 stream = stream
                     .flatMap(function(upstream) {
+                        var treat = treatDep( dep );
                         var scope = clientFuncs.createScope(upstream);
-                        // Using data transfered from previous route instead of accessing the dependency
-
-                        if (lastData && Object.keys(lastData).length && upstream.ref) {
-                            var mask = utils.getPattern(lastMask);
-
-                            // look in lastData only for current mask
-                            var data = s.filterKeys(function(dataMask){ return mask === dataMask }, lastData);
-                            delete lastData[mask];
-
-                            // merge all depend names into one list
-                            data = s.reduce(function(xs, x){ return _.merge(xs, x) }, {}, data);
-
-                            if (data.hasOwnProperty(upstream.ref)) {
-                                return Bacon.constant(data[upstream.ref]);
-                            }
-                        }
-
                         var scopeData = (upstream.with && 'value' in upstream.with) ? upstream.with.value(scope) : scope;
                         
                         return treat(scopeData)
@@ -456,16 +438,6 @@ function Atlant(){
         };
     }();
 
-    var _transfer = function(depends) {
-        transfersGrabber.tailTransfer(depends, TopState.state);
-        return this
-    }
-
-    var _to = function(name) {
-        transfersGrabber.tailTo(name, TopState.state);
-        return this
-    }
-
     /* Base and helper streams*/
     l.log('registering base streams...');
 
@@ -490,25 +462,6 @@ function Atlant(){
 
     var whenCount = { value: 0 };
     var renderStreams = require('./render-streams')(Counter, whenCount);
-
-    // collect data for  .transfer()
-    //@TODO side effect!
-    var collectTransferData = function(upstreams) {
-        var oldData = lastData ? lastData : {};
-        var newData = s.reduce(function(xs, x){
-            var foldDeps = s.reduce(function(ax, a){
-                                var obj = {};
-                                obj[a] = x.depends[x.refs[a]];
-                                return _.merge(ax, obj) }
-                               , {});
-
-            var dx = s.map( foldDeps, x.transfers);
-
-            return _.merge(xs, dx);
-        }, {}, upstreams)
-
-        lastData = _.merge( oldData, newData);
-    }
 
     var getRedirects = function(upstreams) {
         var redirect = [];
@@ -572,11 +525,6 @@ function Atlant(){
             if (!isAction) renderStreams.nullifyScan.push('nullify'); // Do not nullify anything of action
 
             if (typeof window !== 'undefined') lastPath = utils.getLocation();
-
-            // collecting transfers data
-            //@TODO do it only when need
-            collectTransferData(upstreams);
-
 
             var redirects = getRedirects(upstreams);
             var allRendered = performRender(upstreams);
@@ -673,9 +621,11 @@ function Atlant(){
         })
         .takeUntil(baseStreams.destructorStream)
         .map(function(upstream){
-            upstream.id = _.uniqueId();
-            activeStreamId.value = upstream.id;
-            return upstream;
+            var stream = Object.create(null); // Here we change id of the stream. Hence this is should be new object, because otherwise we will change all existed streams
+            stream = _.extend(upstream)
+            stream.id = _.uniqueId();
+            activeStreamId.value = stream.id;
+            return stream;
         })
 
     var otherWiseRootStream = rootStream
@@ -1535,18 +1485,6 @@ function Atlant(){
     this.interceptor = _interceptor;
 
     this.push = _push;
-
-    // @TODO DEPRECATED transfer/to
-    /**
-     * Allow to define array of depend names which will be transfered if user goes from current when/action to route/action defined in .to()
-     * */
-    this.transfer = _transfer;
-    /**
-     * Allow to define array of routes, which will receive array of transfered depends
-     * */
-    this.to = _to;
-
-
 
     /**
      * Stores! 

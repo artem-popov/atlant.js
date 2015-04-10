@@ -57,6 +57,7 @@ var Render = function() {
             // console.log('---every view:', name, upstream.id)
             if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.  
                 // get new component somehow.
+                console.log('---generating the view:', upstream, name, upstream.id, scope)
                 state.set(name, viewProvider(scope));  
             } else {
                 console.log('---STOP-X1!', upstream, name, upstream.id, activeStreamId.value);
@@ -75,7 +76,7 @@ var Render = function() {
     this.clear = function(viewProvider, upstream, activeStreamId, name, scope) {
         return new Promise( function( resolve, reject ){
 
-            if( !upstream.isAction && upstream.id !== activeStreamId.value ) { console.log('---STOP-X2!', name, upstream.id, activeStreamId.value); return resolve({code: 'notActiveStream', upstream: upstream, activeStreamId: activeStreamId.value });} // Checking, should we continue or this stream already obsolete. 
+            // if( !upstream.isAction && upstream.id !== activeStreamId.value ) { console.log('---STOP-X2!', name, upstream.id, activeStreamId.value); return resolve({code: 'notActiveStream', upstream: upstream, activeStreamId: activeStreamId.value });} // Checking, should we continue or this stream already obsolete. 
 
             state.set(name, React.DOM.div(null));
             state.check(name);
