@@ -806,17 +806,19 @@ function Atlant(){
         var injects = injectsGrabber.init(depName, State.state);
 
         State.state.lastWhen = otherWiseRootStream
-            .map( function(depValue) {
+            .map( function(upstream) {
+                var depValue = {};
                 depValue.masks = lastMask;
                 depValue.pattern = utils.getPattern(lastMask);
                 depValue.mask = void 0;
                 depValue.location = lastPath;
                 depValue.referrer = lastReferrer;
 
-                var stream = injectsGrabber.add(depName, depValue, injects, {})
+                var stream = {};
+                stream  = _.extend(stream, injectsGrabber.add(depName, depValue, injects, upstream));
                 stream.otherwise = true;
                 stream.conditionId = whenId;
-                if(activeStreamId.value === whenCount.value) whenCount.value++;
+                if(activeStreamId.value === stream.id) whenCount.value++;
                 l.log('---Matched otherwise!!!')
                 return stream;
             })
