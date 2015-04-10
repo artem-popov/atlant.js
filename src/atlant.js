@@ -112,10 +112,8 @@ function Atlant(){
 
         // Signalling that view renders
         var whenRenderedSignal = function( upstream ) {
-            if (!upstream.isAction && upstream.id !== activeStreamId.value) {console.log('---STOP-Z!', upstream, upstream.id, activeStreamId.value); return}; // this streams should not be counted.
+            if (!upstream.isAction && upstream.id !== activeStreamId.value) return // this streams should not be counted.
 
-            if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction && !upstream.isAtom )
-                console.log('---i will push into WhenRenderedStream:', upstream.render.viewName, upstream.id, activeStreamId.value)
             if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction && !upstream.isAtom )
                 renderStreams.whenRenderedStream.push(upstream); // This will count the renders
 
@@ -136,11 +134,11 @@ function Atlant(){
             if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw || upstream.isAction || upstream.render.renderOperation === RenderOperation.move || upstream.render.renderOperation === RenderOperation.redirect || upstream.render.renderOperation === RenderOperation.replace || upstream.render.renderOperation === RenderOperation.change || upstream.isAtom )
                 return true;
 
-            if ( atlantState.viewRendered[upstream.render.viewName]) {  // If this view is already rendered...
+            if ( atlantState.viewRendered[upstream.render.viewName] >= activeStreamId.value ) {  // If this view is already rendered...
                 whenRenderedSignal(upstream);
                 return false;
             } else { // If this view not yet rendered...
-                atlantState.viewRendered[upstream.render.viewName] = true;
+                atlantState.viewRendered[upstream.render.viewName] = upstream.id;
 
                 return true;
             }
@@ -371,7 +369,6 @@ function Atlant(){
 
                                 if ( 'undefined' !== typeof store ) upstream.atomId = scopeData; 
 
-                                console.log('the depends stream is:', upstream)
                                 return upstream;
                             })
                     })
@@ -397,7 +394,6 @@ function Atlant(){
 
                     return stream;
                 })
-                // .filter( function(_) { if(activeStreamId.value !== _.id && !_.isAction) console.log('---STOPPED2!', _.render.viewName, _.id, activeStreamId.value); return _.id === activeStreamId.value || _.isAction } ) // Checking, should we continue or this stream already obsolete.
 
             return stream;
         }
@@ -595,7 +591,6 @@ function Atlant(){
             lastMask = [];
 
             // Nil values.
-            console.log('---Nullify when:', 0, upstream.id, activeStreamId.value)
             whenCount.value = 0;
             activeStreamId.value = 0;
             Counter.reset();
@@ -688,7 +683,6 @@ function Atlant(){
                                         .filter( s.notEmpty )                              // empty params means fails of route identity.
                                         .head()
 
-                            console.log('the value2!:', mask)
                             if (!mask) { 
                                 return void 0;
                             } else { 
@@ -704,7 +698,6 @@ function Atlant(){
                         upstream.isFinally = false;
                         upstream.isMatch = WhenFinally.match === whenType;
                         upstream.finallyStream = finallyStream;
-                        console.log('---when counting up', whenCount.value, upstream.id, activeStreamId.value);
                         if(activeStreamId.value === upstream.id) whenCount.value++;
 
                         // Storing here the data for actions.
@@ -753,7 +746,6 @@ function Atlant(){
                         stream = transfersGrabber.add(transfers, upstream)
                         stream.isFinally = true;
                         stream.whenId = whenId;
-                        console.log('---when counting up', whenCount.value, stream.id, activeStreamId.value);
                         whenCount.value++;
                         stream.route = { whenNot: masks };
                         return stream;
@@ -827,7 +819,6 @@ function Atlant(){
                 var stream = injectsGrabber.add(depName, depValue, injects, {})
                 stream.otherwise = true;
                 stream.conditionId = whenId;
-                console.log('---otherwise counting up', whenCount.value, stream.id, activeStreamId.value);
                 if(activeStreamId.value === whenCount.value) whenCount.value++;
                 l.log('---Matched otherwise!!!')
                 return stream;
@@ -963,7 +954,6 @@ function Atlant(){
             .map( function(upstream) {
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
 
-                if ( !upstream.isAction && activeStreamId.value === upstream.id) console.log('---if counting up', whenCount.value, upstream.id, activeStreamId.value);
                 if ( !upstream.isAction && activeStreamId.value === upstream.id ) whenCount.value++; // increasing counter only if this stream is not yet obsolete
                 if( isElse)
                     l.log('---Matched else!!!')
@@ -1075,8 +1065,6 @@ function Atlant(){
             // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewName.
             if ( ! renders[viewName] ) renders[viewName] = [];
             renders[viewName].push(thisRender);
-
-            if( ! viewReady[viewName] && renderOperation !== RenderOperation.draw) viewReady[viewName] = baseStreams.bus(); // This will signal that this view is rendered. Will be used in onValue assignment.
 
             if (void 0 !== State.state.lastIf && renderOperation !== RenderOperation.draw) State.rollback();
 
