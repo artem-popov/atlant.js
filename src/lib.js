@@ -445,6 +445,14 @@ var s = (function(){
 
    var copy = _.compose( JSON.parse, JSON.stringify );
 
+   this.clone = function(obj) {
+       return _.cloneDeep(obj, function(value) {
+           if (_.isFunction(value)) {
+               return value;
+           }
+       })
+    }
+
    this.maybeS = this.maybe.bind(this, '')
    this.maybeV = this.maybe.bind(this, void 0)
 

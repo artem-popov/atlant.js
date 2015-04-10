@@ -245,20 +245,14 @@ function Atlant(){
                                     .then(function(_){
                                         // @TODO make it better
                                         // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
-                                        var finallyStream = upstream.finallyStream;
                                         var atoms = upstream.atoms;
-                                        var injects = upstream.injects; // injects contains functions which cannot be copyed natively
                                         upstream.finallyStream = void 0;
                                         upstream.atoms = void 0;
-                                        upstream.injects = void 0;
 
-                                        var stream = s.copy(upstream); 
-                                        stream.finallyStream = finallyStream;
+                                        var stream = s.clone(upstream); 
+                                        
                                         stream.atoms = atoms;
-                                        stream.injects = injects;
-                                        upstream.finallyStream = finallyStream;
                                         upstream.atoms = atoms;
-                                        upstream.injects = injects;
 
                                         if(_.code && 'notActiveStream' === _.code){
                                         } else {
@@ -272,7 +266,8 @@ function Atlant(){
                             }
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ // Actually we don't use streamed values, we just re-run scope creation on previous saved data. All values of atoms will be updated because they are the functions which retrieve data straightforvard from store.
-                                return renderIntoView(scope(), true) // Here we using scope updated from store!
+                                var data = scope();
+                                return renderIntoView(data, true) // Here we using scope updated from store!
                             });
 
                             renderIntoView(scope(), false);
@@ -333,10 +328,6 @@ function Atlant(){
     /* depends */
     var _depends = function() {
 
-        var treatDep = s.compose(  clientFuncs.convertPromiseD
-                                    ,s.promiseTryD
-                                );
-
         var createDepStream = function(stream, depName, dep, injects, store) {
             var nameContainer = dependsName.init(depName, State.state);
             var withs = withGrabber.init(State.state);
@@ -357,6 +348,10 @@ function Atlant(){
 
                 stream = stream
                     .flatMap(function(upstream) {
+                        var treatDep = s.compose(  clientFuncs.convertPromiseD
+                                    ,s.promiseTryD
+                                );
+
                         var treat = treatDep( dep );
                         var scope = clientFuncs.createScope(upstream);
                         var scopeData = (upstream.with && 'value' in upstream.with) ? upstream.with.value(scope) : scope;
@@ -686,9 +681,11 @@ function Atlant(){
                             if (!mask) { 
                                 return void 0;
                             } else { 
-                                upstream.params = mask.params;
-                                upstream.route = mask.route;
-                                return upstream;
+                                var stream = {};
+                                stream = _.extend(stream, upstream);
+                                stream.params = mask.params;
+                                stream.route = mask.route;
+                                return stream;
                             }
                     })
                     .filter(s.id)

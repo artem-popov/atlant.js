@@ -54,7 +54,7 @@ var getScopeDataFromStream = function( upstream ){
     scope.params = upstream.params;
     scope.path = upstream.path;
     scope.route = upstream.route;
-    return scope;
+    return s.clone(scope);
 }
 
 /**
