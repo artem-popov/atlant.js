@@ -1,4 +1,4 @@
-0.4.7 - several improvements for unsubscribing on destoroy
+0.4.7 fix fast clicking - now streams are not intersect
 0.4.6 - several improvements for unsubscribing on destoroy
 0.4.5
 	- improve server sender: in the search of memoryleaks
