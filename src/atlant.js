@@ -1260,9 +1260,6 @@ function Atlant(){
         return this
     }
 
-    var _view = function(name) {
-        return prefs.render.get(name);
-    }
 
     var _redirectTo = function(url) {
         return utils.goTo(url)
@@ -1570,6 +1567,28 @@ function Atlant(){
     this.publish =  _publish;
 
     /**
+     * Commands allows perform manipulations of atlant immediatelly.
+     */
+
+    // Here you can manipulate views.
+    this.views = Object.create(null);
+    // set component value into view
+    // this.put :: viewName :: component
+    this.views.put = function(viewName, component){
+        return prefs.render.put(viewName, component);
+    }
+
+    // Return view with viewName
+    // this.view :: viewName
+    this.views.get = function(name) { 
+        return prefs.render.get(name);
+    }
+
+    this.views.list = function(){
+        return prefs.render.list();
+    }
+
+    /**
      * Plugins!
      */
     // Contains available renders
@@ -1589,12 +1608,11 @@ function Atlant(){
     this.stringify =  _stringify;
 
 
+
     /**
      * Utils
      * These commands doesn't return "this".
      */
-    // Returns child view component
-    this.get =  _get;
     // Returns atlant.js version
     this.version = require('./atlant-version');
     // Returns timestamp of the creation time
@@ -1636,12 +1654,9 @@ function Atlant(){
     // Will hard redirect to param url (page will be reloaded by browser)
     this.moveTo = _moveTo;
 
-    // Return view with viewName
-    // this.view :: viewName
-    this.view = _view;
 
     return this;
 
-};
+}
 
 module.exports = Atlant;

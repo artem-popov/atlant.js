@@ -1,3 +1,6 @@
+0.4.10 deprecate .view(), use .views.get() instead. Introduce .views.list(),
+	.views.put(viewName, component), internal: instances of react wrappers now
+	singleton
 0.4.9 fix otherwise stream
 0.4.8 fix whens intersects their upstreams
 0.4.7 fix fast clicking - now streams are not intersect
