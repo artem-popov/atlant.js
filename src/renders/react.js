@@ -21,7 +21,8 @@ var State = function(){
                         return views[name];
                     }
             })}    
-            instances[name] = wrappers[name]();
+            if ( !instances[name] ) 
+                instances[name] = wrappers[name]();
         }
 
         this.getState = function(name) {
@@ -41,6 +42,11 @@ var State = function(){
             return void 0;
         }
 
+        this.list = function(){
+            if (! views ) return [];
+            return Object.keys(views);
+        }
+
         return this;
 };
 
@@ -56,11 +62,11 @@ var Render = function() {
 
             if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.  
                 // get new component somehow.
-                // if('headerView'===name)console.log('---wrint the component', name, scope)
                 state.set(name, viewProvider(scope));  
-            }//else { console.log('---stopping the component...', name, scope)}
-            var instance = state.getThis('name');
+            }
+            var instance = state.getThis(name);
             state.check(name);
+            // if(instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate();
 
             l.logTimeEnd('rendered view ' + name);
             return resolve(state.getInstance(name));  
@@ -77,15 +83,6 @@ var Render = function() {
             } 
 
             state.check(name);
-
-            return resolve(state.getInstance(name));
-        });
-    }
-
-    this.update = function(viewProvider, name, scope) {
-        return new Promise( function( resolve, reject ){
-
-            // state.check(name);
 
             return resolve(state.getInstance(name));
         });
@@ -133,6 +130,16 @@ var Render = function() {
         state.check(name);
         var instance = state.getState(name);
         return instance;
+    }
+
+    this.list = function(){
+        return state.list(); 
+    }
+
+    this.put = function(name, component){
+        state.set(name, component);  
+        state.check(name);
+        return component;
     }
 
     /**

@@ -117,7 +117,7 @@ function Atlant(){
             if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction && !upstream.isAtom )
                 renderStreams.whenRenderedStream.push(upstream); // This will count the renders
 
-            if (upstream.render.renderOperation === RenderOperation.draw && !upstream.isAction || 'isAtom' in upstream && upstream.isAtom ) // Special draw stream also applyes to atoms: don't count these renders - they are brilliant.
+            if (upstream.render.renderOperation === RenderOperation.draw || 'isAtom' in upstream && upstream.isAtom ) // Special draw stream also applyes to atoms: don't count these renders - they are brilliant.
                 renderStreams.drawEnd.push(upstream);
 
             if ( upstream.render.renderOperation !== RenderOperation.draw && upstream.isAction && !upstream.isAtom )
@@ -160,7 +160,6 @@ function Atlant(){
                     try{ 
                         var viewName = s.dot('.render.viewName', upstream);
                         savedViewScope[viewName+upstream.render.renderId] = clientFuncs.getScopeDataFromStream(upstream);
-                        if(viewName==='headerView')console.log('---============savedViewScope', viewName+upstream.render.renderId)
                         var scope = function() { return clientFuncs.createScope(savedViewScope[viewName+upstream.render.renderId]) };
                         var viewProvider = s.dot('.render.renderProvider', upstream);
 
@@ -265,12 +264,10 @@ function Atlant(){
 
                             viewSubscriptionsUnsubscribe[viewName+upstream.render.renderId] = viewSubscriptions[viewName+upstream.render.renderId].onValue(function(atom){ // Actually we don't use streamed values, we just re-run scope creation on previous saved data. All values of atoms will be updated because they are the functions which retrieve data straightforvard from store.
                                 var data = scope();
-                                if('headerView'===viewName)console.log('---i will update compoentn!:', data)
                                 return renderIntoView(data, true) // Here we using scope updated from store!
                             });
 
                             var data = scope();
-                                // if('headerView'===viewName)console.log('---i will update compoentn!----', s.copy(data));
 
                             renderIntoView(data, false);
                         }
@@ -1262,9 +1259,6 @@ function Atlant(){
         return this
     }
 
-    var _view = function(name) {
-        return prefs.render.get(name);
-    }
 
     var _redirectTo = function(url) {
         return utils.goTo(url)
@@ -1572,6 +1566,28 @@ function Atlant(){
     this.publish =  _publish;
 
     /**
+     * Commands allows perform manipulations of atlant immediatelly.
+     */
+
+    // Here you can manipulate views.
+    this.views = Object.create(null);
+    // set component value into view
+    // this.put :: viewName :: component
+    this.views.put = function(viewName, component){
+        return prefs.render.put(viewName, component);
+    }
+
+    // Return view with viewName
+    // this.view :: viewName
+    this.views.get = function(name) { 
+        return prefs.render.get(name);
+    }
+
+    this.views.list = function(){
+        return prefs.render.list();
+    }
+
+    /**
      * Plugins!
      */
     // Contains available renders
@@ -1591,12 +1607,11 @@ function Atlant(){
     this.stringify =  _stringify;
 
 
+
     /**
      * Utils
      * These commands doesn't return "this".
      */
-    // Returns child view component
-    this.get =  _get;
     // Returns atlant.js version
     this.version = require('./atlant-version');
     // Returns timestamp of the creation time
@@ -1638,12 +1653,9 @@ function Atlant(){
     // Will hard redirect to param url (page will be reloaded by browser)
     this.moveTo = _moveTo;
 
-    // Return view with viewName
-    // this.view :: viewName
-    this.view = _view;
 
     return this;
 
-};
+}
 
 module.exports = Atlant;
