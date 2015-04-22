@@ -14,8 +14,17 @@ var State = function(){
         this.check = function(name) {
             if ( !wrappers[name] ) {
                 wrappers[name] = React.createClass({
-                    render: function(){
+                    getInitialState: function(){
+                        console.log('initing wrapper!:', name)
                         thises[name] = this;
+                        return null
+                    },
+                    componentWillReceiveProps: function(){
+                        console.log('rendered wrapper!:', name)
+                        thises[name] = this;
+                    },
+                    render: function(){
+                        console.log('rendered wrapper!:', name)
                         if ( !views[name] ) views[name] = React.DOM.div(null); 
 
                         return views[name];
@@ -23,6 +32,7 @@ var State = function(){
             })}    
             if ( !instances[name] ) 
                 instances[name] = wrappers[name]();
+            return instances[name] 
         }
 
         this.getState = function(name) {
@@ -38,7 +48,9 @@ var State = function(){
         }
 
         this.set = function(name, view){
+            console.log('setting rendered!, view', name)
             views[name] = view;
+
             return void 0;
         }
 
@@ -93,7 +105,7 @@ var Render = function() {
             if ( typeof window === 'undefined') throw Error('AtlantJs, React render: attach not possible in browser.')
 
             var element = document.querySelector(selector);
-            if ( !element )   throw Error('AtlantJs, React render: can\'t find the selector' + selector )
+            if ( !element )   throw Error("AtlantJs, React render: can\'t find the selector" + selector )
 
             var root = state.getInstance(name);
 

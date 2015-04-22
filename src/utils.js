@@ -265,4 +265,10 @@ utils.addSlashes = function(masks){
         .reduce(function(v, i) { return v.concat(i); }, [])
 }
 
+utils.upstreamCopy = function(upstream){
+    var stream = {};
+    stream = _.merge(stream, upstream);
+    return stream
+}
+
 module.exports = utils;
