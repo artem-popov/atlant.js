@@ -354,7 +354,8 @@ function Atlant(){
 
                         var treat = treatDep( dep );
                         var scope = clientFuncs.createScope(upstream);
-                        var scopeData = (upstream.with && 'value' in upstream.with) ? upstream.with.value(scope) : scope;
+                        var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
+                        var scopeData = function() { return where(scope) };
                         
                         return treat(scopeData)
                             .map(function(results){
@@ -378,7 +379,7 @@ function Atlant(){
                     if ('undefined' !== typeof store) {
                         var atomBus = store.bus.map(function(storeValue){
                             try {
-                                return s.copy(store.partProvider(storeValue, upstream.atomId));
+                                return s.copy(store.partProvider(storeValue, upstream.atomId() ));
                             } catch (e) {
                                 return void 0;
                             }
