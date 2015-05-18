@@ -95,6 +95,8 @@ function Atlant(){
         ,continue: _.uniqueId()
     }
 
+    var IMPOSSIBLE_VALUE = 'impossibleValue' + _.uniqueId();
+
     var RenderOperation = {
         render: parseInt(_.uniqueId())
         ,draw: parseInt(_.uniqueId())
@@ -266,8 +268,10 @@ function Atlant(){
                             }
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ // Actually we don't use streamed values, we just re-run scope creation on previous saved data. All values of atoms will be updated because they are the functions which retrieve data straightforvard from store.
-                                var data = scope();
-                                return renderIntoView(data, true) // Here we using scope updated from store!
+                                if( atom.value !== IMPOSSIBLE_VALUE ){
+                                    var data = scope();
+                                    return renderIntoView(data, true) // Here we using scope updated from store!
+                                }
                             });
 
                             renderIntoView(scope(), false);
@@ -382,7 +386,7 @@ function Atlant(){
                             } catch (e) {
                                 return void 0;
                             }
-                        }).skipDuplicates(_.isEqual).startWith(void 0); // @TODO contructore should be here. Use force my podovan.
+                        }).skipDuplicates(_.isEqual).startWith(IMPOSSIBLE_VALUE);
 
                         stream.atoms[store.storeName + '.' + store.partName] = { id: upstream.atomId, store: store.storeName, atom: store.partName, bus: atomBus };
                     } 
@@ -467,33 +471,20 @@ function Atlant(){
 
     }
 
-    var performRender = function(upstreams) {
-        if(Object.keys(upstreams).length) {
-            return Promise.all(
-                Object.keys(upstreams)
-                    .filter(function(x){ return x.doLater === void 0})
-                    .map(function(x){ return prefs.render.on.renderEnd(x) })
-            )
-        }
-        return void 0
-    }
+    var performCallback = function(upstreams, callbackStream, redirects) {
+        if (Object.keys(upstreams).length) {
+            try {
+                var scopeMap = s.map(clientFuncs.createScope, upstreams)
+                callbackStream.push(scopeMap);
 
-    var performCallback = function(upstreams, allRendered, callbackStream, redirects) {
-        if(Object.keys(upstreams).length) {
-            allRendered
-                .then(function(){
-                    var scopeMap = s.map(clientFuncs.createScope, upstreams)
-                    callbackStream.push(scopeMap);
+                if (redirects && redirects.length) {
+                    setTimeout(redirects[0]);
+                }
 
-                    if (redirects && redirects.length){
-                        setTimeout(redirects[0]);
-                    }
-
-                })
-                .catch(function(e){
-                    log.error('Atlant Error:', e)
-                    errorStream.push(e);
-                })
+            } catch (e) {
+                log.error('Atlant Error:', e)
+                errorStream.push(e);
+            }
         }
     }
 
@@ -501,8 +492,8 @@ function Atlant(){
             var upstreams = {};
             upstreams[upstream.render.viewName] = upstream;
 
-            var allRendered = performRender(upstreams);
-            if (allRendered) performCallback(upstreams, allRendered, onDrawEndStream);
+
+            performCallback(upstreams, onDrawEndStream);
     });
 
     /* Except .draw() every render get this*/
@@ -518,8 +509,7 @@ function Atlant(){
             if (typeof window !== 'undefined') lastPath = utils.getLocation();
 
             var redirects = getRedirects(upstreams);
-            var allRendered = performRender(upstreams);
-            if (allRendered) performCallback(upstreams, allRendered, onRenderEndStream, redirects);
+            performCallback(upstreams, onRenderEndStream, redirects);
 
             return upstreams;
         })

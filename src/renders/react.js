@@ -54,6 +54,7 @@ var Render = function() {
     var state = new State();
 
     this.name = 'React';
+    var rootName = void 0;
 
     this.render = function(viewProvider, upstream, activeStreamId, name, scope ) {
         var rendered = new Promise( function( resolve, reject ){
@@ -66,7 +67,7 @@ var Render = function() {
             }
             var instance = state.getThis(name);
             state.check(name);
-            // if(instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate();
+            if( rootName !== name && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate();
 
             l.logTimeEnd('rendered view ' + name);
             return resolve(state.getInstance(name));  
@@ -100,7 +101,7 @@ var Render = function() {
             if ( !root ) { throw new Error('AtlantJs: Please use .render(component, "' + name + '") to render something') }
 
             try{
-                React.renderComponent(root, element, resolve );
+                React.renderComponent(root, element, function(){ rootName = name; resolve() } );
             } catch(e) {
                 console.error(e.message, e.stack)
 
@@ -150,40 +151,6 @@ var Render = function() {
             return React.DOM.div(null);
         }
     })
-
-    this.on = { 
-        renderEnd: function(name) {
-            return new Promise( function( resolve, reject) {
-                var instance = state.getThis(name);
-                try {
-                    if (instance) { 
-                        l.log('%cbegin force update of ' + name, 'color: #0000ff');
-                        l.logTime('update of ' + name + ' finished')
-                        if( instance.isMounted()) instance.forceUpdate(s.compose( l.logTimeEnd.bind(l, 'update of ' + name + ' finished'), resolve));
-                        else l.log('the instance is not mounted!', 'color: #0000ff')
-                    } else {
-                        l.log('%cno need of ' + name + ' update', 'color: #0000ff');
-                        resolve();
-                    }
-                } catch(e) { 
-                    console.error(e.message, e.stack)
-                    reject({error:e});
-
-                    var element = document.querySelector('#rootView');
-                    React.unmountComponentAtNode(element);
-                }
-            })
-        }
-        ,error:function(){
-            // trying to restore...
-            try{
-                // React.renderComponent(React.DOM.div('Hey! Error in the city!'), element, function(){l.log('view restored!')} );
-                //instance.forceUpdate(resolve);
-            } catch(e){
-                console.error(e.message, e.stack)
-            }
-        }
-    }
 }
 
 module.exports = Render;
