@@ -1,3 +1,4 @@
+0.4.11 remove render.on, do forceUpdate of every view render, instead of root view forceUpdate, exclude view update of first atom change from undefined value.
 0.4.10 deprecate .view(), use .views.get() instead. Introduce .views.list(),
 	.views.put(viewName, component), internal: instances of react wrappers now
 	singleton
