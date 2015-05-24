@@ -359,15 +359,51 @@ function Atlant(){
                         var treat = treatDep( dep );
                         var scope = clientFuncs.createScope(upstream);
                         var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
-                        var scopeData = function() { return where(scope) };
+                        var atomId = function(atomIds, scope, where, store, ref, isConsole) { 
+                            // if (isConsole) console.log('---scopeData:', scope, where, where(scope));
+
+                            var dependAtoms = scope;
+                            if ( 'undefined' !== typeof store) {
+
+                                if(isConsole)console.log('the atom ids:', atomIds)
+                                dependAtoms = (atomIds || [])
+                                    .map( function( atom ){
+                                        var atom_id = atom.fn(false)
+                                        console.log(atom.ref, 'Id:', atom_id, s.extend({}, store.storeData.staticValue));
+                                        var atomValue = s.tryF( void 0, function() { return store.partProvider(store.storeData.staticValue, atom_id) })();
+                                        var res = { ref: atom.ref, value: atomValue, id: atom_id, atom: atom } // @TODO: Optimize it! Now atom calls all it's parents again and again. This can't be called best :)
+                                        return res
+                                    })
+
+                                if(isConsole)console.log('mapping atoms for ', ref, ':', dependAtoms, s.extend({}, store.storeData.staticValue), store)
+
+                                dependAtoms = dependAtoms.reduce(function(res, atomValue){
+                                    if(isConsole)console.log('---reduce:', res, atomValue)
+                                    var result = {};
+                                    result[atomValue.ref] = atomValue.value;
+
+                                    res = _.extend({}, res, result);
+                                    return res;
+                                }, _.extend({}, scope));
+
+                                if(isConsole)console.log('---Atoms values for', ref, ':', dependAtoms)
+                            }
+
+                            return where(dependAtoms)
+                        }.bind(void 0, (upstream.atomIds || []).slice(), scope, where, store, upstream.ref);
                         
-                        return treat(scopeData)
+                        return treat(atomId(true))
                             .map(function(results){
-                                if ( !upstream.isInterceptor ) interceptorBus.push({upstream: upstream, scope: results}); // pushing into global data .interceptor() 
+                                if ( !upstream.isInterceptor ) interceptorBus.push({upstream: upstream, scope: results}); // pushing into global depends .interceptor() 
                                 if (!upstream.depends) upstream.depends = {};
                                 upstream.depends[depName] = results;
 
-                                if ( 'undefined' !== typeof store ) upstream.atomId = scopeData; 
+                                if ( !upstream.atomIds ) upstream.atomIds = [];
+
+                                if ( 'undefined' !== typeof store ) {
+                                    upstream.atomId = atomId; 
+                                    upstream.atomIds.push({ ref: upstream.ref, fn: atomId });
+                                } 
 
                                 return upstream;
                             })
@@ -380,13 +416,11 @@ function Atlant(){
 
                     if ( !stream.atoms ) stream.atoms = {};
 
-                    if ('undefined' !== typeof store) {
+                    if ( 'undefined' !== typeof store) {
                         var atomBus = store.bus.map(function(storeValue){
-                            try {
-                                return s.copy(store.partProvider(storeValue, upstream.atomId() ));
-                            } catch (e) {
-                                return void 0;
-                            }
+
+                            return s.tryF(void 0, function() { return s.copy(store.partProvider(storeValue, upstream.atomId() )) })()
+
                         }).skipDuplicates(_.isEqual).startWith(IMPOSSIBLE_VALUE);
 
                         stream.atoms[store.storeName + '.' + store.partName] = { id: upstream.atomId, store: store.storeName, atom: store.partName, bus: atomBus };
@@ -1323,7 +1357,7 @@ function Atlant(){
 
         stores[storeName]._constructor = constructorProvider;
         stores[storeName].updater = baseStreams.bus();
-        stores[storeName].bus = stores[storeName].updater.scan(constructorProvider(), function(state, updater){ return updater(state) } ).changes()  
+        stores[storeName].bus = stores[storeName].updater.scan(constructorProvider(), function(state, updater){ console.log('the store', storeName, ' updated!', stores[storeName].staticValue); return updater(state) } ).changes()  
 
         baseStreams.onValue(stores[storeName].bus, function(value) { 
             if (!window.stores) window.stores = {};
@@ -1406,7 +1440,7 @@ function Atlant(){
                     return void 0;
                 }
             }
-        }, dependsBehaviour, { storeName: storeName, partName: partName, bus: stores[storeName].bus, partProvider: stores[storeName].parts[partName]} );
+        }, dependsBehaviour, { storeName: storeName, partName: partName, bus: stores[storeName].bus, partProvider: stores[storeName].parts[partName], storeData: stores[storeName]} );
     }
 
     // Create scope for prefixed method (currently .select(), .update(), .depends())

@@ -406,6 +406,16 @@ var s = (function(){
         else return false;
     }
 
+    var tryF = function(fallbackValue, fn){
+        return function() {
+            try {
+                return fn.apply(this, arguments)
+            } catch(e) {
+                return fallbackValue
+            }
+        }
+    }
+
     var tryD = function(fn, errorCallback){
         return function() {
             try {
@@ -509,6 +519,7 @@ var s = (function(){
     this.isPromise = isPromise;
     this.simpleType = simpleType;
     this.tryD = tryD;
+    this.tryF = tryF;
     this.apply = _apply;
 
     this.baconTryD = baconTryD;
