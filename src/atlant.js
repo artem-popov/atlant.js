@@ -234,6 +234,7 @@ function Atlant(){
                                             stream.value = pushedValue;
                                             stream.name = atom.atom;
                                             stream.store = atom.store;
+                                            stream.ref = atom.ref;
                                             return stream;
                                     };
                                     return bus.
@@ -267,7 +268,7 @@ function Atlant(){
                                     .catch( clientFuncs.catchError )
                             }
 
-                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ // Actually we don't use streamed values, we just re-run scope creation on previous saved data. All values of atoms will be updated because they are the functions which retrieve data straightforvard from store.
+                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ 
                                 if( atom.value !== IMPOSSIBLE_VALUE ){
                                     var data = scope();
                                     return renderIntoView(data, true) // Here we using scope updated from store!
@@ -352,16 +353,9 @@ function Atlant(){
 
                 stream = stream
                     .flatMap(function(upstream) {
-                        var treatDep = s.compose(  clientFuncs.convertPromiseD
-                                    ,s.promiseTryD
-                                );
-
-                        var treat = treatDep( dep );
                         var scope = clientFuncs.createScope(upstream);
                         var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
-                        var atomId = function(atomIds, scope, where, store, ref, isConsole) { 
-                            // if (isConsole) console.log('---scopeData:', scope, where, where(scope));
-
+                        var atomId = function(atomIds, scope, where, store, ref, isConsole/*variable for debug*/) { 
                             var dependAtoms = scope;
                             if ( 'undefined' !== typeof store) {
 
@@ -369,16 +363,12 @@ function Atlant(){
                                     .map( function( atom ){
                                         var atom_id = atom.fn(false)
 
-                                        // console.log(atom.ref, 'Id:', atom_id, s.extend({}, store.storeData.staticValue));
-                                        // console.log(ref, 'calculate partProvide:', store.partProvider)
                                         var atomValue = s.tryF( void 0, function() { return atom.partProvider(atom.storeData.staticValue, atom_id) })();
-                                        // if(isConsole)console.log(ref, 'recalculated:', atom.ref, atom_id, atomValue)
                                         var res = { ref: atom.ref, value: atomValue, id: atom_id, atom: atom } // @TODO: Optimize it! Now atom calls all it's parents again and again. This can't be called best :)
                                         return res
                                     })
 
                                 dependAtoms = dependAtoms.reduce(function(res, atomValue){
-                                    // if(isConsole)console.log('---reduce:', res, atomValue)
                                     var result = {};
                                     result[atomValue.ref] = atomValue.value;
 
@@ -386,15 +376,16 @@ function Atlant(){
                                     return res;
                                 }, _.extend({}, scope));
 
-                                // if(isConsole)console.log('---Atoms values for', ref, ':', dependAtoms, store.storeData.staticValue)
                             }
 
                             var result = where(dependAtoms);
                             return result;
                         }.bind(void 0, (upstream.atomIds || []).slice(), scope, where, store, upstream.ref);
                         
-                        return treat(atomId(true))
-                            .map(function(results){
+                        var treatDep = s.compose( clientFuncs.convertPromiseD, s.promiseTryD );
+                        return treatDep( dep )( atomId(true) )
+                            .map(function(upstream, atomId, store, results){
+                                if ( 'function' === typeof results ) results = results.bind(void 0, atomId);
                                 if ( !upstream.isInterceptor ) interceptorBus.push({upstream: upstream, scope: results}); // pushing into global depends .interceptor() 
                                 if (!upstream.depends) upstream.depends = {};
                                 upstream.depends[depName] = results;
@@ -407,7 +398,7 @@ function Atlant(){
                                 } 
 
                                 return upstream;
-                            })
+                            }.bind(void 0, upstream, atomId, store))
                     })
             }
 
@@ -427,14 +418,13 @@ function Atlant(){
                                     var source = store.storeData.staticValue;
                                     var atomIdValue = atomId(true);
                                     var value = s.tryF(void 0, function() { return s.copy(store.partProvider(source, atomIdValue )) })()
-                                    console.log('calculating atom value for ', ref, '(', atomIdValue,'):', u.type, ':', value, store.partProvider, store.storeData.staticValue);
                                     return value;
 
                                 }.bind(void 0, stream.ref, stream.atomId, stream.atomBuses, store, _.extend({}, stream)))
                                 .skipDuplicates(_.isEqual)
                                 .startWith(IMPOSSIBLE_VALUE);
 
-                        stream.atoms[store.storeName + '.' + store.partName] = { id: upstream.atomId, store: store.storeName, atom: store.partName, bus: atomBus };
+                        stream.atoms[store.storeName + '.' + store.partName] = { id: upstream.atomId, ref: stream.ref, store: store.storeName, atom: store.partName, bus: atomBus };
                         stream.atomBuses.push(atomBus);
                     } 
 
@@ -1372,7 +1362,6 @@ function Atlant(){
         stores[storeName].bus = stores[storeName].updater.scan(constructorProvider(), function(state, updater){ 
             var newState = updater(state);
             stores[storeName].staticValue = newState;
-            console.log('---real updated!', storeName);
             return newState 
         }).changes()  
 
@@ -1443,10 +1432,10 @@ function Atlant(){
         if (!(storeName in stores)) throw new Error('atlant.js: store ', storeName, ' is not defined. Use atlant.store(', storeName, ')');
         if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: store ', storeName, ' is not defined. Use atlant.store(', storeName, ')');
 
-        return _depends.bind(this)( function(id){
-            return function(){
+        return _depends.bind(this)( function(){
+            return function(id){
                 try{
-                    return stores[storeName].parts[partName](stores[storeName].staticValue, id);
+                    return stores[storeName].parts[partName](stores[storeName].staticValue, id());
                 } catch(e) {
                     return void 0;
                 }
