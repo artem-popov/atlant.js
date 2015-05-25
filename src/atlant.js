@@ -1363,8 +1363,16 @@ function Atlant(){
         stores[storeName].bus = stores[storeName].updater.scan(constructorProvider(), function(state, updater){ 
             var newState = updater(state);
             stores[storeName].staticValue = newState;
+
+            if ('undefined' !== typeof window) {
+                if (!window.stores) window.stores = {};
+                window.stores[storeName] = newState;
+            }
+
             return newState 
-        }).changes()  
+        }).changes();  
+
+        baseStreams.onValue(stores[storeName].bus, function() {});
 
         return this;
     }
