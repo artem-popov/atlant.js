@@ -36,9 +36,7 @@ var getRefsData = function( upstream ) {
         if ( 'undefined' !== refName && depName in upstream.depends ) {
             res[refName] = upstream.depends[depName];
             if ('function' === typeof res[refName]) { 
-                console.log('the calc of ATOM:', res[refName]);
                 res[refName] = res[refName]()
-                console.log('the calc of ATOM2:', res[refName]);
             }
         }
 
@@ -64,7 +62,6 @@ var getScopeDataFromStream = function( upstream ){
     */
 var createScope = function ( upstream ) {
     var refsData = getRefsData( upstream ); 
-    console.log('--refsData:', refsData)
 
     var warning = function(inject) { l.log('Atlant warning: inject accessor return nothing:' + inject) }
     var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);

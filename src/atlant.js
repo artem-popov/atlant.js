@@ -1359,6 +1359,7 @@ function Atlant(){
 
         stores[storeName]._constructor = constructorProvider;
         stores[storeName].updater = baseStreams.bus();
+        stores[storeName].staticValue = constructorProvider();
         stores[storeName].bus = stores[storeName].updater.scan(constructorProvider(), function(state, updater){ 
             var newState = updater(state);
             stores[storeName].staticValue = newState;
