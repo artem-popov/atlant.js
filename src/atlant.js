@@ -355,13 +355,15 @@ function Atlant(){
                     .flatMap(function(upstream) {
                         var scope = clientFuncs.createScope(upstream);
                         var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
-                        var atomId = function(atomIds, scope, where, store, ref, isConsole/*variable for debug*/) { 
+                        var atomId = function(atomIds, scope, where, store, ref, isConsole/*variable for debug*/, parentRef) { 
+                            // if (isConsole) console.time('atom', store, ref);
+                            var aParentRef = isConsole ? ref : parentRef;
                             var dependAtoms = scope;
                             if ( 'undefined' !== typeof store) {
 
                                 dependAtoms = (atomIds || [])
                                     .map( function( atom ){
-                                        var atom_id = atom.fn(false)
+                                        var atom_id = atom.fn(false, aParentRef)
 
                                         var atomValue = s.tryF( void 0, function() { return atom.partProvider(atom.storeData.staticValue, atom_id) })();
                                         var res = { ref: atom.ref, value: atomValue, id: atom_id, atom: atom } // @TODO: Optimize it! Now atom calls all it's parents again and again. This can't be called best :)
@@ -379,6 +381,9 @@ function Atlant(){
                             }
 
                             var result = where(dependAtoms);
+                            // if( isConsole && 'likers' === ref ) console.log('atom', ref, result)
+                            // if( !isConsole && 'likers' === parentRef ) console.log('atom', ref, result)
+                            // if (isConsole) console.timeEnd('atom', store, ref);
                             return result;
                         }.bind(void 0, (upstream.atomIds || []).slice(), scope, where, store, upstream.ref);
                         
@@ -1391,7 +1396,8 @@ function Atlant(){
         baseStreams.onValue(emitStreams[updaterName], function(scope){
             stores[storeName].updater.push( function(state){ 
                 try{ 
-                    return s.copy(updater( state, scope)) }
+                    var newVal = updater( state, scope);
+                    return void 0 === newVal ? void 0 : s.copy(newVal) }
                 catch(e) { 
                     console.log('atlant.js: Warning: updater failed', e)
                     return s.copy(state)

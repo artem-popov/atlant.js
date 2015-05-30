@@ -66,8 +66,9 @@ var Render = function() {
                 state.set(name, viewProvider(scope));  
             }
             var instance = state.getThis(name);
+            // console.time('renering ' + name);
             state.check(name);
-            if( rootName !== name && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate();
+            if( rootName !== name && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate(/* console.timeEnd.bind(console, 'renering ' + name) */);
 
             l.logTimeEnd('rendered view ' + name);
             return resolve(state.getInstance(name));  
