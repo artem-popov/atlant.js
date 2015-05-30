@@ -1,3 +1,4 @@
+"use strict";
 //https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent
 // Polyfill for "new CustomEvent"
 (function () {
@@ -32,8 +33,9 @@ var wrapPushState = function(window){
     };
 
     window.history.pushState = function(state, title, url) {
-        if ( !state || !('eventless' in state) || !state.eventless ) {
-            var onpushstate = new CustomEvent('pushstate', { detail: { state: {referrer: window.location.pathname, forceRouteChange: state.forceRouteChange}, title: title, url: url } } );
+        var eventless = state && state.eventless;
+        if ( !eventless ) {
+            var onpushstate = new CustomEvent('pushstate', { detail: { state: {referrer: window.location.pathname, scrollTop: document.querySelector('body').scrollTop, forceRouteChange: state.forceRouteChange}, title: title, url: url } } );
             window.dispatchEvent(onpushstate);
         }
 
@@ -42,5 +44,26 @@ var wrapPushState = function(window){
 
 };
 
+var wrapPopState = function(window){
+    var popState = window.history.popState;
 
-module.exports = wrapPushState;
+    var tryState = function(params) {
+        try { 
+           return popState.apply(window.history, params); 
+        } catch (e) {
+           console.error('Can\'t push state:', e);
+           return void 0;
+        }
+    };
+
+    window.history.popState = function(state, title, url) {
+        var onpopstate = new CustomEvent('popstate', { detail: { state: {referrer: window.location.pathname, scrollTop: document.querySelector('body').scrollTop, forceRouteChange: state.forceRouteChange}, title: title, url: url } } );
+        window.dispatchEvent(onpopstate);
+
+        return tryState(arguments);
+    };
+
+};
+
+
+module.exports = { wrapPushState: wrapPushState, wrapPopState: wrapPopState };

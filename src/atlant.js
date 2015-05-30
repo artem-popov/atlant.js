@@ -21,9 +21,11 @@ function Atlant(){
         ,StateClass = require('./inc/state')
         ,clientFuncs = require('./inc/clientFuncs')
         ,baseStreams = require('./inc/base-streams')
+        ,ScrollManager = require('./inc/scroll-manager')
 
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
+
 
     //    ,State = require('./state.js')
 
@@ -52,8 +54,11 @@ function Atlant(){
             ,skipRoutes: []  // This routes will be skipped in StreamRoutes
             ,viewState: ['root']
             ,on: { renderEnd: void 0 }// callback which will be called on finishing when rendering
+            ,scrollElement: void 0
 
     }
+
+    var scrollManager = new ScrollManager(prefs);
 
     var injectsGrabber = new interfaces.injectsGrabber();
     var dependsName = new interfaces.dependsName();
@@ -64,10 +69,6 @@ function Atlant(){
     var lastPath // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
         ,lastMask = []
         ,lastReferrer;
-
-    //Action should be performed at route change.
-    var onRouteChange = function() {
-    }
 
     var State = new StateClass(); // State which up to any last conditional: when, if
     var TopState = new StateClass(); // State which up to when
@@ -123,7 +124,7 @@ function Atlant(){
                 renderStreams.drawEnd.push(upstream);
 
             if ( upstream.render.renderOperation !== RenderOperation.draw && upstream.isAction && !upstream.isAtom )
-                renderStreams.taskRendered.push(upstream);
+                renderStreams.actionRendered.push(upstream);
 
             // signal for finally construct
             if ( !upstream.isFinally && upstream.finallyStream) {
@@ -486,45 +487,31 @@ function Atlant(){
 
     // Browser specific actions.
     if ('undefined' !== typeof window) {
-        require( './inc/wrapPushState.js')(window);
+        var states = require( './inc/wrap-push-pop-states.js');
+        states.wrapPushState(window);
+        // states.wrapPopState(window);
 
-        // if angular, then use $rootScope.$on('$routeChangeSuccess' ...
-        // Because we are using the same ng-view with angular, then we need to know when it's filled by ng.
-        document.addEventListener("DOMContentLoaded", onRouteChange);
-        window.addEventListener("popstate", onRouteChange);
-
-        baseStreams.onValue(publishStream, utils.attachGuardToLinks);
+        // Subscribe to clicks and keyboard immediatelly. Document already exists.
+        utils.attachGuardToLinks();
     }
 
 
     var whenCount = { value: 0 };
     var renderStreams = require('./render-streams')(Counter, whenCount);
 
-    var getRedirects = function(upstreams) {
-        var redirect = [];
-        s.map(function(upstream){
-            if(upstream.doLater) {
-                redirect.push(upstream.doLater);
-            }
-        }, upstreams);
 
-       return redirect
-           .filter(function(x){return x})
-
-    }
-
-    var performCallback = function(upstreams, callbackStream, redirects) {
+    var performCallback = function(upstreams, callbackStream, postponedActions) {
         if (Object.keys(upstreams).length) {
             try {
                 var scopeMap = s.map(clientFuncs.createScope, upstreams)
                 callbackStream.push(scopeMap);
 
-                if (redirects && redirects.length) {
-                    setTimeout(redirects[0]);
-                }
+                postponedActions.forEach(function(action){
+                    action();
+                });
 
             } catch (e) {
-                log.error('Atlant Error:', e)
+                console.error('Atlant Error:', e)
                 errorStream.push(e);
             }
         }
@@ -534,8 +521,7 @@ function Atlant(){
             var upstreams = {};
             upstreams[upstream.render.viewName] = upstream;
 
-
-            performCallback(upstreams, onDrawEndStream);
+            performCallback(upstreams, onDrawEndStream, upstream.postponed ? [upstream.postponed] : []);
     });
 
     /* Except .draw() every render get this*/
@@ -550,8 +536,13 @@ function Atlant(){
 
             if (typeof window !== 'undefined') lastPath = utils.getLocation();
 
-            var redirects = getRedirects(upstreams);
-            performCallback(upstreams, onRenderEndStream, redirects);
+            var doLater = _.first(  _(upstreams).reduce( function(acc, v, k){ if(v.doLater) acc.push(v.doLater); return acc }, [])  ); 
+            var redirectAction = function(){ setTimeout( doLater, 0 ) }.bind(void 0, doLater);
+            var postponedActions = _(upstreams).reduce( function(acc, v, k){ if(v.postponed) acc.push(v.postponed); return acc}, []);
+
+            if (redirectAction) postponedActions.push(redirectAction);
+
+            performCallback(upstreams, onRenderEndStream, postponedActions);
 
             return upstreams;
         })
@@ -570,18 +561,32 @@ function Atlant(){
             }
         });
 
+
     var routeChangedStream =  publishStream
         .merge( Bacon.fromBinder(function(sink) {
             if ( 'undefined' !== typeof window) {
                 var routeChanged = function(event) {
                     event.preventDefault();
-                    var parsed = ( event.detail ) ? utils.parseURL( event.detail.url ) : void 0;
-                    var path = ( parsed ) ?  parsed.pathname + '?' + parsed.search :  utils.getLocation();
+                    console.log('event', event)
+                    var path;
+                    var postponedScroll;
+
+                    if ( 'pushstate' === event.type ) { // On pushstate event the utils.getLocation() will give url of previous route.
+                        path = utils.parseURL( event.detail.url ); 
+                        path = path.pathname + ( path.search ? '?' + path.search : ''); 
+                        scrollManager.saveURI(event.detail.state.referrer); // Save scroll position for previous uri
+                    } else if ( 'popstate' === event.type ) {
+                        path = utils.getLocation(); // On popstate utils.getLocation() always return current URI.
+                        scrollManager.saveURI(lastPath); // Save scroll position for previous uri
+                        postponedScroll = function(path){ var done = false; return function(path){ if (!done) { scrollManager.restoreURI(path); done = true; } }.bind(void 0, path); }(path) // restore scroll position for this new uri ONCE
+                    }
+
                     l.log('the route is changed!')
                     if (path !== lastPath || (event && event.detail && event.detail.state && event.detail.state.forceRouteChange)) {
                         sink({
                             path: path
                             ,referrer: lastPath
+                            ,postponed: postponedScroll
                             // ,referrerPattern: lastPattern
                         });
                     }
@@ -1229,18 +1234,6 @@ function Atlant(){
         return this;
     }
 
-    // unused
-    var _setProps = function( properties ) {
-        var allowedProps = [];
-        var wrongProps = s.compose( s.notEq( -1 ), allowedProps.indexOf.bind(allowedProps) );
-        var propsGuard = s.filterKeys( wrongProps );
-        var fillProps = s.compose( s.inject(this), s.merge( prefs ), propsGuard );
-
-        fillProps(properties);
-
-        return this;
-    }
-
     var _onDrawEnd = function(callback) {
         baseStreams.onValue(onDrawEndStream, s.baconTryD(callback));
         return this;
@@ -1257,6 +1250,12 @@ function Atlant(){
         if (prefs.render) throw new Error('You can specify render only once.');
 
         prefs.render = new render();
+        return this;
+    }
+
+    var _scrollElement = function(elementFn){
+        s.type(elementFn, 'function');
+        prefs.scrollElement = elementFn;
         return this;
     }
 
@@ -1598,6 +1597,7 @@ function Atlant(){
     this.unset = _unset;
     // Use another render. simple render is default
     this.use = _use;
+    this.scrollElement = _scrollElement;
 
 
     /**
@@ -1673,6 +1673,7 @@ function Atlant(){
             s = l = simpleRender = reactRender = utils = Counter = Bacon = _ = interfaces = StateClass = clientFuncs =  baseStreams = safeGoToCopy = null;// @TODO more
             return 
         }
+        ,setScrollTop: utils.setScrollTop
     };
     this.data = {
         get routes() { return _(routes) 

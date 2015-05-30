@@ -10,9 +10,9 @@ module.exports = function(Counter, whenCount)  {
 
     var whenRenderedStream = new Bacon.Bus(); // Stream for finishing purposes
     var nullifyScan = new Bacon.Bus();
-    var taskRendered = new Bacon.Bus();
+    var actionRendered = new Bacon.Bus();
     var drawEnd = new Bacon.Bus();
-    var taskRenderedAndMapped = taskRendered
+    var actionRenderedAndMapped = actionRendered
         .map(function(u){
             var obj = {};
             obj[u.render.viewName] = u;
@@ -61,7 +61,7 @@ module.exports = function(Counter, whenCount)  {
         .filter(s.notEmpty) // Still this hash can be nullified, so stay aware.
         .changes()
         .filter( function(_) { return 0 === --whenCount.value; } ) // Here checking is there all whens are ended.
-        .merge(taskRenderedAndMapped)
+        .merge(actionRenderedAndMapped)
         .map(function(u){
             return s.reduce(function(sum, value, key){if ('undefined' !== key) sum[key] = value; return sum}, {}, u)
         })
@@ -71,7 +71,7 @@ module.exports = function(Counter, whenCount)  {
         renderEndStream: renderEndStream 
         ,whenRenderedStream: whenRenderedStream  
         ,nullifyScan: nullifyScan 
-        ,taskRendered: taskRendered
+        ,actionRendered: actionRendered
         ,drawEnd: drawEnd
     }
 }
