@@ -35,7 +35,7 @@ var wrapPushState = function(window){
     window.history.pushState = function(state, title, url) {
         var eventless = state && state.eventless;
         if ( !eventless ) {
-            var onpushstate = new CustomEvent('pushstate', { detail: { state: {referrer: window.location.pathname, scrollTop: document.querySelector('body').scrollTop, forceRouteChange: state.forceRouteChange}, title: title, url: url } } );
+            var onpushstate = new CustomEvent('pushstate', { detail: { state: {url: url, referrer: window.location.pathname, scrollTop: state.scrollTop, forceRouteChange: state.forceRouteChange}, title: title, url: url } } );
             window.dispatchEvent(onpushstate);
         }
 
@@ -44,26 +44,4 @@ var wrapPushState = function(window){
 
 };
 
-var wrapPopState = function(window){
-    var popState = window.history.popState;
-
-    var tryState = function(params) {
-        try { 
-           return popState.apply(window.history, params); 
-        } catch (e) {
-           console.error('Can\'t push state:', e);
-           return void 0;
-        }
-    };
-
-    window.history.popState = function(state, title, url) {
-        var onpopstate = new CustomEvent('popstate', { detail: { state: {referrer: window.location.pathname, scrollTop: document.querySelector('body').scrollTop, forceRouteChange: state.forceRouteChange}, title: title, url: url } } );
-        window.dispatchEvent(onpopstate);
-
-        return tryState(arguments);
-    };
-
-};
-
-
-module.exports = { wrapPushState: wrapPushState, wrapPopState: wrapPopState };
+module.exports = { wrapPushState: wrapPushState };

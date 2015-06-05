@@ -20,8 +20,7 @@ function Atlant(){
         ,interfaces = require('./inc/interfaces')
         ,StateClass = require('./inc/state')
         ,clientFuncs = require('./inc/clientFuncs')
-        ,baseStreams = require('./inc/base-streams')
-        ,ScrollManager = require('./inc/scroll-manager')
+        ,baseStreams = require('./inc/base-streams');
 
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
@@ -57,8 +56,6 @@ function Atlant(){
             ,scrollElement: void 0
 
     }
-
-    var scrollManager = new ScrollManager(prefs);
 
     var injectsGrabber = new interfaces.injectsGrabber();
     var dependsName = new interfaces.dependsName();
@@ -566,6 +563,7 @@ function Atlant(){
         .merge( Bacon.fromBinder(function(sink) {
             if ( 'undefined' !== typeof window) {
                 var routeChanged = function(event) {
+                    try{
                     event.preventDefault();
                     console.log('event', event)
                     var path;
@@ -574,11 +572,9 @@ function Atlant(){
                     if ( 'pushstate' === event.type ) { // On pushstate event the utils.getLocation() will give url of previous route.
                         path = utils.parseURL( event.detail.url ); 
                         path = path.pathname + ( path.search ? '?' + path.search : ''); 
-                        scrollManager.saveURI(event.detail.state.referrer); // Save scroll position for previous uri
                     } else if ( 'popstate' === event.type ) {
                         path = utils.getLocation(); // On popstate utils.getLocation() always return current URI.
-                        scrollManager.saveURI(lastPath); // Save scroll position for previous uri
-                        postponedScroll = function(path){ var done = false; return function(path){ if (!done) { scrollManager.restoreURI(path); done = true; } }.bind(void 0, path); }(path) // restore scroll position for this new uri ONCE
+                        postponedScroll = function(){ document.querySelector('body').scrollTop = event.state.scrollTop }; // restore scroll position for this new uri ONCE
                     }
 
                     l.log('the route is changed!')
@@ -587,12 +583,15 @@ function Atlant(){
                             path: path
                             ,referrer: lastPath
                             ,postponed: postponedScroll
-                            // ,referrerPattern: lastPattern
                         });
                     }
+                    }catch(e){console.error(e.stack)}
                 };
                 window.addEventListener( 'popstate', routeChanged );
                 window.addEventListener( 'pushstate', routeChanged );
+                window.addEventListener( 'scroll', utils.saveScroll );
+
+                utils.saveScroll();
             }
         }))
         .scan(void 0, function(previous, current){

@@ -110,8 +110,22 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) {
         }
     }
 
-    setTimeout( history.pushState.bind(history, { forceRouteChange: redirectForce }, null, url), 0);
+    utils.saveScroll();
+
+    setTimeout( history.pushState.bind(history, { fromhere:1, url: url, scrollTop: document.querySelector('body').scrollTop, referrer: window.location.href, forceRouteChange: redirectForce }, null, url), 0);
 }
+
+utils.saveScroll = _.debounce(function(){
+    // console.time('savingScroll')
+    var stateData = {
+        scrollTop: document.querySelector('body').scrollTop
+    };
+
+    // console.log('setting scroll to...', document.querySelector('body').scrollTop)
+    window.history.replaceState(stateData);
+    // console.timeEnd('savingScroll')
+
+}, 300)
 
 /**
  * Redirect to the other path using $location
