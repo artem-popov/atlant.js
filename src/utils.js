@@ -95,7 +95,7 @@ utils.isIE = function()
  * @param upstream
  * @returns {*}
  */
-utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) {
+utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO scrollTop should be not 0, but from preferences
 
     if ('undefined' === typeof window) return;
     if ( !redirectForce && (window.location.origin + url) === window.location.href )  return;
@@ -112,20 +112,20 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) {
 
     utils.saveScroll();
 
-    setTimeout( history.pushState.bind(history, { fromhere:1, url: url, scrollTop: document.querySelector('body').scrollTop, referrer: window.location.href, forceRouteChange: redirectForce }, null, url), 0);
+    setTimeout( history.pushState.bind(history, { url: url, scrollTop: 0, referrer: window.location.href, forceRouteChange: redirectForce }, null, url), 0);
 }
 
-utils.saveScroll = _.debounce(function(){
+utils.saveScroll = _.debounce(function(event){
     // console.time('savingScroll')
+    var scrollTop = document.querySelector('body').scrollTop;
     var stateData = {
-        scrollTop: document.querySelector('body').scrollTop
+        scrollTop: scrollTop
     };
 
-    // console.log('setting scroll to...', document.querySelector('body').scrollTop)
     window.history.replaceState(stateData);
     // console.timeEnd('savingScroll')
 
-}, 300)
+}, 100)
 
 /**
  * Redirect to the other path using $location

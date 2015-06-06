@@ -53,7 +53,7 @@ function Atlant(){
             ,skipRoutes: []  // This routes will be skipped in StreamRoutes
             ,viewState: ['root']
             ,on: { renderEnd: void 0 }// callback which will be called on finishing when rendering
-            ,scrollElement: void 0
+            ,scrollElement: function(){ return 'undefined' !== typeof document ? document.querySelector('body') : void 0 }
 
     }
 
@@ -564,27 +564,39 @@ function Atlant(){
             if ( 'undefined' !== typeof window) {
                 var routeChanged = function(event) {
                     try{
-                    event.preventDefault();
-                    console.log('event', event)
-                    var path;
-                    var postponedScroll;
+                        event.preventDefault();
+                        var path;
+                        var postponedScroll;
 
-                    if ( 'pushstate' === event.type ) { // On pushstate event the utils.getLocation() will give url of previous route.
-                        path = utils.parseURL( event.detail.url ); 
-                        path = path.pathname + ( path.search ? '?' + path.search : ''); 
-                    } else if ( 'popstate' === event.type ) {
-                        path = utils.getLocation(); // On popstate utils.getLocation() always return current URI.
-                        postponedScroll = function(){ document.querySelector('body').scrollTop = event.state.scrollTop }; // restore scroll position for this new uri ONCE
-                    }
+                        var state = function(event){ return 'pushstate' === event.type ? event.detail.state : ( 'popstate' === event.type ? event.state : void 0 )  };
+                        if ( 'pushstate' === event.type ) { // On pushstate event the utils.getLocation() will give url of previous route.
+                            path = utils.parseURL( event.detail.url ); 
+                            path = path.pathname + ( path.search ? '?' + path.search : ''); 
+                        } else if ( 'popstate' === event.type ) {
+                            path = utils.getLocation(); // On popstate utils.getLocation() always return current URI.
 
-                    l.log('the route is changed!')
-                    if (path !== lastPath || (event && event.detail && event.detail.state && event.detail.state.forceRouteChange)) {
-                        sink({
-                            path: path
-                            ,referrer: lastPath
-                            ,postponed: postponedScroll
-                        });
-                    }
+                            var stateData = state(event);
+                            if (!stateData.scrolled) {
+                                window.history.replaceState(_.extend({initial: true}, stateData));
+                            }
+                        }
+
+                        var initial = true;
+                        postponedScroll = function(){
+                            var stateData = state(event);
+                            if(initial) prefs.scrollElement().scrollTop = stateData.scrollTop
+                            initial = false;
+                        }; // restore scroll position for this new uri ONCE
+
+
+                        l.log('the route is changed!')
+                        if (path !== lastPath || (event && event.detail && event.detail.state && event.detail.state.forceRouteChange)) {
+                            sink({
+                                path: path
+                                ,referrer: lastPath
+                                ,postponed: postponedScroll
+                            });
+                        }
                     }catch(e){console.error(e.stack)}
                 };
                 window.addEventListener( 'popstate', routeChanged );
