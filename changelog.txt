@@ -1,3 +1,5 @@
+0.4.14 various fixes for saving scroll position in history.state. Still not
+saving the scrollHeight
 0.4.13 initial version for saving scroll position in history.state
 0.4.12 add (unoptimized) possiblity to depend .select() on .select()
 0.4.11 remove render.on, do forceUpdate of every view render, instead of root view forceUpdate, exclude view update of first atom change from undefined value.
