@@ -122,7 +122,7 @@ utils.saveScroll = _.debounce(function(event){
         scrollTop: scrollTop
     };
 
-    window.history.replaceState(stateData);
+    window.history.replaceState(stateData, null);
     // console.timeEnd('savingScroll')
 
 }, 100)

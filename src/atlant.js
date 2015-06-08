@@ -577,7 +577,7 @@ function Atlant(){
 
                             var stateData = state(event);
                             if (!stateData.scrolled) {
-                                window.history.replaceState(_.extend({initial: true}, stateData));
+                                window.history.replaceState(_.extend({initial: true}, stateData), null);
                             }
                         }
 
