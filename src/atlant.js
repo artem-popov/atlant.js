@@ -25,6 +25,8 @@ function Atlant(){
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
 
+    // var lastScrollTop; 
+
 
     //    ,State = require('./state.js')
 
@@ -152,6 +154,8 @@ function Atlant(){
                 .filter( renderStopper );
 
             baseStreams.onValue( theStream, function(upstream){
+                    if( void 0 === upstream || activeStreamId.value !== upstream.id ) { return void 0; }
+
                     try{ 
                         var viewName = s.dot('.render.viewName', upstream);
                         savedViewScope[viewName] = clientFuncs.getScopeDataFromStream(upstream);
@@ -266,6 +270,7 @@ function Atlant(){
                                     .catch( clientFuncs.catchError )
                             }
 
+
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ 
                                 if( atom.value !== IMPOSSIBLE_VALUE ){
                                     var data = scope();
@@ -336,9 +341,12 @@ function Atlant(){
             var withs = withGrabber.init(State.state);
 
             stream = stream
+                // .map( function(u){ console.log('extending:', 'to be:' , u); return u; #<{(|_.extend( {}, u)|)}># } )
+                // .map( function(_){ if ( activeStreamId.value !== _.id ) { console.log('STOPPED_DEP:', _, _.id, activeStreamId.value); return void 0 } else { return _ } } )
+                // .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
+                // .map( function(_){ if ( activeStreamId.value !== _.id ) { console.log('NOTSTOPPED_DEP:', _, _.id, activeStreamId.value);}  return _  } )
                 .map( dependsName.add.bind(dependsName, depName, nameContainer) )
                 .map( withGrabber.add.bind(withGrabber, withs) )
-                // .filter( function(_) { if(activeStreamId.value !== _.id && !_.isAction) console.log('---STOPPED1!', _.render.viewName, _.id, activeStreamId.value); return _.id === activeStreamId.value || _.isAction } ) // Checking, should we continue or this stream already obsolete.
 
             if ('function' !== typeof dep) {
                 stream = stream
@@ -566,7 +574,7 @@ function Atlant(){
                     try{
                         event.preventDefault();
                         var path;
-                        var postponedScroll;
+                        // var postponedScroll;
 
                         var state = function(event){ return 'pushstate' === event.type ? event.detail.state : ( 'popstate' === event.type ? event.state : void 0 )  };
                         if ( 'pushstate' === event.type ) { // On pushstate event the utils.getLocation() will give url of previous route.
@@ -575,18 +583,20 @@ function Atlant(){
                         } else if ( 'popstate' === event.type ) {
                             path = utils.getLocation(); // On popstate utils.getLocation() always return current URI.
 
-                            var stateData = state(event);
-                            if (!stateData.scrolled) {
-                                window.history.replaceState(_.extend({initial: true}, stateData), null);
-                            }
                         }
 
-                        var initial = true;
-                        postponedScroll = function(){
-                            var stateData = state(event);
-                            if(initial) prefs.scrollElement().scrollTop = stateData.scrollTop
-                            initial = false;
-                        }; // restore scroll position for this new uri ONCE
+                        // lastScrollTop[path] = document.querySelector('body').scrollTop;
+
+                        // if ( 0 === history.state.scrollTop ) {
+                        //     prefs.scrollElement().scrollTop = 0;
+                        //     utils.saveScroll();
+                        // } else { 
+                        //     var initial = true;
+                        //     postponedScroll = function(){
+                        //         if(initial #<{(|&& lastScrollTop[lastPath] !== history.state.scrollTop|)}>#) {  // restore scroll position for this new uri ONCE 
+                        //             prefs.scrollElement().scrollTop = history.state.scrollTop;
+                        //         } 
+                        // }} 
 
 
                         l.log('the route is changed!')
@@ -594,16 +604,16 @@ function Atlant(){
                             sink({
                                 path: path
                                 ,referrer: lastPath
-                                ,postponed: postponedScroll
+                                // ,postponed: postponedScroll
                             });
                         }
                     }catch(e){console.error(e.stack)}
                 };
                 window.addEventListener( 'popstate', routeChanged );
                 window.addEventListener( 'pushstate', routeChanged );
-                window.addEventListener( 'scroll', utils.saveScroll );
+                // window.addEventListener( 'scroll', utils.saveScroll );
 
-                utils.saveScroll();
+                // utils.saveScroll();
             }
         }))
         .scan(void 0, function(previous, current){
@@ -866,6 +876,7 @@ function Atlant(){
                 stream  = _.extend(stream, injectsGrabber.add(depName, depValue, injects, upstream));
                 stream.otherwise = true;
                 stream.conditionId = whenId;
+
                 if(activeStreamId.value === stream.id) whenCount.value++;
                 l.log('---Matched otherwise!!!')
                 return stream;
@@ -914,6 +925,7 @@ function Atlant(){
                 stream.action = true;
                 stream.conditionId = whenId;
                 stream.isAction = isAction;
+                stream.id = activeStreamId.value;
 
                 l.log('---Matched action!!!', depValue)
 
@@ -954,6 +966,7 @@ function Atlant(){
                 stream.conditionId = whenId;
 
                 stream.isAction = true;
+                stream.id = _.uniqueId();
 
                 l.log('---Matched error!!!')
                 return stream;
@@ -991,6 +1004,10 @@ function Atlant(){
         var injects = injectsGrabber.init(depName, State.state);
 
         var thisIf = State.state.lastOp
+            .map( function(u){ return _.extend( {}, u) } )
+            .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
+            .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
+            .map( function(_){ if ( activeStreamId.value !== _.id ) { console.log('NONSTOP')} return _ } ) // stayed here for debuggind purposes
             .map(function(upstream){
                 var scope = clientFuncs.createScope(upstream);
                 var checkCondition = s.compose(clientFuncs.applyScopeD, s.tryD)(fn);
@@ -1102,6 +1119,9 @@ function Atlant(){
 
 
             var thisRender = State.state.lastOp
+                .map( function(u){ return _.extend( {}, u) } )
+                .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
+                .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
                 .map(function(u) { 
                     var ups = new Upstream();
                     ups.fmap(_.extend)(u);
@@ -1183,6 +1203,7 @@ function Atlant(){
                 stream.isInterceptor = true;
                 stream.isAction = true;
                 stream.conditionId = whenId;
+                stream.id = activeStreamId.value;
 
                 l.log('---Matched interceptor!!!', depValue)
 

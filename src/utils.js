@@ -115,17 +115,16 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO 
     setTimeout( history.pushState.bind(history, { url: url, scrollTop: 0, referrer: window.location.href, forceRouteChange: redirectForce }, null, url), 0);
 }
 
+
+utils.newPage = true;
+
 utils.saveScroll = _.debounce(function(event){
-    // console.time('savingScroll')
-    var scrollTop = document.querySelector('body').scrollTop;
     var stateData = {
-        scrollTop: scrollTop
+        scrollTop: document.querySelector('body').scrollTop
     };
-
+         
     window.history.replaceState(stateData, null);
-    // console.timeEnd('savingScroll')
-
-}, 100)
+}, 50)
 
 /**
  * Redirect to the other path using $location
