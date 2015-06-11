@@ -1,6 +1,6 @@
 {
   "name": "atlant.js",
-  "version": "0.4.15",
+  "version": "0.4.17",
   "description": "Atlant.js is an application flow/routing framework for React.js. It provides robust routing and dependency injection mechanism. It uses bacon.js streams to rule all out.",
   "homepage": "",
   "main": "src/atlant.js",
@@ -9,7 +9,6 @@
     "gulp-browserify": "~0.5.0",
     "gulp": "~3.6.2",
     "envify": "~1.2.1",
-    "react": "~0.10.0",
     "connect": "^3.0.2",
     "gulp-plumber": "~0.6.3",
     "gulp-watch": "~0.6.6-1",

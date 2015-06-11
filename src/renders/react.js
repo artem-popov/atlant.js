@@ -1,11 +1,11 @@
 "use strict";
-var React = require('react')
-     ,s = require('./../lib')
+var s = require('./../lib')
      ,_ = require('lodash')
      ,u = require('../utils')
+     ,Promise = require('promise')
      ,l = require('../inc/log')();
 
-var State = function(){
+var State = function(React){
     var wrappers = {}
         ,views = {}
         ,thises = {}
@@ -50,8 +50,8 @@ var State = function(){
         return this;
 };
 
-var Render = function() {
-    var state = new State();
+var Render = function(React) {
+    var state = new State(React);
 
     this.name = 'React';
     var rootName = void 0;

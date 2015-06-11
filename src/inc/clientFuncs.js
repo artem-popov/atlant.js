@@ -3,6 +3,7 @@
 var s = require('../lib')
         ,_ = require('lodash')
         ,l = require('./log')()
+        ,Promise = require('promise')
         ,Bacon = require('baconjs')
 
 var catchError;

@@ -1277,11 +1277,11 @@ function Atlant(){
     }
 
     var _use = function(render) {
-        s.type(render, 'function');
+        s.type(render, 'object');
         //@TODO: check render for internal structure
         if (prefs.render) throw new Error('You can specify render only once.');
 
-        prefs.render = new render();
+        prefs.render = render;
         return this;
     }
 
