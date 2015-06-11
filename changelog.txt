@@ -1,3 +1,4 @@
+0.4.16 disable saving scrollTop, cancel if's and render's of old streams
 0.4.15 newest browsers wants replaceState 2 arguments
 0.4.14 various fixes for saving scroll position in history.state. Still not
 saving the scrollHeight

@@ -542,7 +542,7 @@ function Atlant(){
             if (typeof window !== 'undefined') lastPath = utils.getLocation();
 
             var doLater = _.first(  _(upstreams).reduce( function(acc, v, k){ if(v.doLater) acc.push(v.doLater); return acc }, [])  ); 
-            var redirectAction = function(){ setTimeout( doLater, 0 ) }.bind(void 0, doLater);
+            var redirectAction = function(doLater){ if(doLater) setTimeout( doLater, 0 ) }.bind(void 0, doLater);
             var postponedActions = _(upstreams).reduce( function(acc, v, k){ if(v.postponed) acc.push(v.postponed); return acc}, []);
 
             if (redirectAction) postponedActions.push(redirectAction);
@@ -1705,7 +1705,6 @@ function Atlant(){
             s = l = simpleRender = reactRender = utils = Counter = Bacon = _ = interfaces = StateClass = clientFuncs =  baseStreams = safeGoToCopy = null;// @TODO more
             return 
         }
-        ,setScrollTop: utils.setScrollTop
     };
     this.data = {
         get routes() { return _(routes) 

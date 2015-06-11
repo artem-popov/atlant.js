@@ -1,24 +1,27 @@
+"use strict";
 /**
    Utils library.
  */
+var container = Object.create(null);
 var s = (function(){
 
     var _ = require('lodash')
-        ,Promise = require('promise');
+        ,Promise = require('promise')
+        ,Bacon = require('baconjs')
 
-    var $s = this;
-    var id = function(value) { return value; }
-    var nop = function() { return void 0; }
+    var that = this;
+    this.id = function(value) { return value; }
+    this.nop = function() { return void 0; }
 
-    var pass = function() { return function(promise) { return promise; } }
-    var inject = function(data) { return function() { return data; } }
+    this.pass = function() { return function(promise) { return promise; } }
+    this.inject = function(data) { return function() { return data; } }
     /**
      *
      * @param fn - promise callback
      * @param fn2 - reject callback
      * @returns {Function}
      */
-    var then = function(fn, fn2) { return function(promise) { return promise.then(fn, fn2); }; }
+    this.then = function(fn, fn2) { return function(promise) { return promise.then(fn, fn2); }; }
 
     /**
      * Decorator that accept resolving of promise to let free the blocking of function it decorates.
@@ -28,7 +31,7 @@ var s = (function(){
      * @param item
      * @returns {Function}
      */
-    var sync = function(obj, item) {
+    this.sync = function(obj, item) {
 
         var resolvePromise = function() {
             obj[item] = false;
@@ -40,16 +43,20 @@ var s = (function(){
                     obj[item] = true;
                     return fn.apply(this, arguments);
                 } else {
-                    return $q.reject();
+                    return Promise.reject();
                 }
             }
         }
 
         return function(fn) {
-            return _.compose( $s.then(resolvePromise), blockPromise(fn));
+            return _.compose( that.then(resolvePromise), blockPromise(fn));
         }
     }
 
+    /**
+     * Depreated
+     *
+     * */
     /**
      * Deprecated. Use sync
      * @param obj
@@ -57,7 +64,7 @@ var s = (function(){
      * @param fn
      * @returns {Function}
      */
-    var guardWithTrue = function(obj, item, fn) {
+    this.guardWithTrue = function(obj, item, fn) {
         return function() {
             if ( ! obj[item] ) {
                 obj[item] = true;
@@ -75,7 +82,7 @@ var s = (function(){
      * @param fn
      * @returns {*}
      */
-    var resolveGuard = function(obj, item, fn) {
+    this.resolveGuard = function(obj, item, fn) {
         if (fn) {
             return function() {
                 fn.apply(this, arguments);
@@ -92,7 +99,7 @@ var s = (function(){
      * Deprecated. Use streams instead.
      * @constructor
      */
-    var Herald = function() {
+    this.Herald = function() {
         this.listeners = {};
 
         this.listen = function( what, listener) {
@@ -107,11 +114,11 @@ var s = (function(){
     }
 
     // Convert arguments into array.
-    var a2a = function(args) {
+    this.a2a = function(args) {
         return Array.prototype.slice.apply( args );
     }
 
-    var unary = function(fn) {
+    this.unary = function(fn) {
         return function(val) {
             return fn.call(this, val);
         }
@@ -122,9 +129,9 @@ var s = (function(){
      * it pass obj value and object name to fn (temporary 2 args)
      * @type {Function}
      */
-    var map = _.curry( function(fn, obj) {
+    this.map = _.curry( function(fn, obj) {
         if ( ! obj ) return [];
-        if (obj && obj.map) return obj.map(unary(fn));
+        if (obj && obj.map) return obj.map(that.unary(fn));
 
         var mapped = {};
 
@@ -139,14 +146,14 @@ var s = (function(){
     // @TODO create mapKeys
 
 
-    var fmap = _.curry( function(fn, obj) {
+    this.fmap = _.curry( function(fn, obj) {
         return obj.fmap(fn);
     });
     
     // @TODO check immutability/mutability
-    var filter = _.curry( function(fn, obj) {
+    this.filter = _.curry( function(fn, obj) {
         if ( ! obj ) return [];
-        if (obj && obj.map) return obj.filter(unary(fn));
+        if (obj && obj.map) return obj.filter(that.unary(fn));
 
         var filtered = {};
 
@@ -160,7 +167,7 @@ var s = (function(){
 
     });
 
-    var filterKeys = _.curry( function(fn, obj) {
+    this.filterKeys = _.curry( function(fn, obj) {
         if ( ! obj ) return obj;
 
         var filtered = {};
@@ -175,7 +182,7 @@ var s = (function(){
 
     });
 
-    var reduce = _.curry( function(fn, startValue, obj) {
+    this.reduce = _.curry( function(fn, startValue, obj) {
         if ( !obj ) return startValue;
         if (obj && obj.reduce) Array.prototype.reduce.call(obj, fn, startValue);
 
@@ -188,46 +195,46 @@ var s = (function(){
         return reduced;
     });
 
-    var concat = _.curry( function(a, b) {
+    this.concat = _.curry( function(a, b) {
         return b.concat(a);
     });
 
-    var flatMap = function(arr) {
+    this.flatMap = function(arr) {
         return Array.prototype.concat.apply([], arr);
     }
 
-    var last = function(arr) {
+    this.last = function(arr) {
         if (arr) {
             return arr[arr.length-1];
         } else {
             return void 0;
         }
     };
-    var head = function(arr) {
+    this.head = function(arr) {
         if (arr) {
             return arr[0];
         } else {
             return void 0;
         }
     };
-    var negate = function(obj) {
+    this.negate = function(obj) {
         return !obj;
     }
 
-    var eq = _.curry( function(obj, obj2) {
+    this.eq = _.curry( function(obj, obj2) {
         return obj === obj2
     });
 
-    var notEq = _.curry( function(obj, obj2) {
+    this.notEq = _.curry( function(obj, obj2) {
         return obj !== obj2
     });
 
-    var empty = function(obj) {
+    this.empty = function(obj) {
         return obj === null || obj === void 0 || obj === '' || ( (obj instanceof Array) && 0 === obj.length ) || ('object' === typeof obj && 0 === Object.keys(obj).length);
     }
-    var notEmpty = _.compose( negate, empty );
+    this.notEmpty = _.compose( this.negate, this.empty );
 
-    var simpleDot = function(expression, obj) {
+    this.simpleDot = function(expression, obj) {
         if ( obj ) {
             return obj[expression];
         } else {
@@ -235,7 +242,7 @@ var s = (function(){
         }
     }
 
-    var flipSimpleDot = function(obj, expression) {
+    this.flipSimpleDot = function(obj, expression) {
         if ( obj ) {
             return obj[expression];
         } else {
@@ -244,16 +251,16 @@ var s = (function(){
     }
 
     // expression is ".something" or ".something.something"
-    var dot = _.curry( function(expression, obj) {
-        return expression.split('.').filter($s.notEmpty).reduce(flipSimpleDot, obj);
+    this.dot = _.curry( function(expression, obj) {
+        return expression.split('.').filter(that.notEmpty).reduce(that.flipSimpleDot, obj);
     });
 
     // expression is ".something" or ".something.something"
-    var flipDot = _.curry( function(obj, expression) {
-        return dot(expression, obj);
+    this.flipDot = _.curry( function(obj, expression) {
+        return that.dot(expression, obj);
     });
 
-    var set = _.curry( function(item, obj, value) {
+    this.set = _.curry( function(item, obj, value) {
         if(item) {
             obj[item] = value;
             return obj;
@@ -262,25 +269,25 @@ var s = (function(){
         }
     });
 
-    var plus = _.curry( function(item1, item2) {
+    this.plus = _.curry( function(item1, item2) {
         return item1 + item2;
     });
 
-    var trim = function(string) {
+    this.trim = function(string) {
         return string.trim();
     }
 
-    var flip = function(fn) {
+    this.flip = function(fn) {
         return _.curry(function() {
-            return fn.apply(this, a2a(arguments).reverse());
+            return fn.apply(this, that.a2a(arguments).reverse());
         }, fn.length);
     };
 
-    var replace = _.curry( function(where, replacer, obj) {
+    this.replace = _.curry( function(where, replacer, obj) {
         return obj.replace(where, replacer);
     });
 
-    var push = function( item, obj ) {
+    this.push = function( item, obj ) {
         if ( ! obj ) {
             return function(obj) { return obj.push(item); };
         } else {
@@ -288,25 +295,25 @@ var s = (function(){
         }
     };
 
-    var split = _.curry( function( char, obj ) {
+    this.split = _.curry( function( char, obj ) {
         return obj.split(char);
     });
 
-    var log = function(what) {
+    this.log = function(what) {
         console.log(what);
         return what;
     }
 
-    var logIt = function() {
-        var args = a2a(arguments);
+    this.logIt = function() {
+        var args = that.a2a(arguments);
         return function(what) {
             console.log.apply(console, args.concat(what) );
             return what;
         }
     };
 
-    var side = function(fn) {
-        var args = a2a(arguments);
+    this.side = function(fn) {
+        var args = that.a2a(arguments);
         return function(param) {
             if (args.length > 1) {
                 fn = _.compose.apply(this,args);
@@ -316,50 +323,50 @@ var s = (function(){
         }
     }
 
-    var instanceOf = function( type, object ) {
+    this.instanceOf = function( type, object ) {
         return object instanceof type;
     }
 
-    var typeOf = _.curry(function( type, object ) {
+    this.typeOf = _.curry(function( type, object ) {
         return type === typeof object;
     });
     
 
-    var mapD = function(fn) {
+    this.mapD = function(fn) {
         return function() {
-            return map(fn, a2a(arguments))
+            return that.map(fn, that.a2a(arguments))
         }
     }
 
-    var promise = function(value) {
+    // Promises
+    this.promise = function(value) {
         return new Promise( function(fullfill, reject ) { 
              fullfill(value);
         });
     }
 
-    var promiseD = function(promiseProvider) {
+    this.promiseD = function(promiseProvider) {
         return function() {
             var result = promiseProvider.apply(this, arguments );
             if ( 'Promise' === result.constructor.name){
                 return result;
             } else {
-                return promise(result);
+                return that.promise(result);
             }
         }
     }
 
     //memoize.js - by @addyosmani, @philogb, @mathias
     // with a few useful tweaks from @DmitryBaranovsk
-    function memoize( fn ) {
+    this.memoize = function( fn ) {
         return function () {
             var args = Array.prototype.slice.call(arguments),
                 hash = "",
                 i  = args.length;
-            currentArg = null;
+            var currentArg = null;
             while(i--){
                 currentArg = args[i];
-                hash += (currentArg === Object(currentArg)) ?
-                    JSON.stringify(currentArg) : currentArg;
+                hash += (currentArg === Object(currentArg)) ? JSON.stringify(currentArg) : currentArg;
                 fn.memoize || (fn.memoize = {});
             }
             return (hash in fn.memoize) ? fn.memoize[hash] :
@@ -367,7 +374,7 @@ var s = (function(){
         };
     }
 
-    var Perf = function() {
+    this.Perf = function() {
         var time;
         this.count = 0;
         this.begin = function() {
@@ -378,17 +385,20 @@ var s = (function(){
         }
     }
 
-    var _ifelse = _.curry( function(condition, then, _else, value){
+    this.extend = _.curry(_.extend, 2);
+    this.merge = _.curry(_.merge, 2);
+
+    this.ifelse = _.curry( function(condition, then, _else, value){
         if( condition( value ) ) return then(value);
         else return _else(value)
     });
 
-    var _if = _.curry( function(condition, then, value){
+    this.if = _.curry( function(condition, then, value){
         if( condition( value ) ) return then(value);
         else return value;
     });
 
-    var type = function(item, type) {
+    this.type = function(item, type) {
         
         if ( type !== typeof item && item ) {
             var error = new Error('Type Error: ' + item + ' should be ' + type);
@@ -397,16 +407,16 @@ var s = (function(){
         }
     }
 
-    var simpleType = function(data, key) {
+    this.simpleType = function(data, key) {
         return 'string' === typeof data[key] || 'number' === typeof data[key] || 'boolean' === typeof data[key]
     }
 
-    var isPromise = function(promise) {
+    this.isPromise = function(promise) {
         if ( promise && 'function' === typeof promise.then ) return true;
         else return false;
     }
 
-    var tryF = function(fallbackValue, fn){
+    this.tryF = function(fallbackValue, fn){
         return function() {
             try {
                 return fn.apply(this, arguments)
@@ -416,7 +426,7 @@ var s = (function(){
         }
     }
 
-    var tryD = function(fn, errorCallback){
+    this.tryD = function(fn, errorCallback){
         return function() {
             try {
                 return fn.apply(this, arguments);
@@ -427,15 +437,15 @@ var s = (function(){
         }
     };
 
-    var baconTryD = function(fn) {
-        return tryD(fn, function(e) { return Bacon.Error(e) })
+    this.baconTryD = function(fn) {
+        return that.tryD(fn, function(e) { return Bacon.Error(e) })
     }
 
-    var promiseTryD = function(fn) {
-        return tryD(fn, function(e) { return Promise.reject(e) })
+    this.promiseTryD = function(fn) {
+        return that.tryD(fn, function(e) { return Promise.reject(e) })
     }
 
-    var _apply = function(doProvider, value) {
+    this.apply = function(doProvider, value) {
         if ('function' === typeof doProvider) {
             return doProvider(value);
         } else {
@@ -446,14 +456,14 @@ var s = (function(){
    this.maybe = function(nothing, fn){
        return function(){
            try {
-               return fn.apply(this, this.a2a(arguments))
+               return fn.apply(this, that.a2a(arguments))
            } catch (e) {
                return nothing
            }
        }
    }
 
-   var copy = _.compose( JSON.parse, JSON.stringify );
+   this.copy = _.compose( JSON.parse, JSON.stringify );
 
    this.clone = function(obj) {
        return _.cloneDeep(obj, function(value) {
@@ -466,75 +476,11 @@ var s = (function(){
    this.maybeS = this.maybe.bind(this, '')
    this.maybeV = this.maybe.bind(this, void 0)
 
-    this.compose      = _.compose;
-    this.curry        = _.curry;
-    this.pass   = pass;
-    this.then   = then;
-    this.sync   = sync;
-    this.id     = id;
-    this.inject = inject;
-    this.nop = nop;
+   this.compose      = _.compose;
+   this.curry        = _.curry;
 
-    this.log    = log;
-    this.logIt    = logIt;
-    this.map    = map;
-    this.filterKeys = filterKeys;
-    this.filter = filter;
-    this.reduce = reduce;
-    this.dot 	= dot;
-    this.flipDot 	= flipDot;
-    this.push 	= push;
-    this.split 	= split;
-    this.instanceOf = instanceOf;
-    this.typeOf = typeOf;
-    this.eq     = eq;
-    this.notEq = notEq;
-    this.empty = empty;
-    this.notEmpty = notEmpty;
-    this.negate = negate;
-    this.plus   = plus;
-    this.trim   = trim;
-    this.a2a    = a2a;
-    this.replace = replace;
-    this.head   = head;
-    this.last   = last;
-    this.concat = concat;
-    this.mapD   = mapD;
-    this.fmap   = fmap;
-    this.flatMap   = flatMap;
-    this.set    = set;
-    this.flip = flip;
-    this.memoize = memoize;
-    this.Perf = Perf;
-    this.extend = _.curry(_.extend, 2);
-    this.merge = _.curry(_.merge, 2);
-    this.unary = unary;
-    this.side = side;
-    // Promises
-    this.promise = promise;
-    this.promiseD = promiseD;
-    this.if = _if;
-    this.ifelse = _ifelse;
-    this.type = type;
-    this.isPromise = isPromise;
-    this.simpleType = simpleType;
-    this.tryD = tryD;
-    this.tryF = tryF;
-    this.apply = _apply;
+   return this;
 
-    this.baconTryD = baconTryD;
-    this.promiseTryD = promiseTryD;
-    /**
-     * Depreated
-     *
-     * */
-    this.guardWithTrue = guardWithTrue;
-    this.resolveGuard = resolveGuard;
-    this.Herald = Herald;
-    this.copy = copy;
-
-    return this;
-
-})();
+}.bind(container))();
 
 module.exports = s;

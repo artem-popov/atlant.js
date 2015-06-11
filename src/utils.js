@@ -278,14 +278,6 @@ utils.addSlashes = function(masks){
         .reduce(function(v, i) { return v.concat(i); }, [])
 }
 
-var scrolledDefault = document.querySelector('body');
-utils.getScrollTop = function(element){
-    return element ? element().scrollTop : scrolledDefault.scrollTop
-}
 
-utils.setScrollTop = function(element, scrollTop){
-    if (element) element().scrollTop = scrollTop;
-    else scrolledDefault.scrollTop = scrollTop;
-}
 
 module.exports = utils;
