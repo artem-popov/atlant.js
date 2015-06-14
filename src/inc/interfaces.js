@@ -41,32 +41,6 @@ var withGrabber = function() {
     return this;
 }
 
-var transfersGrabber = function() {
-    this.init = function(state) {
-        var data = {};
-        state.lastTransfers = data // Here we will store further injects with ".transfers"
-        return data;
-    }
-    // Add invocation when mapping stream.
-    this.add = function(transfers, upstream) {
-        upstream.transfers = transfers;
-        return upstream
-    }
-    this.tailTransfer = function(depends, state) {
-        depends = [].concat(depends);
-        if (void 0 !== state.lastTransfer) throw new Error('Atlant.js: You forgot the .to()!')
-
-        state.lastTransfer = depends
-    }
-    this.tailTo = function(name, state) {
-        if (void 0 === state.lastTransfers) throw new Error('Atlant.js: You forgot the .transfer() before .to()!')
-        
-        state.lastTransfers[name] = state.lastTransfer;
-        state.lastTransfer = void 0;
-    }
-    return this;
-}
-
 var injectsGrabber = function() {
     this.init = function(depName, state) {
         if (!depName) throw new Error('Atlant.js: developer: you forgot the "depName"!')
@@ -90,6 +64,5 @@ var injectsGrabber = function() {
 module.exports = { 
                 injectsGrabber:injectsGrabber
                 ,dependsName: dependsName
-                ,transfersGrabber: transfersGrabber
                 ,withGrabber: withGrabber
 }

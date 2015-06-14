@@ -3,8 +3,8 @@
 var _ = require('lodash');
 
 var StateType = function(state) {
-    _.extend( this, {lastWhen: void 0, lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0, lastStoreName: void 0} );
-    _.merge( this, state );
+    var newState = _.extend( {}, {lastWhen: void 0, lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0, lastStoreName: void 0, totalOfUpdates: { keys: [] } }, state );
+    return newState
 };
 
 var StateClass = function(){
@@ -13,9 +13,11 @@ var StateClass = function(){
     this.state = void 0;
 
     this.first = function(){
+        console.log('this.state:', this.state ? JSON.stringify(this.state.totalOfUpdates) : void 0)
         states = [];
-        this.state = new StateType();
+        this.state = StateType();
         states.push(this.state);
+        window.states = states;
     }
 
     this.divide = function() {
