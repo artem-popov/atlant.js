@@ -45,11 +45,9 @@ function Atlant(){
     var viewSubscriptions = {};
     var viewSubscriptionsUnsubscribe = {};
     var savedViewScope = {};
-    var cache = [];
 
     var activeStreamId = { value: void 0 }; // Used to store active stream id. If route changed again then we need something to compare with current id and cancel our current stream if it is obsolete.
     var lastCondition;
-    var lastMasks = [];
     var lastFinallyStream;
     var prefs = {
             parentOf: {}
@@ -61,6 +59,9 @@ function Atlant(){
 
     }
 
+    // will be AST then?
+    var globalStat = {};
+
     var injectsGrabber = new interfaces.injectsGrabber();
     var dependsName = new interfaces.dependsName();
     var withGrabber = new interfaces.withGrabber();
@@ -68,7 +69,7 @@ function Atlant(){
     // State from current route. Updated on route Load.
     var lastPath // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
         ,lastMask = []
-        ,lastReferrer;
+        ,lastReferrer
 
     var State = new StateClass(); // State which up to any last conditional: when, if
     var TopState = new StateClass(); // State which up to when
@@ -84,10 +85,9 @@ function Atlant(){
         ,continue: _.uniqueId()
     }
 
-    var WhenFinally = {
+    var WhenOrMatch = {
         when: _.uniqueId()
         ,match: _.uniqueId()
-        ,finally: _.uniqueId()
     }
 
     // Depends enum
@@ -126,10 +126,6 @@ function Atlant(){
             if ( upstream.render.renderOperation !== RenderOperation.draw && upstream.isAction && !upstream.isAtom )
                 renderStreams.actionRendered.push(upstream);
 
-            // signal for finally construct
-            if ( !upstream.isFinally && upstream.finallyStream) {
-                upstream.finallyStream.push(upstream);
-            }
         };
 
         // when render applyed, no more renders will be accepted for this .when and viewName
@@ -228,7 +224,7 @@ function Atlant(){
                             // turn off all subscriptions of atoms for this view
                             if( viewSubscriptions[viewName] ) viewSubscriptionsUnsubscribe[viewName](); // finish Bus if it exists;
 
-                            if(upstream.atoms) console.log('atoms:', viewName, upstream.atoms.length, 'updates:', upstream.totalOfUpdates);
+                            if(upstream.atoms) console.log('atoms:', viewName, upstream.atoms.length, 'updates for this when:', upstream.stats);
 
                             // subscribe for every atom upstream to rerender view if need
                             viewSubscriptions[viewName] = baseStreams.bus();
@@ -255,7 +251,6 @@ function Atlant(){
                                         // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
                                         // console.log('csope: view...', viewName, scope)
                                         var atoms = upstream.atoms;
-                                        upstream.finallyStream = void 0;
                                         upstream.atoms = void 0;
 
                                         var stream = s.clone(upstream); 
@@ -372,7 +367,7 @@ function Atlant(){
                     .flatMap(function(upstream) {
                         var scope = clientFuncs.createScope(upstream);
                         var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
-                        var atomId = function(atomIds, scope, where, store, ref, isConsole/*variable for debug*/, parentRef) { 
+                        var atomParams = function(atomIds, scope, where, store, ref, isConsole/*variable for debug*/, parentRef) { 
                             // if (isConsole) console.time('atom', store, ref);
                             var aParentRef = isConsole ? ref : parentRef;
                             var dependAtoms = scope;
@@ -405,9 +400,9 @@ function Atlant(){
                         }.bind(void 0, (upstream.atomIds || []).slice(), scope, where, store, upstream.ref);
                         
                         var treatDep = s.compose( clientFuncs.convertPromiseD, s.promiseTryD );
-                        return treatDep( dep )( atomId(true) )
-                            .map(function(upstream, atomId, store, results){
-                                if ( 'function' === typeof results ) results = results.bind(void 0, atomId);
+                        return treatDep( dep )( atomParams(true) )
+                            .map(function(upstream, atomParams, store, results){
+                                if ( 'function' === typeof results ) results = results.bind(void 0, atomParams);
                                 if ( !upstream.isInterceptor ) interceptorBus.push({upstream: upstream, scope: results}); // pushing into global depends .interceptor() 
                                 if (!upstream.depends) upstream.depends = {};
                                 upstream.depends[depName] = results;
@@ -415,12 +410,12 @@ function Atlant(){
                                 if ( !upstream.atomIds ) upstream.atomIds = [];
 
                                 if ( 'undefined' !== typeof store ) {
-                                    upstream.atomId = atomId; 
-                                    upstream.atomIds.push({ ref: upstream.ref, fn: atomId, partProvider: store.partProvider, storeData: store.storeData });
+                                    upstream.atomParams = atomParams; 
+                                    upstream.atomIds.push({ ref: upstream.ref, fn: atomParams, partProvider: store.partProvider, storeData: store.storeData });
                                 } 
 
                                 return upstream;
-                            }.bind(void 0, upstream, atomId, store))
+                            }.bind(void 0, upstream, atomParams, store))
                     })
             }
 
@@ -429,26 +424,42 @@ function Atlant(){
                     var stream = injectsGrabber.add(depName, upstream.depends[depName], injects, upstream);
 
                     if ( !stream.atoms ) stream.atoms = [];
-                    if ( !stream.atomBuses ) stream.atomBuses = [];
 
                     if ( 'undefined' !== typeof store ) {
-                        var getValue = function(ref, atomId, atomBuses, store, upstream, u ){
+                        var getValue = function( ref, atomParams, atomBuses, store, upstream, firstTime, u ){ 
                             var source = store.storeData.staticValue;
-                            var atomIdValue = atomId(true);
+                            var atomIdValue = atomParams(true);
                             var value = s.tryF(void 0, function() { return s.copy(store.partProvider(source, atomIdValue )) })()
+                            var noDehtdrotizedData = true;
+                            if(firstTime && noDehtdrotizedData) { // @TODO when dehydrotized data come, it will be available on the first time, so be carefull
+                                console.log('first get value for ', ref, IMPOSSIBLE_VALUE);
+                                return IMPOSSIBLE_VALUE;
+                            }
                             return value;
                         }
 
-                        var startWith = getValue(stream.ref, stream.atomId, stream.atomBuses, store, _.extend({}, stream)); // Initial value of the store;
-                        var atomBus = store.bus
-                                .map(function(value){ return {value:value, type:'source'} })
-                                .merge(Bacon.mergeAll(stream.atomBuses.slice()).map(function(value){ return {value:value, type:'dependency'} })) // Depending on all upper buses
-                                .map(getValue.bind(void 0, stream.ref, stream.atomId, stream.atomBuses, store, _.extend({}, stream)))
-                                .skipDuplicates(_.isEqual)
-                                .startWith(startWith)
+                        var atomId = _.uniqueId();
+                        var startWith = getValue(stream.ref, stream.atomParams, stream.atomBuses, store, _.extend({}, stream), true);// Initial value of the store;
 
-                        stream.atoms.push({ id: upstream.atomId, ref: stream.ref, store: store.storeName, atom: store.partName, bus: atomBus });
-                        stream.atomBuses.push(atomBus);
+
+
+                        var plainAtomBus = store.bus
+                                                .startWith(startWith);
+
+                        if (upstream.lastAtomBus)
+                            plainAtomBus = plainAtomBus
+                                .merge(upstream.lastAtomBus) // Depending on one upper bus (and on all upper if you know)
+
+                        plainAtomBus = plainAtomBus
+                                .map(getValue.bind(void 0, stream.ref, stream.atomParams, stream.atomBuses, store, _.extend({}, stream), false))
+
+                        // atomBus.onValue(function(store, atomId, stats, value, whenId){console.log('imthebus!:', atomId, store.storeName, stats, whenId )}.bind(void 0, store, atomId, upstream.stats, upstream.whenId))
+
+                        var atomBus = plainAtomBus
+                                .skipDuplicates(_.isEqual)
+
+                        stream.atoms.push({ id: atomId, atomParams: upstream.atomParams, ref: stream.ref, store: store.storeName, atom: store.partName, bus: atomBus, plainBus: plainAtomBus });
+                        stream.lastAtomBus = plainAtomBus;
                     } 
 
                     return stream;
@@ -694,6 +705,24 @@ function Atlant(){
 
     /* Base */
 
+    var whenStat = function(statObject, masks){
+
+        masks.forEach(function(mask){
+            mask = utils.sanitizeUrl(mask);
+            if( !(mask in statObject) ) statObject[mask] = { updatesList: [] };
+        })
+
+        return statObject;
+    }
+
+    var updateStat = function(statObject, eventKey, lastMasks){
+        lastMasks.forEach(function(mask){
+            mask = utils.sanitizeUrl(mask);
+            if(statObject.updatesList) statObject.updatesList.push(eventKey);
+        })
+        return statObject;
+    }
+
     /**
      * When
      */
@@ -704,30 +733,31 @@ function Atlant(){
         return function(masks, matchingBehaviour, whenType) {
 
             if ( -1 !== masks.indexOf('&&')) throw new Error('&& declarations not yet supported.')
-            masks = masks.split('||').map(s.trim);
+            masks = masks
+                        .split('||')
+                        .map(s.trim)
+                        .filter(function(_){ return _.length });
 
-            if ( 0 === masks.length || 1 === masks.length && '' === masks[0] ) masks = lastMasks;
-            lastMasks = masks;
+            if ( !masks.length ) throw new Error('At least one route mask should be specified.');
 
-            if ( 0 === masks.length || 1 === masks.length && '' === masks[0] ) throw new Error('At least one route mask should be specified.');
             State.first();
             TopState.first();
 
-            if (masks.filter(function(mask){ return '*' === mask}).length && whenType === WhenFinally.when) { throw new Error( 'Atlant.js: Error! You using atlant.when("*") which is prohibited. For astericks use atlant.match("*")' ); }
-
-            var name = '';
-            if (whenType === WhenFinally.finally) name = 'finally';
-            if (whenType === WhenFinally.match) name = 'match';
-            name = name + createNameFromMasks(masks) + _.uniqueId();
-
             var whenId = _.uniqueId();
-            var finallyStream = ( WhenFinally.finally !== whenType ) ? baseStreams.bus() : lastFinallyStream;
+
+            TopState.state.lastMasks = masks;
+            globalStat = whenStat(globalStat, masks);
+
+            if (masks.filter(function(mask){ return '*' === mask}).length && whenType === WhenOrMatch.when) { throw new Error( 'Atlant.js: Error! You using atlant.when("*") which is prohibited. For astericks use atlant.match("*")' ); }
+
+            var name = (whenType === WhenOrMatch.match) ? 'match' : 'when';
+            name = name + createNameFromMasks(masks) + _.uniqueId();
 
             // Allows attaching injects to .when().
             var injects = injectsGrabber.init(name, State.state);
-            var totalOfUpdates = TopState.state.totalOfUpdates;
+            var stats = TopState.state.stats;
 
-            if( WhenFinally.when === whenType || WhenFinally.finally === whenType )
+            if( WhenOrMatch.when === whenType )
                 masks.forEach(function(mask) {
                     s.push({mask: mask}, routes);
                     s.push({mask: utils.getPossiblePath(mask), redirectTo: mask}, routes);
@@ -736,94 +766,51 @@ function Atlant(){
             masks = _(masks).map(function(mask){return [mask, utils.getPossiblePath(mask)]}).flatten().value();
 
 
-            if ( WhenFinally.when === whenType || WhenFinally.match === whenType ) {
-                lastFinallyStream = finallyStream;
+            State.state.lastWhen = rootStream
+                .map( function(upstream) {
+                    var mask = _(masks)
+                                    .filter(function() { if(WhenOrMatch.match === whenType) return true; else return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched. .match() streams are immune.
+                                    .map( matchRouteLast( upstream.path, matchingBehaviour ) )
+                                    // .map(s.logIt('---matched routes!!!', upstream))
+                                    .filter( s.notEmpty )                              // empty params means fails of route identity.
+                                    .head()
 
-                State.state.lastWhen = rootStream
-                    .map( function(upstream) {
-                        var mask = _(masks)
-                                        .filter(function() { if(WhenFinally.match === whenType) return true; else return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched. .match() streams are immune.
-                                        .map( matchRouteLast( upstream.path, matchingBehaviour ) )
-                                        // .map(s.logIt('---matched routes!!!', upstream))
-                                        .filter( s.notEmpty )                              // empty params means fails of route identity.
-                                        .head()
+                        if (!mask) { 
+                            return void 0;
+                        } else { 
+                            var stream = {};
+                            stream = _.extend(stream, upstream);
+                            stream.params = mask.params;
+                            stream.route = mask.route;
+                            return stream;
+                        }
+                })
+                .filter(s.id)
+                .map(function (upstream) {
+                    upstream.whenId = whenId;
+                    upstream.route.when = masks;
+                    upstream.isFinally = false;
+                    upstream.isMatch = WhenOrMatch.match === whenType;
+                    if(activeStreamId.value === upstream.id) whenCount.value++;
 
-                            if (!mask) { 
-                                return void 0;
-                            } else { 
-                                var stream = {};
-                                stream = _.extend(stream, upstream);
-                                stream.params = mask.params;
-                                stream.route = mask.route;
-                                return stream;
-                            }
-                    })
-                    .filter(s.id)
-                    .map(function (upstream) {
-                        upstream.whenId = whenId;
-                        upstream.route.when = masks;
-                        upstream.isFinally = false;
-                        upstream.isMatch = WhenFinally.match === whenType;
-                        upstream.finallyStream = finallyStream;
-                        if(activeStreamId.value === upstream.id) whenCount.value++;
+                    upstream.stats = stats;
+                    console.log('WHEN WHEN WHEN WHEN')
 
-                        upstream.totalOfUpdates = totalOfUpdates;
-                        upstream.updates = new Bacon.Bus()
+                    // Storing here the data for actions.
+                    lastMask.push(upstream.route.mask);
 
-                        var updatesFinished = upstream.updates.scan(void 0, function(acc, sign){ 
-                            if (acc) return acc + ' ' + sign; else return sign 
-                        });
-                        updatesFinished.onValue(function(counter){ console.log('new update!', counter) })
+                    var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
+                    var depData = s.merge( params, {
+                                            location: upstream.path
+                                            ,mask: upstream.route.mask
+                                            ,masks: lastMask
+                                            ,pattern: utils.getPattern(lastMask)
+                                            ,referrer: upstream.referrer
+                    });
 
-                        // Storing here the data for actions.
-                        lastMask.push(upstream.route.mask);
-
-                        var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
-                        var depData = s.merge( params, {
-                                               location: upstream.path
-                                              ,mask: upstream.route.mask
-                                              ,masks: lastMask
-                                              ,pattern: utils.getPattern(lastMask)
-                                              ,referrer: upstream.referrer
-                        });
-
-                        var stream = injectsGrabber.add(name, depData, injects, upstream);
-                        return stream;
-                    })
-            } else { // Finally processing. Currently is not working bacause of (1)
-                lastFinallyStream = void 0;
-
-                State.state.lastWhen = rootStream
-                    .map(ups.fmap(_.extend)) // (1) is deprecated and not working
-                    .map( function(upstream) {
-                        var result = masks
-                            .map( s.compose( s.negate, matchRouteLast( upstream.path, matchingBehaviour ) ) )
-                            .reduce( function(x, y) { return x && y; }, true )
-                        return result;
-                    })
-                    .merge( finallyStream )
-                    .scan ( void 0, function(previous, current) {
-                        if ( void 0 === previous ) return current;
-
-                        var isRouteChanged = function(event){ return "boolean" === typeof event && event }
-                        var isRouteRendered = function(event){ return event.hasOwnProperty('id') } // route with declared finally tree.
-
-                        if ( isRouteRendered( previous ) && isRouteChanged( current ) ) return 'orly';
-                        else return current;
-
-                    })
-                    .filter( function(x) { return x === 'orly'; } )
-                    .map(ups.join(void 0, void 0))
-                    .map(function(upstream) {
-                        var depData = {location: upstream.path, mask: void 0, referrer: upstream.referrer};
-                        var stream = injectsGrabber.add(name, depData, injects, {});
-                        stream.isFinally = true;
-                        stream.whenId = whenId;
-                        whenCount.value++;
-                        stream.route = { whenNot: masks };
-                        return stream;
-                    })
-            }
+                    var stream = injectsGrabber.add(name, depData, injects, upstream);
+                    return stream;
+                })
 
             State.state.lastWhen = State.state.lastWhen.map( function(stream) { stream.conditionId = whenId; return stream; })
 
@@ -853,7 +840,7 @@ function Atlant(){
      * @returns {*}
      */
     var __lastWhen = function(masks) {
-        return _when.bind(this)( masks, Matching.stop, WhenFinally.when );
+        return _when.bind(this)( masks, Matching.stop, WhenOrMatch.when );
     }
 
     /**
@@ -862,15 +849,11 @@ function Atlant(){
      * @returns {*}
      */
     var __when = function(masks) {
-        return _when.bind(this)( masks, Matching.continue, WhenFinally.when );
+        return _when.bind(this)( masks, Matching.continue, WhenOrMatch.when );
     }
 
     var _match = function(masks) {
-        return _when.bind(this)( masks, Matching.continue, WhenFinally.match );
-    }
-
-    var _finally = function() {
-        return _when.bind(this)( '', Matching.continue, WhenFinally.finally );
+        return _when.bind(this)( masks, Matching.continue, WhenOrMatch.match );
     }
 
     var _otherwise = function(){ //@TODO create mixins for this
@@ -880,7 +863,7 @@ function Atlant(){
         var whenId = _.uniqueId();
         var depName = 'otherwise_' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
-        var totalOfUpdates = TopState.state.totalOfUpdates;
+        var stats = TopState.state.stats;
 
         State.state.lastWhen = otherWiseRootStream
             .map( function(upstream) {
@@ -895,7 +878,7 @@ function Atlant(){
                 stream  = _.extend(stream, injectsGrabber.add(depName, depValue, injects, upstream));
                 stream.otherwise = true;
                 stream.conditionId = whenId;
-                stream.totalOfUpdates = totalOfUpdates;
+                stream.stats = stats;
 
                 if(activeStreamId.value === stream.id) whenCount.value++;
                 l.log('---Matched otherwise!!!')
@@ -922,7 +905,7 @@ function Atlant(){
         var depName = 'action_' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
         var nameContainer = dependsName.init(depName, State.state);
-        var totalOfUpdates = TopState.state.totalOfUpdates;
+        var stats = TopState.state.stats;
 
         State.state.lastWhen = action
             .map( function(depValue) {
@@ -940,7 +923,7 @@ function Atlant(){
                 // Check if this action now active - prevents double-click
                 var stream = injectsGrabber.add(depName, depValue, injects, {});
                 stream = dependsName.add( depName, nameContainer, stream); 
-                stream.totalOfUpdates = totalOfUpdates;
+                stream.stats = stats;
 
                 stream.action = true;
                 stream.conditionId = whenId;
@@ -970,7 +953,7 @@ function Atlant(){
         var whenId = _.uniqueId();
         var depName = 'error_' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
-        var totalOfUpdates = TopState.state.totalOfUpdates;
+        var stats = TopState.state.stats;
 
         State.state.lastWhen = errorStream
             .map( function(depValue) {
@@ -985,7 +968,7 @@ function Atlant(){
 
                 stream.error = true;
                 stream.conditionId = whenId;
-                stream.totalOfUpdates = totalOfUpdates;
+                stream.stats = stats;
 
                 stream.isAction = true;
                 stream.id = _.uniqueId();
@@ -1204,7 +1187,7 @@ function Atlant(){
         var whenId = _.uniqueId();
         var depName = 'interceptor' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
-        var totalOfUpdates = TopState.state.totalOfUpdates;
+        var stats = TopState.state.stats;
 
         State.state.lastWhen = interceptorBus
             .map( function(obj) {
@@ -1219,7 +1202,7 @@ function Atlant(){
                 depValue.referrer = lastReferrer;
 
                 var stream = injectsGrabber.add(depName, depValue, injects, {});
-                stream.totalOfUpdates = totalOfUpdates;
+                stream.stats = stats;
 
                 stream.action = true;
                 stream.isInterceptor = true;
@@ -1479,7 +1462,8 @@ function Atlant(){
 
         var withs = withGrabber.init(State.state);
 
-        TopState.state.totalOfUpdates.keys.push(key);
+        TopState.state.stats.keys.push(key);
+        globalStat = updateStat(globalStat, key, TopState.state.lastMasks);
 
         var thisOp = State.state.lastOp
             .map( function(upstream){
@@ -1490,8 +1474,7 @@ function Atlant(){
                 var refsData = clientFuncs.getRefsData( upstream ); 
                 
                 var data = ( upstream.with && 'value' in upstream.with ) ? upstream.with.value( refsData ) : refsData;
-                console.log('all and mainview ', key, data)
-                upstream.updates.push(key); // counting this update
+
                 if ( key in emitStreams ) emitStreams[key].push(data);
                 else console.log("\nAtlant.js: Warning: event key" + key + " is not defined");
         });

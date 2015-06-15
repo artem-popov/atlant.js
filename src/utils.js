@@ -279,5 +279,14 @@ utils.addSlashes = function(masks){
 }
 
 
+utils.sanitizeUrl = function(url){
+    if ('' === url) throw new Error('Atlant.js: url cannot be empty')
+        var escapedRoute = url
+    .toLowerCase()
+    .replace(/\/+$/, "");  // replacing last /
+    if ('' === escapedRoute) escapedRoute = '/';
+    return escapedRoute;
+}
+
 
 module.exports = utils;
