@@ -20,7 +20,9 @@ function Atlant(){
         ,interfaces = require('./inc/interfaces')
         ,StateClass = require('./inc/state')
         ,clientFuncs = require('./inc/clientFuncs')
-        ,baseStreams = require('./inc/base-streams');
+        ,baseStreams = require('./inc/base-streams')
+        ,Stat = require('./inc/statistics');
+
 
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
@@ -58,9 +60,6 @@ function Atlant(){
             ,scrollElement: function(){ return 'undefined' !== typeof document ? document.querySelector('body') : void 0 }
 
     }
-
-    // will be AST then?
-    var globalStat = {};
 
     var injectsGrabber = new interfaces.injectsGrabber();
     var dependsName = new interfaces.dependsName();
@@ -224,7 +223,7 @@ function Atlant(){
                             // turn off all subscriptions of atoms for this view
                             if( viewSubscriptions[viewName] ) viewSubscriptionsUnsubscribe[viewName](); // finish Bus if it exists;
 
-                            if(upstream.atoms) console.log('atoms:', viewName, upstream.atoms.length, 'updates for this when:', upstream.stats);
+                            // if(upstream.atoms) console.log('atoms:', viewName, upstream.atoms.length, 'updates for this when:', upstream.stats);
 
                             // subscribe for every atom upstream to rerender view if need
                             viewSubscriptions[viewName] = baseStreams.bus();
@@ -232,14 +231,17 @@ function Atlant(){
                                 .reduce( function(bus, atom) {
                                     var putInfo = function(pushedValue){  // When data arrived, get info from static scope of atom details
                                             var stream = Object.create(null);
+                                            // console.log('atom:', atom)
                                             stream.value = pushedValue;
                                             stream.name = atom.atom;
                                             stream.store = atom.store;
                                             stream.ref = atom.ref;
+                                            stream.that = atom.that;
+                                            // stream.that.overWeight++;
                                             return stream;
                                     };
                                     return bus.
-                                            merge( atom.bus.map(putInfo) ); // these buses are not merged: we don't need to wait for all of them to continue
+                                            merge( atom.plainBus.map(putInfo) ); // these buses are not merged: we don't need to wait for all of them to continue
                                 }, viewSubscriptions[viewName])
 
                             var renderIntoView = function(scope, isAtom) {
@@ -272,17 +274,21 @@ function Atlant(){
 
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ 
-                                // if( atom.value !== IMPOSSIBLE_VALUE ){
+                                if( !atom.that.next ) {
+                                    // atom.that.overWeight--; 
+                                    // if ( 1 === atom.that.overWeight )
+                                        console.log('atom:', viewName, atom.that, atom.value) 
+                                }
+                                if( atom.value !== IMPOSSIBLE_VALUE ){
                                     var data = scope();
                                     if ( !_.isEqual(data, viewData[viewName] ) ) {
                                         viewData[viewName] = scope();
-                                        console.log('updating view...', viewName)
+                                        console.log('updating view...', viewName, atom)
                                         return renderIntoView(data, true) // Here we using scope updated from store!
                                     } else {
                                         console.log('canceled render due the same data', viewName)
                                     }
-                                    
-                                // }
+                                }
                             });
 
                         }
@@ -426,7 +432,7 @@ function Atlant(){
                     if ( !stream.atoms ) stream.atoms = [];
 
                     if ( 'undefined' !== typeof store ) {
-                        var getValue = function( ref, atomParams, atomBuses, store, upstream, firstTime, u ){ 
+                        var getValue = function( ref, atomParams, store, upstream, firstTime, u ){ 
                             var source = store.storeData.staticValue;
                             var atomIdValue = atomParams(true);
                             var value = s.tryF(void 0, function() { return s.copy(store.partProvider(source, atomIdValue )) })()
@@ -439,27 +445,56 @@ function Atlant(){
                         }
 
                         var atomId = _.uniqueId();
-                        var startWith = getValue(stream.ref, stream.atomParams, stream.atomBuses, store, _.extend({}, stream), true);// Initial value of the store;
+                        var startWith = getValue(stream.ref, stream.atomParams, store, _.extend({}, stream), true);// Initial value of the store;
 
 
+                        // Creating plainAtomBus: it's not skipping duplicates.
+                        var plainAtomBus = (function(){
+                            var plainAtomBus = store.bus;
 
-                        var plainAtomBus = store.bus
-                                                .startWith(startWith);
+                            if (upstream.lastAtom)
+                                plainAtomBus = plainAtomBus
+                                    .merge(upstream.lastAtom.plainBus) // Depending on one upper bus (and on all upper if you know)
 
-                        if (upstream.lastAtomBus)
-                            plainAtomBus = plainAtomBus
-                                .merge(upstream.lastAtomBus) // Depending on one upper bus (and on all upper if you know)
+                            return plainAtomBus
+                                    .map(getValue.bind(void 0, stream.ref, stream.atomParams, store, _.extend({}, stream), false))
+                        })();
 
-                        plainAtomBus = plainAtomBus
-                                .map(getValue.bind(void 0, stream.ref, stream.atomParams, stream.atomBuses, store, _.extend({}, stream), false))
+
+                        // Creating atomBus // @TODO: Not used actually
+                        var atomBus = (function(){
+                            var atomBus = store.bus.startWith(startWith);
+
+                            if (upstream.lastAtom)
+                                atomBus = atomBus
+                                    .merge(upstream.lastAtom.bus) // Depending on one upper bus (and on all upper if you know)
+
+                            return atomBus
+                                    .map(getValue.bind(void 0, stream.ref, stream.atomParams, store, _.extend({}, stream), false))
+                                    .skipDuplicates(_.isEqual)
+                        })()
 
                         // atomBus.onValue(function(store, atomId, stats, value, whenId){console.log('imthebus!:', atomId, store.storeName, stats, whenId )}.bind(void 0, store, atomId, upstream.stats, upstream.whenId))
 
-                        var atomBus = plainAtomBus
-                                .skipDuplicates(_.isEqual)
 
-                        stream.atoms.push({ id: atomId, atomParams: upstream.atomParams, ref: stream.ref, store: store.storeName, atom: store.partName, bus: atomBus, plainBus: plainAtomBus });
-                        stream.lastAtomBus = plainAtomBus;
+                        var weight = statistics.getWeight(upstream.path, store.storeName);
+                        var overWeight = weight + (upstream.lastAtom ? upstream.lastAtom.overWeight : 0);
+                        
+                        var atom = { id: atomId
+                                        ,atomParams: upstream.atomParams
+                                        ,ref: stream.ref
+                                        ,store: store.storeName
+                                        ,atom: store.partName
+                                        ,bus: atomBus
+                                        ,plainBus: plainAtomBus
+                                        ,weight: weight 
+                                        ,overWeight: overWeight // sum previous
+                                        ,prev: upstream.lastAtom
+                        };
+                        stream.atoms.push(atom);
+                        if(stream.lastAtom) stream.lastAtom.next = atom;
+                        atom.that = atom;
+                        stream.lastAtom = atom;
                     } 
 
                     return stream;
@@ -705,23 +740,7 @@ function Atlant(){
 
     /* Base */
 
-    var whenStat = function(statObject, masks){
-
-        masks.forEach(function(mask){
-            mask = utils.sanitizeUrl(mask);
-            if( !(mask in statObject) ) statObject[mask] = { updatesList: [] };
-        })
-
-        return statObject;
-    }
-
-    var updateStat = function(statObject, eventKey, lastMasks){
-        lastMasks.forEach(function(mask){
-            mask = utils.sanitizeUrl(mask);
-            if(statObject.updatesList) statObject.updatesList.push(eventKey);
-        })
-        return statObject;
-    }
+    var statistics = new Stat();
 
     /**
      * When
@@ -746,7 +765,7 @@ function Atlant(){
             var whenId = _.uniqueId();
 
             TopState.state.lastMasks = masks;
-            globalStat = whenStat(globalStat, masks);
+            statistics.whenStat(masks);
 
             if (masks.filter(function(mask){ return '*' === mask}).length && whenType === WhenOrMatch.when) { throw new Error( 'Atlant.js: Error! You using atlant.when("*") which is prohibited. For astericks use atlant.match("*")' ); }
 
@@ -794,7 +813,6 @@ function Atlant(){
                     if(activeStreamId.value === upstream.id) whenCount.value++;
 
                     upstream.stats = stats;
-                    console.log('WHEN WHEN WHEN WHEN')
 
                     // Storing here the data for actions.
                     lastMask.push(upstream.route.mask);
@@ -1340,35 +1358,12 @@ function Atlant(){
             console.error('Atlant.js: no window object...')
     }
 
-    var _test = function(path, mask){
-        if ( !path || !mask ) return false;
+    var _destroy = function() {
+        baseStreams.destroy(); 
+        baseStreams = null;
 
-        return null !== utils.matchRoute(path, mask)
-    }
-
-    var _testAll = function(path, masks){
-        if ( !path || !masks || 0 === masks.length) return false;
-
-        return utils.addSlashes(masks)
-            .map(_test.bind(void 0, path))
-            .reduce( function(v, i) { return v || i }, false)
-    }
-
-    var _parse = function(path, mask){
-        if ( !path || !mask ) return {};
-
-        var params = utils.matchRoute(path, mask);
-        var parsed = utils.parseURL( path );
-        var searches = _.clone( utils.parseSearch(parsed.search), true); // add search params
-        return _.extend(searches, params);
-    }
-
-    var _parseAll = function(path, masks){
-        if ( !path || !masks || 0 === masks.length) return {};
-
-        return utils.addSlashes(masks)
-            .map(_parse.bind(void 0, path))
-            .reduce( function(v, i) { return _.merge(v, i) }, {})
+        s = l = simpleRender = reactRender = utils = Counter = Bacon = _ = interfaces = StateClass = clientFuncs =  baseStreams = safeGoToCopy = null;// @TODO more
+        return 
     }
 
 
@@ -1426,6 +1421,7 @@ function Atlant(){
         if ( updaterName in stores[storeName].updaters ) { throw new Error("Cannot reimplement updater ", updaterName, " in store ", storeName)}
 
         stores[storeName].updaters[updaterName] = updater;
+        statistics.putLink(storeName, updaterName);
 
         if( !(updaterName in emitStreams ) ) emitStreams[updaterName] = baseStreams.bus();
         
@@ -1463,7 +1459,7 @@ function Atlant(){
         var withs = withGrabber.init(State.state);
 
         TopState.state.stats.keys.push(key);
-        globalStat = updateStat(globalStat, key, TopState.state.lastMasks);
+        if (TopState.state.lastMasks) statistics.updateStat(key, TopState.state.lastMasks);  // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
 
         var thisOp = State.state.lastOp
             .map( function(upstream){
@@ -1699,23 +1695,12 @@ function Atlant(){
     this.version = require('./atlant-version');
     // Returns timestamp of the creation time
     this.build = require('./atlant-build');
-    this.utils = {
-        // test :: path -> mask -> Bool
-        test: _test
-        // testAll :: path -> [mask] -> Bool
-        ,testAll: _testAll
-        // parse :: path -> mask -> {params}
-        ,parse: _parse
-        // parseAll :: path -> [mask] -> {params}
-        ,parseAll: _parseAll
-        ,destroy: function() {
-            baseStreams.destroy(); 
-            baseStreams = null;
 
-            s = l = simpleRender = reactRender = utils = Counter = Bacon = _ = interfaces = StateClass = clientFuncs =  baseStreams = safeGoToCopy = null;// @TODO more
-            return 
-        }
-    };
+    this.destroy = _destroy;
+
+    this.utils = require('./inc/tools'); // @TODO: rename to 'tools'
+
+
     this.data = {
         get routes() { return _(routes) 
             .map( function(route){ return route.mask } )
@@ -1735,7 +1720,6 @@ function Atlant(){
     this.redirectTo = _redirectTo;
     // Will hard redirect to param url (page will be reloaded by browser)
     this.moveTo = _moveTo;
-
 
     return this;
 
