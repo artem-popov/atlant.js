@@ -95,8 +95,6 @@ function Atlant(){
         ,continue: _.uniqueId()
     }
 
-    var IMPOSSIBLE_VALUE = 'impossibleValue' + _.uniqueId();
-
     var RenderOperation = {
         render: parseInt(_.uniqueId())
         ,draw: parseInt(_.uniqueId())
@@ -225,29 +223,31 @@ function Atlant(){
 
                             // if(upstream.atoms) console.log('atoms:', viewName, upstream.atoms.length, 'updates for this when:', upstream.stats);
 
-                            // subscribe for every atom upstream to rerender view if need
-                            viewSubscriptions[viewName] = baseStreams.bus();
-                            viewSubscriptions[viewName] = _(upstream.atoms) // Add all atoms into this view stream
-                                .reduce( function(bus, atom) {
-                                    var putInfo = function(pushedValue){  // When data arrived, get info from static scope of atom details
-                                            var stream = Object.create(null);
-                                            // console.log('atom:', atom)
-                                            stream.value = pushedValue;
-                                            stream.name = atom.atom;
-                                            stream.store = atom.store;
-                                            stream.ref = atom.ref;
-                                            stream.that = atom.that;
-                                            // stream.that.overWeight++;
-                                            return stream;
-                                    };
-                                    return bus.
-                                            merge( atom.plainBus.map(putInfo) ); // these buses are not merged: we don't need to wait for all of them to continue
-                                }, viewSubscriptions[viewName])
+                            // console.log('atom:', viewName, ' count:', upstream.atoms)
+                            var putInfo = function(atom, pushedValue){  // When data arrived, get info from static scope of atom details
+                                    var stream = Object.create(null);
+                                    stream.value = pushedValue;
+                                    stream.name = atom.atom;
+                                    stream.store = atom.store;
+                                    stream.ref = atom.ref;
+                                    stream.that = atom.that;
+                                    return stream;
+                            };
+
+                            // Bacon.mergeAll(_(upstream.atoms).map(function(_){return _.bus}).value()).onValue(function(value){console.log('bugaga:', viewName, value)}) 
+
+                            var lastAtom = _(upstream.atoms) // Subscribing this view for last atom (because last is subscribed to change of his "parent" (upper) atom, parent atom subscribed to his parent and so on.)
+                                .filter( function(atom) {
+                                    return void 0 === atom.next
+                                })
+                                .head();
+
+                            viewSubscriptions[viewName] = lastAtom ? lastAtom.bus.map(putInfo.bind(this, lastAtom)) : Bacon.never(); 
 
                             var renderIntoView = function(scope, isAtom) {
                                 var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
                                 // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
-                                renderD(viewProvider, upstream, activeStreamId, viewName, scope)
+                                return renderD(viewProvider, upstream, activeStreamId, viewName, scope)
                                     .then(function(_){
                                         // @TODO make it better
                                         // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
@@ -274,22 +274,19 @@ function Atlant(){
 
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ 
-                                if( !atom.that.next ) {
-                                    // atom.that.overWeight--; 
-                                    // if ( 1 === atom.that.overWeight )
-                                        console.log('atom:', viewName, atom.that, atom.value) 
-                                }
-                                if( atom.value !== IMPOSSIBLE_VALUE ){
-                                    var data = scope();
-                                    if ( !_.isEqual(data, viewData[viewName] ) ) {
-                                        viewData[viewName] = scope();
-                                        console.log('updating view...', viewName, atom)
-                                        return renderIntoView(data, true) // Here we using scope updated from store!
-                                    } else {
-                                        console.log('canceled render due the same data', viewName)
-                                    }
+                                console.log('atom:', viewName, atom.that, atom.value ) 
+                                var data = scope();
+                                if ( !_.isEqual(data, viewData[viewName] ) ) {
+                                    viewData[viewName] = scope();
+                                    console.log('updating view...', viewName, atom)
+                                    return renderIntoView(data, true) // Here we using scope updated from store!
+                                } else {
+                                    console.log('canceled render due the same data', viewName)
                                 }
                             });
+
+                            var data = scope();
+                            return renderIntoView(data, false) // Here we using scope updated from store!
 
                         }
 
@@ -436,43 +433,34 @@ function Atlant(){
                             var source = store.storeData.staticValue;
                             var atomIdValue = atomParams(true);
                             var value = s.tryF(void 0, function() { return s.copy(store.partProvider(source, atomIdValue )) })()
-                            var noDehtdrotizedData = true;
-                            if(firstTime && noDehtdrotizedData) { // @TODO when dehydrotized data come, it will be available on the first time, so be carefull
-                                console.log('first get value for ', ref, IMPOSSIBLE_VALUE);
-                                return IMPOSSIBLE_VALUE;
-                            }
+                            var noDehydrotizedData = true;
                             return value;
+                        }
+                        var push = function(name, _){
+                            var o = {};
+                            o[name] = _;
+                            return o;
                         }
 
                         var atomId = _.uniqueId();
-                        var startWith = getValue(stream.ref, stream.atomParams, store, _.extend({}, stream), true);// Initial value of the store;
 
-
-                        // Creating plainAtomBus: it's not skipping duplicates.
-                        var plainAtomBus = (function(){
-                            var plainAtomBus = store.bus;
+                        var bus = (function(){
+                            var bus = store.bus
+                                .map(
+                                    _.compose(
+                                        push.bind(void 0, "own")
+                                        ,getValue.bind(void 0, stream.ref, stream.atomParams, store, _.extend({}, stream), false)
+                                    )
+                                )
 
                             if (upstream.lastAtom)
-                                plainAtomBus = plainAtomBus
-                                    .merge(upstream.lastAtom.plainBus) // Depending on one upper bus (and on all upper if you know)
+                                bus = bus
+                                    .merge(upstream.lastAtom.bus.map(push.bind(void 0, 'inherited'))) // Depending on one upper bus (and on all upper if you know)
 
-                            return plainAtomBus
-                                    .map(getValue.bind(void 0, stream.ref, stream.atomParams, store, _.extend({}, stream), false))
+                            return bus
+                                    
                         })();
 
-
-                        // Creating atomBus // @TODO: Not used actually
-                        var atomBus = (function(){
-                            var atomBus = store.bus.startWith(startWith);
-
-                            if (upstream.lastAtom)
-                                atomBus = atomBus
-                                    .merge(upstream.lastAtom.bus) // Depending on one upper bus (and on all upper if you know)
-
-                            return atomBus
-                                    .map(getValue.bind(void 0, stream.ref, stream.atomParams, store, _.extend({}, stream), false))
-                                    .skipDuplicates(_.isEqual)
-                        })()
 
                         // atomBus.onValue(function(store, atomId, stats, value, whenId){console.log('imthebus!:', atomId, store.storeName, stats, whenId )}.bind(void 0, store, atomId, upstream.stats, upstream.whenId))
 
@@ -485,8 +473,7 @@ function Atlant(){
                                         ,ref: stream.ref
                                         ,store: store.storeName
                                         ,atom: store.partName
-                                        ,bus: atomBus
-                                        ,plainBus: plainAtomBus
+                                        ,bus: bus
                                         ,weight: weight 
                                         ,overWeight: overWeight // sum previous
                                         ,prev: upstream.lastAtom
@@ -534,6 +521,7 @@ function Atlant(){
             State.state.lastDep = thisDep;
             State.state.lastDepName = depName;
             State.state.lastOp = State.state.lastDep;
+            // State.state.finalOp = State.state.finalOp.zip(State.state.lastOp, function(x,y){return y});
 
             return this;
         };
@@ -847,6 +835,7 @@ function Atlant(){
             State.state.lastOp = State.state.lastWhen;
             State.state.lastConditionId = whenId;
             State.state.lastWhenType = 'when';
+            // State.state.finalOp = State.state.lastOp;
 
             return this;
         };
@@ -909,6 +898,7 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastConditionId = whenId;
         State.state.lastWhenType = 'otherwise';
+        // State.state.finalOp = State.state.lastOp;
 
         return this;
 
@@ -959,6 +949,7 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastWhenType = 'action';
         State.state.lastConditionId = whenId;
+        // State.state.finalOp = State.state.lastOp;
 
         return this;
 
@@ -1002,6 +993,7 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastConditionId = whenId;
         State.state.lastWhenType = 'error';
+        // State.state.finalOp = State.state.lastOp;
 
         return this;
     };
@@ -1057,6 +1049,7 @@ function Atlant(){
         State.state.lastIf = thisIf;
         State.state.lastOp = State.state.lastIf;
         State.state.lastConditionId = ifId;
+        // State.state.finalOp = State.state.finalOp.zip(State.state.lastOp, function(x,y){return y});
 
         return this;
     }
@@ -1170,34 +1163,6 @@ function Atlant(){
         return this;
     }
 
-    /**
-     * Just action. receives upstream, do not return it.
-     */
-    var _do = function(actionProvider) {
-        if ( ! State.state.lastOp ) throw new Error('"do" should nest something');
-        s.type(actionProvider, 'function');
-        var doId = _.uniqueId();
-
-        var thisDo = State.state.lastOp
-            .flatMap( function(upstream) {
-                try{
-                    var scope = clientFuncs.createScope(upstream)
-                    var result = actionProvider(scope);
-                    if ( s.isPromise( result ) ){
-                        return result.then( function() { return upstream; } ).catch( clientFuncs.catchError );
-                    } else {
-                        return upstream;
-                    }
-                } catch(e){
-                    console.error(e.message, e.stack)
-                }
-            }.bind(this));
-
-        State.state.lastOp = thisDo;
-
-        return this;
-    }
-
     var _interceptor = function(){
         State.first();
         TopState.first();
@@ -1239,6 +1204,7 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastWhenType = 'action';
         State.state.lastConditionId = whenId;
+        // State.state.finalOp = State.state.lastOp;
 
         return this;
 
@@ -1319,21 +1285,8 @@ function Atlant(){
         return this;
     }
 
-    var _log = function() {
-        var arr = s.a2a(arguments).slice();
-        var action = s.reduce( function( fn, argument) { return fn.bind(console, argument); }, console.log.bind(console, arr.shift() ));
-        _do.call(this, action(arr));
-        return this;
-    }
-
     var _stringify = function(fn, options) {
         return prefs.render.stringify('root', options );
-    }
-
-    var _get = function(fn) {
-        prefs.get = fn;
-        prefs.getOpts = options;
-        return this;
     }
 
     var _await = function(shouldAWait) {
@@ -1406,7 +1359,7 @@ function Atlant(){
             }
 
             return newState 
-        }).changes();  
+        }).toEventStream();  
 
         baseStreams.onValue(stores[storeName].bus, function() {});
 
@@ -1427,6 +1380,7 @@ function Atlant(){
         
         baseStreams.onValue(emitStreams[updaterName], function(scope){
             stores[storeName].updater.push( function(state){ 
+                console.log('updating!', updaterName, storeName)
                 try{ 
                     var newVal = updater( state, scope);
                     return void 0 === newVal ? void 0 : s.copy(newVal) }
@@ -1466,6 +1420,11 @@ function Atlant(){
                 return withGrabber.add(withs, upstream)
             })
 
+        // var updateCallback;
+        // State.state.lastOp = Bacon.fromCallback(function(callback) {
+        //     updateCallback = callback;
+        // });
+
         baseStreams.onValue( thisOp, function(upstream) { 
                 var refsData = clientFuncs.getRefsData( upstream ); 
                 
@@ -1473,10 +1432,25 @@ function Atlant(){
 
                 if ( key in emitStreams ) emitStreams[key].push(data);
                 else console.log("\nAtlant.js: Warning: event key" + key + " is not defined");
+
+                // updateCallback();
         });
 
+        // State.state.finalOp = State.state.finalOp.zip(State.state.lastOp, function(x,y){return y});
 
         return this;
+    }
+
+    var _log = function() {
+        return _depends.bind(this)( function(){
+            return function(id){
+                try{
+                    console.log('haha', id) 
+                } catch(e) {
+                    return void 0;
+                }
+            }
+        }, Depends.continue );
     }
 
     var _select = function(dependsBehaviour, partName, storeName) {
