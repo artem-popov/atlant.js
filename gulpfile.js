@@ -10,7 +10,7 @@ var browserify = require('browserify')
     ,fs = require('fs')
     ,serveStatic = require('serve-static')
     ,Promise = require('promise')
-    ,sweetify = require('sweetify')
+    ,babel = require("gulp-babel");
 
 var browOpt = {standalone: 'atlant'};
 var dest = 'lib/';

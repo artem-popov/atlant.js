@@ -44,12 +44,15 @@ function Atlant(){
     var stores = {}
     var emitStreams = {};
 
+    var statistics = new Stat();
+
+    var activeRenderEnd;
+
     var viewSubscriptions = {};
     var viewSubscriptionsUnsubscribe = {};
     var savedViewScope = {};
 
     var activeStreamId = { value: void 0 }; // Used to store active stream id. If route changed again then we need something to compare with current id and cancel our current stream if it is obsolete.
-    var lastCondition;
     var lastFinallyStream;
     var prefs = {
             parentOf: {}
@@ -296,13 +299,18 @@ function Atlant(){
             });
         };
 
-        return function() {
+        return function() { 
             if ( isRenderApplyed ) return;
 
             isRenderApplyed = true
-            for(var viewName in renders) {
+            console.time('assign renders')
+            var count = 0;
+            for(var viewName in renders) { //@TODO assign only those streams and for those views which are existent on this route
+                count+=renders[viewName].length;
                 s.map(assignRender, renders[viewName]);
             }
+            console.timeEnd('assign renders')
+            console.log('assign renders to:', count, 'streams')
 
         };
     }();
@@ -521,7 +529,6 @@ function Atlant(){
             State.state.lastDep = thisDep;
             State.state.lastDepName = depName;
             State.state.lastOp = State.state.lastDep;
-            // State.state.finalOp = State.state.finalOp.zip(State.state.lastOp, function(x,y){return y});
 
             return this;
         };
@@ -707,9 +714,15 @@ function Atlant(){
         ,actions: {}
     }
 
+    var assignRenderEnd = function(stream){
+        console.log('subscribed to render end')
+        activeRenderEnd = stream.onValue(function(_){ console.log('WE ARE HERE!!!!!') })
+    }
+
     var rootStream = Bacon.fromBinder(function(sink) {
             baseStreams.onValue(routeChangedStream, function(_) {
                 assignRenders();
+                assignRenderEnd(statistics.getFinalOpByUrl(_.path));
                 sink(_);
             });
         })
@@ -728,7 +741,6 @@ function Atlant(){
 
     /* Base */
 
-    var statistics = new Stat();
 
     /**
      * When
@@ -753,7 +765,6 @@ function Atlant(){
             var whenId = _.uniqueId();
 
             TopState.state.lastMasks = masks;
-            statistics.whenStat(masks);
 
             if (masks.filter(function(mask){ return '*' === mask}).length && whenType === WhenOrMatch.when) { throw new Error( 'Atlant.js: Error! You using atlant.when("*") which is prohibited. For astericks use atlant.match("*")' ); }
 
@@ -835,7 +846,7 @@ function Atlant(){
             State.state.lastOp = State.state.lastWhen;
             State.state.lastConditionId = whenId;
             State.state.lastWhenType = 'when';
-            // State.state.finalOp = State.state.lastOp;
+            statistics.whenStat({ masks: TopState.state.lastMasks });
 
             return this;
         };
@@ -898,7 +909,9 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastConditionId = whenId;
         State.state.lastWhenType = 'otherwise';
-        // State.state.finalOp = State.state.lastOp;
+        TopState.state.lastAction = 'otherwise'        
+
+        statistics.whenStat({ masks: [TopState.state.lastAction] });
 
         return this;
 
@@ -949,7 +962,8 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastWhenType = 'action';
         State.state.lastConditionId = whenId;
-        // State.state.finalOp = State.state.lastOp;
+        TopState.state.lastAction = depName
+        statistics.whenStat({ masks: [TopState.state.lastAction] });
 
         return this;
 
@@ -993,7 +1007,8 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastConditionId = whenId;
         State.state.lastWhenType = 'error';
-        // State.state.finalOp = State.state.lastOp;
+        TopState.state.lastAction = 'error';
+        statistics.whenStat({ masks: [TopState.state.lastAction] });
 
         return this;
     };
@@ -1003,19 +1018,19 @@ function Atlant(){
      * Adds filter into dependency/when
      * @param fn
      */
-    var _if = function(boolTransform, fn) {
+    var _if = function(boolTransform, condition) {
         s.type(boolTransform, 'function');
+        s.type(condition, 'function');
 
-        var oldFn = fn;
-        fn = s.compose(boolTransform, fn);
+        var fn = s.compose(boolTransform, condition);
+        var fnNegate = s.compose(s.negate, boolTransform, condition);
 
         if ( ! State.state.lastOp ) { throw new Error('"if" should nest something.'); }
 
         State.divide();
         var ifId = _.uniqueId();
 
-        var isElse = (lastCondition === fn && lastCondition !== void 0);
-        var depName = isElse ? 'else_' : 'if_' + _.uniqueId();
+        var depName = 'if_' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
 
         var thisIf = State.state.lastOp
@@ -1034,36 +1049,49 @@ function Atlant(){
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
 
                 if ( !upstream.isAction && activeStreamId.value === upstream.id ) whenCount.value++; // increasing counter only if this stream is not yet obsolete
-                if( isElse)
-                    l.log('---Matched else!!!')
-                else
-                    l.log('---Matched if!!!')
-
-                l.log('---condition: (', oldFn, ')(scope) === ', true)
 
                 stream.conditionId = ifId;
                 return stream;
             })
 
-        if(!isElse) lastCondition = fn;
+        var thisIfNegate = State.state.lastOp  // @TODO copy paste!
+            .map( function(u){ return _.extend( {}, u) } )
+            .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
+            .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
+            .map( function(_){ if ( activeStreamId.value !== _.id ) { console.log('NONSTOP')} return _ } ) // stayed here for debuggind purposes
+            .map(function(upstream){
+                var scope = clientFuncs.createScope(upstream);
+                var checkCondition = s.compose(clientFuncs.applyScopeD, s.tryD)(fnNegate);
+                if ( checkCondition(scope) ) return upstream;
+                else return void 0;
+            })
+            .filter( s.id )
+            .map( function(upstream) {
+                var stream = injectsGrabber.add(depName, {}, injects, upstream);
+
+                console.log('SHOULD CANCEL SUCH UPDATES:', statistics.getUpdatesByIfId(ifId))
+
+                stream.conditionId = ifId;
+                return stream;
+            })
+
         State.state.lastIf = thisIf;
         State.state.lastOp = State.state.lastIf;
         State.state.lastConditionId = ifId;
-        // State.state.finalOp = State.state.finalOp.zip(State.state.lastOp, function(x,y){return y});
+        State.state.lastIfId = ifId;
 
+        statistics.whenStat({
+            ifId: State.state.lastIfId
+            ,masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction]
+        });  // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
         return this;
     }
 
-    var _else = function() {
-        if ( !lastCondition ) { throw new Error('"else" should follow if')}
-        var fn = lastCondition;
-        lastCondition = void 0;
-        _if( s.negate.bind(this,fn) );
-        return this
-    }
-
     var _end = function() {
-        if (void 0 !== State.state.lastIf) State.rollback();
+        if (void 0 !== State.state.lastIf) {
+            State.rollback(); 
+        }
+
         return this
     }
 
@@ -1149,7 +1177,9 @@ function Atlant(){
             if ( ! renders[viewName] ) renders[viewName] = [];
             renders[viewName].push(thisRender);
 
-            if (void 0 !== State.state.lastIf && renderOperation !== RenderOperation.draw) State.rollback();
+            if (void 0 !== State.state.lastIf && renderOperation !== RenderOperation.draw){ 
+                State.rollback();
+            }
 
             return this;
     };
@@ -1204,7 +1234,8 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastWhenType = 'action';
         State.state.lastConditionId = whenId;
-        // State.state.finalOp = State.state.lastOp;
+        TopState.state.lastAction = 'interceptor';
+        statistics.whenStat({ masks: [TopState.state.lastAction] });
 
         return this;
 
@@ -1412,18 +1443,16 @@ function Atlant(){
 
         var withs = withGrabber.init(State.state);
 
-        TopState.state.stats.keys.push(key);
-        if (TopState.state.lastMasks) statistics.updateStat(key, TopState.state.lastMasks);  // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
 
         var thisOp = State.state.lastOp
             .map( function(upstream){
                 return withGrabber.add(withs, upstream)
             })
 
-        // var updateCallback;
-        // State.state.lastOp = Bacon.fromCallback(function(callback) {
-        //     updateCallback = callback;
-        // });
+        var updateCallback;
+        State.state.lastOp = Bacon.fromCallback(function(callback) {
+            updateCallback = callback;
+        });
 
         baseStreams.onValue( thisOp, function(upstream) { 
                 var refsData = clientFuncs.getRefsData( upstream ); 
@@ -1436,7 +1465,12 @@ function Atlant(){
                 // updateCallback();
         });
 
-        // State.state.finalOp = State.state.finalOp.zip(State.state.lastOp, function(x,y){return y});
+        TopState.state.stats.keys.push(key);
+        statistics.whenStat({
+            eventKey: key
+            ,ifId: State.state.lastIfId
+            ,masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction]
+        });  // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
 
         return this;
     }
@@ -1567,6 +1601,7 @@ function Atlant(){
     // Creates new branch if computated callback is true. Warning: the parent branch will be executed still. Render it with .nope() if no render should happend.
     this.if = _if.bind(this, s.id);
     this.unless =  _if.bind(this, s.negate);
+    this.end = _end;
 
     /**
      * Renders declaratins

@@ -15,22 +15,65 @@ var Stat = function(){
 
     if('undefined' !== typeof window) window.statObject = statObject; //@TODO debug information
 
-    this.whenStat = function(masks){
+    this.whenStat = function(params){
+        var masks = params.masks
+            ,eventKey = params.eventKey
+            ,ifId = params.ifId
 
         masks.forEach(function(mask){
             mask = utils.sanitizeUrl(mask);
-            if( !(mask in statObject) ) statObject[mask] = { updatesList: [] };
+
+            if( !(mask in statObject) ) { 
+                statObject[mask] = { updatesList: [], lastOp: [], ifList: {} }
+            }
+
+            if (ifId) { 
+                statObject[mask].ifList[ifId] = {updatesList: []}
+            }
+
+            if(eventKey && ifId) statObject[mask].ifList[ifId].updatesList.push(eventKey);
+            if(eventKey) statObject[mask].updatesList.push(eventKey);
+
         })
 
         return statObject;
     }
 
-    this.updateStat = function(eventKey, lastMasks){
-        lastMasks.forEach(function(mask){
-            mask = utils.sanitizeUrl(mask);
-            if(statObject[mask].updatesList) statObject[mask].updatesList.push(eventKey);
-        })
-        return statObject;
+    var getAllExceptAsterisk = function(statObject){
+        return Object.keys(statObject).filter( function(_){ return '*' !== _ } )
+    }
+
+    this.getFinalOpByUrl = function(url){
+        var stream, streams = [];
+
+        if( '*' in statObject ) streams.push(statObject['*'].finalOp);
+
+        stream = Bacon.combineAsArray(
+                tools
+                    .returnAll(url, getAllExceptAsterisk(statObject) )
+                    .map(function(_){ return statObject[_].finalOp })
+                    .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
+                    .concat(streams)
+        )
+
+        return stream;
+    }
+
+    this.getUpdatesByUrlAndIfId = function(url, ifId){
+        var updates = [];
+
+
+        updates = tools
+            .returnAll(url, getAllExceptAsterisk(statObject) )
+            .map(function(_){ return statObject[_].ifList[ifId].updatesList })
+
+        return updates;
+    }
+
+    this.beginIf = function(ifId){
+    }
+
+    this.endIf = function(ifId){
     }
 
     var getStoreWeights = _.memoize(function(url){
@@ -39,7 +82,7 @@ var Stat = function(){
         if( '*' in statObject ) weights = weights.concat(statObject['*'].updatesList);
 
         weights = tools
-            .returnAll(url, Object.keys(statObject).filter( function(_){ return '*' !== _ } ))
+            .returnAll(url, getAllExceptAsterisk(statObject) )
             .map(function(_){ return statObject[_].updatesList })
             .concat(weights)
             .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
@@ -56,7 +99,7 @@ var Stat = function(){
         return (storeName in weights) ? weights[storeName] : 0;
     }
 
-    this.putLink = function(storeName, eventName){
+    this.putLink = function(storeName, eventName) {
         if (!(eventName in storeByEvent)) storeByEvent[eventName] = [];
         storeByEvent[eventName].push(storeName);
     }
