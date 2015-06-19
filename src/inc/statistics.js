@@ -19,6 +19,7 @@ var Stat = function(){
         var masks = params.masks
             ,eventKey = params.eventKey
             ,ifId = params.ifId
+            ,ifIds = params.ifIds
 
         masks.forEach(function(mask){
             mask = utils.sanitizeUrl(mask);
@@ -31,7 +32,9 @@ var Stat = function(){
                 statObject[mask].ifList[ifId] = {updatesList: []}
             }
 
-            if(eventKey && ifId) statObject[mask].ifList[ifId].updatesList.push(eventKey);
+            if(eventKey && ifIds) ifIds.forEach(function(ifId) { 
+                statObject[mask].ifList[ifId].updatesList.push(eventKey);
+            })
             if(eventKey) statObject[mask].updatesList.push(eventKey);
 
         })
@@ -60,14 +63,12 @@ var Stat = function(){
     }
 
     this.getUpdatesByUrlAndIfId = function(url, ifId){
-        var updates = [];
 
-
-        updates = tools
+        return tools
             .returnAll(url, getAllExceptAsterisk(statObject) )
-            .map(function(_){ return statObject[_].ifList[ifId].updatesList })
+            .map(function(_){ return (ifId in statObject[_].ifList) ? statObject[_].ifList[ifId].updatesList : [] })
+            .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
 
-        return updates;
     }
 
     this.beginIf = function(ifId){

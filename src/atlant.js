@@ -1033,55 +1033,52 @@ function Atlant(){
         var depName = 'if_' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
 
-        var thisIf = State.state.lastOp
+        var thisCommonIf = State.state.lastOp
             .map( function(u){ return _.extend( {}, u) } )
             .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
             .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
             .map( function(_){ if ( activeStreamId.value !== _.id ) { console.log('NONSTOP')} return _ } ) // stayed here for debuggind purposes
-            .map(function(upstream){
+
+
+        var thisIf = thisCommonIf
+            .map(function(ifId, fn, condition, upstream){
                 var scope = clientFuncs.createScope(upstream);
                 var checkCondition = s.compose(clientFuncs.applyScopeD, s.tryD)(fn);
                 if ( checkCondition(scope) ) return upstream;
                 else return void 0;
-            })
+            }.bind(void 0, ifId, fn, condition))
             .filter( s.id )
-            .map( function(upstream) {
+            .map( function(ifId, upstream) {
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
 
                 if ( !upstream.isAction && activeStreamId.value === upstream.id ) whenCount.value++; // increasing counter only if this stream is not yet obsolete
 
                 stream.conditionId = ifId;
                 return stream;
-            })
+            }.bind(void 0, ifId))
 
-        var thisIfNegate = State.state.lastOp  // @TODO copy paste!
-            .map( function(u){ return _.extend( {}, u) } )
-            .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
-            .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
-            .map( function(_){ if ( activeStreamId.value !== _.id ) { console.log('NONSTOP')} return _ } ) // stayed here for debuggind purposes
-            .map(function(upstream){
+        var thisIfNegate = thisCommonIf 
+            .map(function(ifId, fnNegate, condition, upstream){
                 var scope = clientFuncs.createScope(upstream);
                 var checkCondition = s.compose(clientFuncs.applyScopeD, s.tryD)(fnNegate);
                 if ( checkCondition(scope) ) return upstream;
                 else return void 0;
-            })
+            }.bind(void 0, ifId, fnNegate, condition))
             .filter( s.id )
-            .map( function(upstream) {
-                var stream = injectsGrabber.add(depName, {}, injects, upstream);
 
-                console.log('SHOULD CANCEL SUCH UPDATES:', statistics.getUpdatesByIfId(ifId))
-
-                stream.conditionId = ifId;
-                return stream;
-            })
+        thisIfNegate.onValue(function(ifId, condition){
+            var updates = statistics.getUpdatesByUrlAndIfId(lastPath, ifId);
+            if(updates.length) console.log('SHOULD CANCEL SUCH UPDATES:', updates, ifId, condition )
+        }.bind(void 0, ifId, condition))
 
         State.state.lastIf = thisIf;
         State.state.lastOp = State.state.lastIf;
         State.state.lastConditionId = ifId;
         State.state.lastIfId = ifId;
+        State.state.lastIfIds.push(ifId) // Stores upper stack of if ids
 
         statistics.whenStat({
-            ifId: State.state.lastIfId
+            ifId: ifId
             ,masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction]
         });  // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
         return this;
@@ -1178,7 +1175,7 @@ function Atlant(){
             renders[viewName].push(thisRender);
 
             if (void 0 !== State.state.lastIf && renderOperation !== RenderOperation.draw){ 
-                State.rollback();
+                State.rollback(); 
             }
 
             return this;
@@ -1468,7 +1465,7 @@ function Atlant(){
         TopState.state.stats.keys.push(key);
         statistics.whenStat({
             eventKey: key
-            ,ifId: State.state.lastIfId
+            ,ifIds: State.state.lastIfIds
             ,masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction]
         });  // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
 
