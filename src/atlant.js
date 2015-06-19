@@ -281,15 +281,15 @@ function Atlant(){
                                 var data = scope();
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = scope();
-                                    console.log('updating view...', viewName, atom)
+                                    // console.log('updating view...', viewName, atom)
                                     var rendered = renderIntoView(data, true) // Here we using scope updated from store!
                                     return rendered.then(function(o){
-                                        atomEndSignal.push(-1);
+                                        atomEndSignal.push();
                                         return o;
                                     });
                                 } else {
                                     console.log('canceled render due the same data', viewName)
-                                    atomEndSignal.push(-1);
+                                    atomEndSignal.push();
                                 }
                             });
 
@@ -477,7 +477,6 @@ function Atlant(){
 
                         // atomBus.onValue(function(store, atomId, stats, value, whenId){console.log('imthebus!:', atomId, store.storeName, stats, whenId )}.bind(void 0, store, atomId, upstream.stats, upstream.whenId))
 
-
                         var weight = statistics.getWeight(upstream.path, store.storeName);
                         var overWeight = weight + (upstream.lastAtom ? upstream.lastAtom.overWeight : 0);
                         
@@ -491,6 +490,7 @@ function Atlant(){
                                         ,overWeight: overWeight // sum previous
                                         ,prev: upstream.lastAtom
                         };
+
                         stream.atoms.push(atom);
                         if(stream.lastAtom) stream.lastAtom.next = atom;
                         atom.that = atom;
@@ -563,11 +563,15 @@ function Atlant(){
     var renderStreams = require('./render-streams')(Counter, whenCount);
     var atomEndSignal = baseStreams.bus();
 
-    var atomCounter = 0;
-    atomEndSignal.onValue(function(change){
-        atomCounter += change;
-        console.log('atom counter: :', atomCounter)
-    })
+     
+    var atomCounter = { value: 0 }
+    atomEndSignal.onValue(function(atomCounter){
+
+        atomCounter.value--;
+        var calculated = statistics.getSum(lastPath);
+        console.log('atom signal received', atomCounter.value, calculated)
+
+    }.bind(void 0, atomCounter))
 
 
     var performCallback = function(upstreams, callbackStream, postponedActions) {
@@ -662,7 +666,6 @@ function Atlant(){
                         //             prefs.scrollElement().scrollTop = history.state.scrollTop;
                         //         } 
                         // }} 
-
 
                         l.log('the route is changed!')
                         if (path !== lastPath || (event && event.detail && event.detail.state && event.detail.state.forceRouteChange)) {
@@ -788,6 +791,7 @@ function Atlant(){
             var injects = injectsGrabber.init(name, State.state);
             var stats = TopState.state.stats;
 
+            var whenMasks = masks;
             if( WhenOrMatch.when === whenType )
                 masks.forEach(function(mask) {
                     s.push({mask: mask}, routes);
@@ -825,6 +829,7 @@ function Atlant(){
                     if(activeStreamId.value === upstream.id) whenCount.value++;
 
                     upstream.stats = stats;
+                    upstream.masks = whenMasks;
 
                     // Storing here the data for actions.
                     lastMask.push(upstream.route.mask);
@@ -1079,12 +1084,12 @@ function Atlant(){
             }.bind(void 0, ifId, fnNegate, condition))
             .filter( s.id )
 
-        thisIfNegate.onValue(function(ifId, condition){
+        thisIfNegate.onValue(function(ifId, condition, u){
             var updates = statistics.getUpdatesByUrlAndIfId(lastPath, ifId);
-            var stores = statistics.getStores(updates);
-            if(stores.length) {
-                console.log("STORES:", stores)
-                atomEndSignal.push(-1 * stores.length); 
+            if(updates.length) {
+                console.log("UPDATES:", updates)
+                statistics.removeUpdates(u.masks, updates);
+                atomEndSignal.push(); 
             }
 
         }.bind(void 0, ifId, condition))
@@ -1426,7 +1431,7 @@ function Atlant(){
         
         baseStreams.onValue(emitStreams[updaterName], function(scope){
             stores[storeName].updater.push( function(state){ 
-                console.log('updating!', updaterName, storeName)
+                // console.log('updating!', updaterName, storeName)
                 try{ 
                     var newVal = updater( state, scope);
                     return void 0 === newVal ? void 0 : s.copy(newVal) }
@@ -1504,6 +1509,8 @@ function Atlant(){
     var _select = function(dependsBehaviour, partName, storeName) {
         if (!(storeName in stores)) throw new Error('atlant.js: store ', storeName, ' is not defined. Use atlant.store(', storeName, ')');
         if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: store ', storeName, ' is not defined. Use atlant.store(', storeName, ')');
+
+        statistics.whenStat({masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], atom: storeName });
 
         return _depends.bind(this)( function(){
             return function(id){

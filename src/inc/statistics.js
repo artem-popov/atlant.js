@@ -3,6 +3,8 @@
 var utils = require('../utils');
 var tools = require('./tools');
 var s = require('../lib');
+var _ = require('lodash');
+var Bacon = require('baconjs');
 
 /**
  * This statistics module used for calculating the end of the atoms updating.
@@ -20,12 +22,13 @@ var Stat = function(){
             ,eventKey = params.eventKey
             ,ifId = params.ifId
             ,ifIds = params.ifIds
+            ,atom = params.atom
 
         masks.forEach(function(mask){
             mask = utils.sanitizeUrl(mask);
 
             if( !(mask in statObject) ) { 
-                statObject[mask] = { updatesList: [], lastOp: [], ifList: {} }
+                statObject[mask] = { updatesList: [], lastOp: [], ifList: {}, atomList: [] }
             }
 
             if (ifId) { 
@@ -37,6 +40,7 @@ var Stat = function(){
             })
             if(eventKey) statObject[mask].updatesList.push(eventKey);
 
+            if(atom) statObject[mask].atomList.push(atom);
         })
 
         return statObject;
@@ -62,6 +66,20 @@ var Stat = function(){
         return stream;
     }
 
+    this.removeUpdates = function(masks, updates){
+        console.log('HOHOHO')
+        masks.forEach(function(mask){
+            mask = utils.sanitizeUrl(mask);
+            updates.forEach(function(update){
+                var index = statObject[mask].updatesList.indexOf(update);
+                console.log('before removal!', update, statObject[mask].updatesList)
+                if( -1 !== index ) statObject[mask].updatesList.splice(index, 1);
+                console.log('removed!', update, statObject[mask].updatesList)
+            }) 
+
+        })
+    }
+
     this.getUpdatesByUrlAndIfId = function(url, ifId){
 
         return tools
@@ -71,7 +89,21 @@ var Stat = function(){
 
     }
 
-    var getStoreWeights = _.memoize(function(url){
+    this.getSum = function(url, storeName){
+        var sum = 0;
+        sum = this.getStoreWeights(url);
+
+        var atoms = tools
+            .returnAll(url, getAllExceptAsterisk(statObject) )
+            .map(function(_){ return statObject[_].atomList })
+            .concat(statObject['*'].atomList)
+            .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
+
+        console.log('inside getSum', sum, atoms)
+        return sum;
+    }
+
+    this.getStoreWeights = function(url){
         var weights = [];
 
         if( '*' in statObject ) weights = weights.concat(statObject['*'].updatesList);
@@ -86,11 +118,11 @@ var Stat = function(){
             .reduce(function(acc, i){ if(i in acc ) acc[i]++; else acc[i] = 1; return acc }, {})
 
         return weights;
-    })
+    }
 
     this.getWeight = function(url, storeName){
 
-        var weights = getStoreWeights(url);
+        var weights = this.getStoreWeights(url);
         return (storeName in weights) ? weights[storeName] : 0;
     }
 

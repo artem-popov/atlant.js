@@ -17,7 +17,7 @@ var StateClass = function(){
         states = [];
         this.state = StateType();
         states.push(this.state);
-        window.states = states;
+        if('undefined' !== typeof window) window.states = states;
     }
 
     this.divide = function() {
