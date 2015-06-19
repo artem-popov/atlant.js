@@ -71,12 +71,6 @@ var Stat = function(){
 
     }
 
-    this.beginIf = function(ifId){
-    }
-
-    this.endIf = function(ifId){
-    }
-
     var getStoreWeights = _.memoize(function(url){
         var weights = [];
 
@@ -103,6 +97,12 @@ var Stat = function(){
     this.putLink = function(storeName, eventName) {
         if (!(eventName in storeByEvent)) storeByEvent[eventName] = [];
         storeByEvent[eventName].push(storeName);
+    }
+
+    this.getStores = function(eventNames) { 
+        return eventNames
+            .map(function(eventName){ return eventName in storeByEvent ? storeByEvent[eventName] : [] })
+            .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
     }
 
     return this;

@@ -282,9 +282,14 @@ function Atlant(){
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = scope();
                                     console.log('updating view...', viewName, atom)
-                                    return renderIntoView(data, true) // Here we using scope updated from store!
+                                    var rendered = renderIntoView(data, true) // Here we using scope updated from store!
+                                    return rendered.then(function(o){
+                                        atomEndSignal.push(-1);
+                                        return o;
+                                    });
                                 } else {
                                     console.log('canceled render due the same data', viewName)
+                                    atomEndSignal.push(-1);
                                 }
                             });
 
@@ -556,6 +561,13 @@ function Atlant(){
 
     var whenCount = { value: 0 };
     var renderStreams = require('./render-streams')(Counter, whenCount);
+    var atomEndSignal = baseStreams.bus();
+
+    var atomCounter = 0;
+    atomEndSignal.onValue(function(change){
+        atomCounter += change;
+        console.log('atom counter: :', atomCounter)
+    })
 
 
     var performCallback = function(upstreams, callbackStream, postponedActions) {
@@ -701,6 +713,7 @@ function Atlant(){
             activeStreamId.value = 0;
             Counter.reset();
             renderStreams.nullifyScan.push('nullify');
+            // atomCounter = 0;
 
             atlantState.viewRendered = {};
             atlantState.isLastWasMatched = false;
@@ -1068,7 +1081,12 @@ function Atlant(){
 
         thisIfNegate.onValue(function(ifId, condition){
             var updates = statistics.getUpdatesByUrlAndIfId(lastPath, ifId);
-            if(updates.length) console.log('SHOULD CANCEL SUCH UPDATES:', updates, ifId, condition )
+            var stores = statistics.getStores(updates);
+            if(stores.length) {
+                console.log("STORES:", stores)
+                atomEndSignal.push(-1 * stores.length); 
+            }
+
         }.bind(void 0, ifId, condition))
 
         State.state.lastIf = thisIf;
@@ -1445,13 +1463,7 @@ function Atlant(){
             .map( function(upstream){
                 return withGrabber.add(withs, upstream)
             })
-
-        var updateCallback;
-        State.state.lastOp = Bacon.fromCallback(function(callback) {
-            updateCallback = callback;
-        });
-
-        baseStreams.onValue( thisOp, function(upstream) { 
+            .map( function(upstream) { 
                 var refsData = clientFuncs.getRefsData( upstream ); 
                 
                 var data = ( upstream.with && 'value' in upstream.with ) ? upstream.with.value( refsData ) : refsData;
@@ -1459,7 +1471,10 @@ function Atlant(){
                 if ( key in emitStreams ) emitStreams[key].push(data);
                 else console.log("\nAtlant.js: Warning: event key" + key + " is not defined");
 
-                // updateCallback();
+                return upstream;
+            });
+
+        baseStreams.onValue( thisOp, function(updateCallback, upstream) { 
         });
 
         TopState.state.stats.keys.push(key);
