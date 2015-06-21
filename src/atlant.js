@@ -276,22 +276,22 @@ function Atlant(){
 
 
 
-                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(atom){ 
+                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, atom){ 
                                 console.log('atom:', viewName, atom.that, atom.value ) 
-                                var data = scope();
+                                var data = scopeFn();
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
-                                    viewData[viewName] = scope();
+                                    viewData[viewName] = scopeFn();
                                     // console.log('updating view...', viewName, atom)
                                     var rendered = renderIntoView(data, true) // Here we using scope updated from store!
                                     return rendered.then(function(o){
-                                        atomEndSignal.push();
+                                        atomEndSignal.push({whenId: upstream.whenId});
                                         return o;
                                     });
                                 } else {
                                     console.log('canceled render due the same data', viewName)
-                                    atomEndSignal.push();
+                                    atomEndSignal.push({whenId: upstream.whenId});
                                 }
-                            });
+                            }.bind(void 0, upstream, viewName, scope));
 
                             var data = scope();
                             return renderIntoView(data, false) // Here we using scope updated from store!
@@ -477,7 +477,7 @@ function Atlant(){
 
                         // atomBus.onValue(function(store, atomId, stats, value, whenId){console.log('imthebus!:', atomId, store.storeName, stats, whenId )}.bind(void 0, store, atomId, upstream.stats, upstream.whenId))
 
-                        var weight = statistics.getWeight(upstream.path, store.storeName);
+                        var weight = statistics.getWeight(upstream.whenId, upstream.path, store.storeName);
                         var overWeight = weight + (upstream.lastAtom ? upstream.lastAtom.overWeight : 0);
                         
                         var atom = { id: atomId
@@ -563,13 +563,19 @@ function Atlant(){
     var renderStreams = require('./render-streams')(Counter, whenCount);
     var atomEndSignal = baseStreams.bus();
 
-     
-    var atomCounter = { value: 0 }
-    atomEndSignal.onValue(function(atomCounter){
+    var defValue = function(){ return { value: 0 } };
+    var atomCounter = {};
+    atomEndSignal.onValue(function(atomCounter, object){
 
-        atomCounter.value--;
-        var calculated = statistics.getSum(lastPath);
-        console.log('atom signal received', atomCounter.value, calculated)
+        atomCounter[object.whenId].value--;
+        var calculated = statistics.getSum(object.whenId, lastPath);
+        var signalled = Object.keys(atomCounter)
+                            .map( function(id){ return atomCounter[id].value })
+                            .reduce(function(acc, i){ return acc + i }, 0) 
+
+        console.log('atom signal received', object.whenId, signalled, calculated)
+
+
 
     }.bind(void 0, atomCounter))
 
@@ -716,7 +722,6 @@ function Atlant(){
             activeStreamId.value = 0;
             Counter.reset();
             renderStreams.nullifyScan.push('nullify');
-            // atomCounter = 0;
 
             atlantState.viewRendered = {};
             atlantState.isLastWasMatched = false;
@@ -730,15 +735,9 @@ function Atlant(){
         ,actions: {}
     }
 
-    var assignRenderEnd = function(stream){
-        console.log('subscribed to render end')
-        activeRenderEnd = stream.onValue(function(_){ console.log('WE ARE HERE!!!!!') })
-    }
-
     var rootStream = Bacon.fromBinder(function(sink) {
             baseStreams.onValue(routeChangedStream, function(_) {
                 assignRenders();
-                assignRenderEnd(statistics.getFinalOpByUrl(_.path));
                 sink(_);
             });
         })
@@ -828,6 +827,7 @@ function Atlant(){
                     upstream.isMatch = WhenOrMatch.match === whenType;
                     if(activeStreamId.value === upstream.id) whenCount.value++;
 
+                    atomCounter[whenId] = defValue();
                     upstream.stats = stats;
                     upstream.masks = whenMasks;
 
@@ -864,7 +864,8 @@ function Atlant(){
             State.state.lastOp = State.state.lastWhen;
             State.state.lastConditionId = whenId;
             State.state.lastWhenType = 'when';
-            statistics.whenStat({ masks: TopState.state.lastMasks });
+            TopState.state.lastActionId = whenId;
+            statistics.whenStat({ actionId: TopState.state.lastActionId, masks: TopState.state.lastMasks });
 
             return this;
         };
@@ -914,6 +915,7 @@ function Atlant(){
                 stream  = _.extend(stream, injectsGrabber.add(depName, depValue, injects, upstream));
                 stream.otherwise = true;
                 stream.conditionId = whenId;
+                stream.whenId = whenId;
                 stream.stats = stats;
 
                 if(activeStreamId.value === stream.id) whenCount.value++;
@@ -926,10 +928,11 @@ function Atlant(){
         State.state.lastDepName = void 0;
         State.state.lastOp = State.state.lastWhen;
         State.state.lastConditionId = whenId;
+        TopState.state.lastActionId = whenId;
         State.state.lastWhenType = 'otherwise';
         TopState.state.lastAction = 'otherwise'        
 
-        statistics.whenStat({ masks: [TopState.state.lastAction] });
+        statistics.whenStat({ actionId: TopState.state.lastActionId, masks: [TopState.state.lastAction] });
 
         return this;
 
@@ -966,6 +969,7 @@ function Atlant(){
 
                 stream.action = true;
                 stream.conditionId = whenId;
+                stream.whenId = whenId;
                 stream.isAction = isAction;
                 stream.id = activeStreamId.value;
 
@@ -980,8 +984,9 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastWhenType = 'action';
         State.state.lastConditionId = whenId;
+        TopState.state.lastActionId = whenId;
         TopState.state.lastAction = depName
-        statistics.whenStat({ masks: [TopState.state.lastAction] });
+        statistics.whenStat({ actionId: TopState.state.lastActionId, masks: [TopState.state.lastAction] });
 
         return this;
 
@@ -1009,6 +1014,7 @@ function Atlant(){
 
                 stream.error = true;
                 stream.conditionId = whenId;
+                stream.whenId = whenId;
                 stream.stats = stats;
 
                 stream.isAction = true;
@@ -1025,8 +1031,9 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastConditionId = whenId;
         State.state.lastWhenType = 'error';
+        TopState.state.lastActionId = whenId;
         TopState.state.lastAction = 'error';
-        statistics.whenStat({ masks: [TopState.state.lastAction] });
+        statistics.whenStat({ actionId: TopState.state.lastActionId, masks: [TopState.state.lastAction] });
 
         return this;
     };
@@ -1084,15 +1091,16 @@ function Atlant(){
             }.bind(void 0, ifId, fnNegate, condition))
             .filter( s.id )
 
-        thisIfNegate.onValue(function(ifId, condition, u){
-            var updates = statistics.getUpdatesByUrlAndIfId(lastPath, ifId);
+        thisIfNegate.onValue(function(ifId, actionId, condition, u){
+            var updates = statistics.getUpdatesByUrl(actionId, lastPath, ifId);
             if(updates.length) {
-                console.log("UPDATES:", updates)
-                statistics.removeUpdates(u.masks, updates);
-                atomEndSignal.push(); 
+                console.log("UPDATES:", updates, u)
+                statistics.removeUpdates(u.whenId, u.masks, updates);
+
+                atomEndSignal.push({whenId: u.whenId, cancelled: 'cancelled'}); 
             }
 
-        }.bind(void 0, ifId, condition))
+        }.bind(void 0, ifId, TopState.state.lastActionId, condition))
 
         State.state.lastIf = thisIf;
         State.state.lastOp = State.state.lastIf;
@@ -1100,8 +1108,10 @@ function Atlant(){
         State.state.lastIfId = ifId;
         State.state.lastIfIds.push(ifId) // Stores upper stack of if ids
 
+
         statistics.whenStat({
-            ifId: ifId
+            actionId: TopState.state.lastActionId
+            ,ifId: ifId
             ,masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction]
         });  // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
         return this;
@@ -1241,6 +1251,7 @@ function Atlant(){
                 stream.isInterceptor = true;
                 stream.isAction = true;
                 stream.conditionId = whenId;
+                stream.whenId = whenId;
                 stream.id = activeStreamId.value;
 
                 l.log('---Matched interceptor!!!', depValue)
@@ -1254,8 +1265,9 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastWhenType = 'action';
         State.state.lastConditionId = whenId;
+        TopState.state.lastActionId = whenId;
         TopState.state.lastAction = 'interceptor';
-        statistics.whenStat({ masks: [TopState.state.lastAction] });
+        statistics.whenStat({ actionId: TopState.state.lastActionId, masks: [TopState.state.lastAction] });
 
         return this;
 
@@ -1485,6 +1497,7 @@ function Atlant(){
         TopState.state.stats.keys.push(key);
         statistics.whenStat({
             eventKey: key
+            ,actionId: TopState.state.lastActionId
             ,ifIds: State.state.lastIfIds
             ,masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction]
         });  // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
@@ -1510,7 +1523,7 @@ function Atlant(){
         if (!(storeName in stores)) throw new Error('atlant.js: store ', storeName, ' is not defined. Use atlant.store(', storeName, ')');
         if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: store ', storeName, ' is not defined. Use atlant.store(', storeName, ')');
 
-        statistics.whenStat({masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], atom: storeName });
+        statistics.whenStat({actionId: TopState.state.lastActionId, masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], atom: storeName });
 
         return _depends.bind(this)( function(){
             return function(id){
