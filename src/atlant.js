@@ -565,22 +565,30 @@ function Atlant(){
 
     var whenCount = { value: 0 };
     var renderStreams = require('./render-streams')(Counter, whenCount);
-    var atomEndSignal = baseStreams.bus();
 
+
+    var atomEndSignal = baseStreams.bus();
+    var atomRecalculateSignal = baseStreams.bus();
+    var atomCounter = { list: {} };
     var defValue = function(){ return { value: 0 } };
-    var atomCounter = {};
+    var sumCounter = function(actomCounter){
+        return Object.keys(atomCounter.list)
+                            .map( function(id){ return atomCounter.list[id].value })
+                            .reduce(function(acc, i){ return acc + i }, 0) 
+    }
     atomEndSignal.onValue(function(atomCounter, object){
 
-        atomCounter[object.whenId].value--;
+        atomCounter.list[object.whenId].value--;
         var calculated = statistics.getSum(object.whenId, lastPath);
-        var signalled = Object.keys(atomCounter)
-                            .map( function(id){ return atomCounter[id].value })
-                            .reduce(function(acc, i){ return acc + i }, 0) 
+        var signalled = sumCounter(atomCounter);
 
-        // console.log('atom signal received', signalled, calculated)
+        console.log('atom signal received', signalled, calculated)
 
+    }.bind(void 0, atomCounter))
 
-
+    atomRecalculateSignal.onValue(function(atomCounter, object){
+        var signalled = sumCounter(atomCounter);
+        var calculated = statistics.getSum(object.whenId, lastPath);
     }.bind(void 0, atomCounter))
 
 
@@ -726,6 +734,7 @@ function Atlant(){
             activeStreamId.value = 0;
             Counter.reset();
             renderStreams.nullifyScan.push('nullify');
+            atomCounter.list = {};
 
             atlantState.viewRendered = {};
             atlantState.isLastWasMatched = false;
@@ -830,7 +839,7 @@ function Atlant(){
                     upstream.isMatch = WhenOrMatch.match === whenType;
                     if(activeStreamId.value === upstream.id) whenCount.value++;
 
-                    atomCounter[whenId] = defValue();
+                    atomCounter.list[whenId] = defValue();
                     upstream.stats = stats;
                     upstream.masks = whenMasks;
 
@@ -1100,7 +1109,7 @@ function Atlant(){
                 console.log("UPDATES:", updates, u)
                 statistics.removeUpdates(u.whenId, u.masks, updates);
 
-                atomEndSignal.push({whenId: u.whenId, cancelled: 'cancelled'}); 
+                atomRecalculateSignal.push({whenId: u.whenId}); 
             }
 
         }.bind(void 0, ifId, TopState.state.lastActionId, condition))

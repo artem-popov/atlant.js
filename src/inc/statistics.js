@@ -86,7 +86,7 @@ var Stat = function(){
 
     }
 
-    var countViews = function(mask, actionId){
+    var countActionViews = function(mask, actionId){
         var action = statObject[mask][actionId];
         return ( action && 'viewList' in action ? action.viewList : [] )
                 .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
@@ -101,34 +101,29 @@ var Stat = function(){
     }
 
     this.getSum = function(actionId, url){ // @TODO should not be actionId as parameter
-        var asteriskNumber = 0; 
-        var weights = this.getStoreWeights(actionId, url);
-        var replacer = replaceNamesWithWeights.bind(this, weights);
-
-        // if( '*' in statObject ){ 
-        //     asteriskNumber = countViews('*', actionId) * Object.keys(statObject['*'])
-        //         .map(function(id){ return 'atomList' in statObject['*'][id] ? statObject['*'][id].atomList : []})
-        //         .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
-        //         .reduce(function(acc, i){ return acc + i }, 0) // sum
-        // }
-        //
-        // console.log('askeriskNumber:', asteriskNumber);
 
         var number = tools
             .returnAll(url, Object.keys(statObject) )
             .filter(function(mask){ return '*/' !== mask })
             .map( function(mask){ // each action is atoms group/seq with it's own view names
-                var action = statObject[mask][actionId];
-                var viewsNum = countViews(mask, actionId);   
-                var actionNum = replacer( action && 'atomList' in action ? action.atomList : [] )
-                            .reduce( function(acc, i){ return acc + i }, 0)
-                console.log('the mask:', mask, actionNum)
-                return actionNum;
-            }) 
+                return Object.keys(statObject[mask])
+                                    .map(function(actionId){
+                                        var action = statObject[mask][actionId];
+                                        var weights = this.getStoreWeights(actionId, url);
+                                        var replacer = replaceNamesWithWeights.bind(this, weights);
 
-        console.log('pre:', number)
+                                        var viewsNum = countActionViews(mask, actionId);   
 
-        return 0;
+                                        var actionNum = replacer( action && 'atomList' in action ? action.atomList : [] )
+                                                    .reduce( function(acc, i){ return acc + i }, 0) // sum
+                                        return viewsNum * actionNum;
+                                    }.bind(this))
+                                    .reduce( function(acc, i){ return acc + i }, 0) // sum
+            }.bind(this)) 
+
+        console.log('pre:',number )
+
+        return number.reduce(function(acc, i){ return acc + i}, 0);
     }
 
     this.getStoreWeights = function(actionId, url){
