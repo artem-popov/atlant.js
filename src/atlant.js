@@ -579,7 +579,7 @@ function Atlant(){
     atomEndSignal.onValue(function(atomCounter, object){
 
         atomCounter.list[object.whenId].value--;
-        var calculated = statistics.getSum(object.whenId, lastPath);
+        var calculated = statistics.getSum(lastPath);
         var signalled = sumCounter(atomCounter);
 
         console.log('atom signal received', signalled, calculated)
@@ -588,7 +588,7 @@ function Atlant(){
 
     atomRecalculateSignal.onValue(function(atomCounter, object){
         var signalled = sumCounter(atomCounter);
-        var calculated = statistics.getSum(object.whenId, lastPath);
+        var calculated = statistics.getSum(lastPath);
     }.bind(void 0, atomCounter))
 
 
@@ -1109,7 +1109,7 @@ function Atlant(){
                 console.log("UPDATES:", updates, u)
                 statistics.removeUpdates(u.whenId, u.masks, updates);
 
-                atomRecalculateSignal.push({whenId: u.whenId}); 
+                // atomEndSignal.push({whenId: u.whenId}); 
             }
 
         }.bind(void 0, ifId, TopState.state.lastActionId, condition))

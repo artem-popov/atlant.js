@@ -100,7 +100,7 @@ var Stat = function(){
             .map( function(_){ return void 0 === _ ? 0 : _ } )
     }
 
-    this.getSum = function(actionId, url){ // @TODO should not be actionId as parameter
+    this.getSum = function(url){ 
 
         var number = tools
             .returnAll(url, Object.keys(statObject) )
@@ -109,13 +109,16 @@ var Stat = function(){
                 return Object.keys(statObject[mask])
                                     .map(function(actionId){
                                         var action = statObject[mask][actionId];
-                                        var weights = this.getStoreWeights(actionId, url);
+                                        var weights = this.getStoreWeights(url);
                                         var replacer = replaceNamesWithWeights.bind(this, weights);
 
                                         var viewsNum = countActionViews(mask, actionId);   
 
                                         var actionNum = replacer( action && 'atomList' in action ? action.atomList : [] )
                                                     .reduce( function(acc, i){ return acc + i }, 0) // sum
+
+                                        console.log('OOO:', weights, action.atomList, actionNum, viewsNum)
+
                                         return viewsNum * actionNum;
                                     }.bind(this))
                                     .reduce( function(acc, i){ return acc + i }, 0) // sum
@@ -126,27 +129,27 @@ var Stat = function(){
         return number.reduce(function(acc, i){ return acc + i}, 0);
     }
 
-    this.getStoreWeights = function(actionId, url){
-        var weights = [];
+    this.getStoreWeights = function(url){
 
-        if( '*' in statObject ) weights = Object.keys(statObject['*'])
-                        .map(function(id){ return statObject['*'][id].updatesList })
-                        .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
-
-        weights = tools
-            .returnAll(url, getAllExceptAsterisk(statObject) )
-            .map(function(_){ return actionId in statObject[_] ? statObject[_][actionId].updatesList : [] })
-            .concat(weights)
+        return tools
+            .returnAll(url, Object.keys(statObject) )
+            .filter(function(mask){ return '*/' !== mask })
+            .map(function(mask){ 
+                return Object.keys(statObject[mask])
+                                    .map(function(actionId){
+                                        return statObject[mask][actionId].updatesList
+                                    })
+                                    .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
+            })
             .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
             .map(function(eventName){ return eventName in storeByEvent ? storeByEvent[eventName] : [] })
             .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
             .reduce(function(acc, i){ if(i in acc ) acc[i]++; else acc[i] = 1; return acc }, {})
 
-        return weights;
     }
 
     this.getWeight = function(actionId, url, storeName){
-        var weights = this.getStoreWeights(actionId, url);
+        var weights = this.getStoreWeights(url);
         return (storeName in weights) ? weights[storeName] : 0;
     }
 
