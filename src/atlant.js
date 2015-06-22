@@ -220,7 +220,6 @@ function Atlant(){
                                 render = prefs.render.clear
                             }
 
-
                             // turn off all subscriptions of atoms for this view
                             if( viewSubscriptions[viewName] ) viewSubscriptionsUnsubscribe[viewName](); // finish Bus if it exists;
 
@@ -246,6 +245,12 @@ function Atlant(){
                                 .head();
 
                             viewSubscriptions[viewName] = lastAtom ? lastAtom.bus.map(putInfo.bind(this, lastAtom)) : Bacon.never(); 
+
+                            if (upstream.masks) {
+                                statistics.whenStat({ actionId: upstream.whenId, masks: upstream.masks.slice(), view: viewName });
+                            } else {
+                                console.log('WARNING! ACTION ON THE BOARD!')
+                            }
 
                             var renderIntoView = function(scope, isAtom) {
                                 var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
@@ -277,7 +282,7 @@ function Atlant(){
 
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, atom){ 
-                                console.log('atom:', viewName, atom.that, atom.value ) 
+                                console.log('atom:', viewName, atom.value ) 
                                 var data = scopeFn();
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = scopeFn();
@@ -315,7 +320,7 @@ function Atlant(){
                 s.map(assignRender, renders[viewName]);
             }
             console.timeEnd('assign renders')
-            console.log('assign renders to:', count, 'streams')
+            // console.log('assign renders to:', count, 'streams')
 
         };
     }();
@@ -449,36 +454,35 @@ function Atlant(){
                             var noDehydrotizedData = true;
                             return value;
                         }
+
+                        var atomId = _.uniqueId();
+
                         var push = function(name, _){
                             var o = {};
                             o[name] = _;
                             return o;
                         }
 
-                        var atomId = _.uniqueId();
+                        var bus = store.bus
+                            .map(
+                                push.bind(void 0, stream.ref + stream.whenId)
+                                ,getValue.bind(void 0, stream.ref, stream.atomParams, store, _.extend({}, stream), false)
+                            )
 
-                        var bus = (function(){
-                            var bus = store.bus
-                                .map(
-                                    _.compose(
-                                        push.bind(void 0, "own")
-                                        ,getValue.bind(void 0, stream.ref, stream.atomParams, store, _.extend({}, stream), false)
-                                    )
-                                )
+                        if (upstream.lastAtom)
+                            bus = bus
+                                // .merge(upstream.lastAtom.bus) // Depending on one upper bus (and on all upper if you know)
+                                .merge(upstream.lastAtom.bus.map(push.bind(void 0, upstream.lastAtom.ref + upstream.whenId))) // Depending on one upper bus (and on all upper if you know)
+                                
 
-                            if (upstream.lastAtom)
-                                bus = bus
-                                    .merge(upstream.lastAtom.bus.map(push.bind(void 0, 'inherited'))) // Depending on one upper bus (and on all upper if you know)
-
-                            return bus
-                                    
-                        })();
 
 
                         // atomBus.onValue(function(store, atomId, stats, value, whenId){console.log('imthebus!:', atomId, store.storeName, stats, whenId )}.bind(void 0, store, atomId, upstream.stats, upstream.whenId))
 
                         var weight = statistics.getWeight(upstream.whenId, upstream.path, store.storeName);
                         var overWeight = weight + (upstream.lastAtom ? upstream.lastAtom.overWeight : 0);
+
+                        // console.log('subscribing to lastAtom:', atomId, stream.ref, (upstream.lastAtom || {ref: 'no previous'}).ref)
                         
                         var atom = { id: atomId
                                         ,atomParams: upstream.atomParams
@@ -573,7 +577,7 @@ function Atlant(){
                             .map( function(id){ return atomCounter[id].value })
                             .reduce(function(acc, i){ return acc + i }, 0) 
 
-        console.log('atom signal received', object.whenId, signalled, calculated)
+        // console.log('atom signal received', signalled, calculated)
 
 
 
@@ -798,7 +802,6 @@ function Atlant(){
                 });
 
             masks = _(masks).map(function(mask){return [mask, utils.getPossiblePath(mask)]}).flatten().value();
-
 
             State.state.lastWhen = rootStream
                 .map( function(upstream) {
@@ -1449,7 +1452,7 @@ function Atlant(){
                     return void 0 === newVal ? void 0 : s.copy(newVal) }
                 catch(e) { 
                     console.log('atlant.js: Warning: updater failed', e)
-                    return s.copy(state)
+                    return state
                 }} 
             )
         });

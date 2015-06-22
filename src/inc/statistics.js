@@ -28,6 +28,7 @@ var Stat = function(){
             ,ifIds = params.ifIds
             ,atom = params.atom
             ,actionId = params.actionId
+            ,view = params.view
 
         masks.forEach(function(mask){
             mask = utils.sanitizeUrl(mask);
@@ -36,7 +37,7 @@ var Stat = function(){
                 statObject[mask] = {}
             
             if( !(actionId in statObject[mask]) )  
-                statObject[mask][actionId] = { updatesList: [], lastOp: [], ifList: {}, atomList: [] }
+                statObject[mask][actionId] = { updatesList: [], lastOp: [], ifList: {}, atomList: [], viewList: [] }
 
             if (ifId) { 
                 statObject[mask][actionId].ifList[ifId] = {updatesList: []}
@@ -48,21 +49,23 @@ var Stat = function(){
             if(eventKey) statObject[mask][actionId].updatesList.push(eventKey);
 
             if(atom) statObject[mask][actionId].atomList.push(atom);
+
+            if(view) statObject[mask][actionId].viewList.push(view);
         })
 
         return statObject;
     }
 
     this.removeUpdates = function(actionId, masks, updates){
-        console.log('removing updates...', updates)
+        // console.log('removing updates...', updates)
         masks.forEach(function(mask){
             mask = utils.sanitizeUrl(mask);
             updates.forEach(function(update){
                 if (actionId in statObject[mask]) {
                     var index = statObject[mask][actionId].updatesList.indexOf(update);
-                    console.log('before removal!', mask, update, statObject[mask].updatesList)
+                    // console.log('before removal!', mask, update, statObject[mask].updatesList)
                     if( -1 !== index ) statObject[mask][actionId].updatesList.splice(index, 1);
-                    console.log('removed!', mask, update, statObject[mask][actionId].updatesList)
+                    // console.log('removed!', mask, update, statObject[mask][actionId].updatesList)
                 }
             }) 
 
@@ -83,38 +86,49 @@ var Stat = function(){
 
     }
 
-    var getSeqSum = function(actionId, url, seq){
-        var weights = this.getStoreWeights(actionId, url);
-
-        var value = seq
-            .map(function(_){ return weights[_] })
-
-            console.log('value', value)
-            value.reduce(function(acc, _, index, array){ 
-                return acc + _ * ( array.length - index )
-            })
-
-        return value
+    var countViews = function(mask, actionId){
+        var action = statObject[mask][actionId];
+        return ( action && 'viewList' in action ? action.viewList : [] )
+                .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
+                .reduce(function(acc, i){ if (-1 !== acc.indexOf(i)) { return acc } else { acc.push(i); return acc}}, [])
+                .reduce(function(acc, i){ return acc + 1 }, 0);
     }
 
-    this.getSum = function(actionId, url){
-        var asteriskAtoms = [];
-        
-        if( '*' in statObject ) asteriskAtoms = Object.keys(statObject['*'])
-                                    .map(function(id){ return 'atomList' in statObject['*'][id] ? statObject['*'][id].atomList : []})
-                                    .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
+    var replaceNamesWithWeights = function(weights, seq){
+        return seq
+            .map(function(_){ return weights[_] })
+            .map( function(_){ return void 0 === _ ? 0 : _ } )
+    }
 
-        var atoms = tools
-            .returnAll(url, getAllExceptAsterisk(statObject) )
-            .map(function(_){ return actionId in statObject[_] ? statObject[_][actionId].atomList : []})
+    this.getSum = function(actionId, url){ // @TODO should not be actionId as parameter
+        var asteriskNumber = 0; 
+        var weights = this.getStoreWeights(actionId, url);
+        var replacer = replaceNamesWithWeights.bind(this, weights);
 
-            .concat(asteriskAtoms)
-            .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
+        // if( '*' in statObject ){ 
+        //     asteriskNumber = countViews('*', actionId) * Object.keys(statObject['*'])
+        //         .map(function(id){ return 'atomList' in statObject['*'][id] ? statObject['*'][id].atomList : []})
+        //         .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
+        //         .reduce(function(acc, i){ return acc + i }, 0) // sum
+        // }
+        //
+        // console.log('askeriskNumber:', asteriskNumber);
 
-        var atomSum = getSeqSum.bind(this, actionId, url);
-        var sum = atomSum(atoms) + atomSum(asteriskAtoms);
+        var number = tools
+            .returnAll(url, Object.keys(statObject) )
+            .filter(function(mask){ return '*/' !== mask })
+            .map( function(mask){ // each action is atoms group/seq with it's own view names
+                var action = statObject[mask][actionId];
+                var viewsNum = countViews(mask, actionId);   
+                var actionNum = replacer( action && 'atomList' in action ? action.atomList : [] )
+                            .reduce( function(acc, i){ return acc + i }, 0)
+                console.log('the mask:', mask, actionNum)
+                return actionNum;
+            }) 
 
-        return sum;
+        console.log('pre:', number)
+
+        return 0;
     }
 
     this.getStoreWeights = function(actionId, url){
