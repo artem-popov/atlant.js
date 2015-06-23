@@ -1,6 +1,7 @@
 "use strict";
 
 var utils = require('../utils');
+var _ = require('lodash');
 
 var _test = function(path, mask){
     if ( !path || !mask ) return false;

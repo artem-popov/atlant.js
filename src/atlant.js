@@ -282,7 +282,7 @@ function Atlant(){
 
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, atom){ 
-                                console.log('atom:', viewName, atom.value ) 
+                                // console.log('atom:', viewName, atom.value ) 
                                 var data = scopeFn();
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = scopeFn();
@@ -569,6 +569,8 @@ function Atlant(){
 
     var atomEndSignal = baseStreams.bus();
     var atomRecalculateSignal = baseStreams.bus();
+    var onServerEndStream = baseStreams.bus();
+
     var atomCounter = { list: {} };
     var defValue = function(){ return { value: 0 } };
     var sumCounter = function(actomCounter){
@@ -582,13 +584,22 @@ function Atlant(){
         var calculated = statistics.getSum(lastPath);
         var signalled = sumCounter(atomCounter);
 
-        console.log('atom signal received', signalled, calculated)
+        // console.log('atom signal received', signalled, calculated)
+        if (0 === signalled + calculated) {
+            // console.log('render end!')
+            onServerEndStream.push()
+        }
 
     }.bind(void 0, atomCounter))
 
     atomRecalculateSignal.onValue(function(atomCounter, object){
         var signalled = sumCounter(atomCounter);
         var calculated = statistics.getSum(lastPath);
+        // console.log('atom cancel signal received', signalled, calculated)
+        if (0 === signalled + calculated) {
+            // console.log('render end!')
+            onServerEndStream.push()
+        }
     }.bind(void 0, atomCounter))
 
 
@@ -1106,10 +1117,10 @@ function Atlant(){
         thisIfNegate.onValue(function(ifId, actionId, condition, u){
             var updates = statistics.getUpdatesByUrl(actionId, lastPath, ifId);
             if(updates.length) {
-                console.log("UPDATES:", updates, u)
+                // console.log("UPDATES:", updates)
                 statistics.removeUpdates(u.whenId, u.masks, updates);
 
-                // atomEndSignal.push({whenId: u.whenId}); 
+                atomRecalculateSignal.push({whenId: u.whenId}); 
             }
 
         }.bind(void 0, ifId, TopState.state.lastActionId, condition))
@@ -1335,6 +1346,10 @@ function Atlant(){
         return this;
     }
 
+    var _onServerEnd = function(callback) {
+        baseStreams.onValue(onServerEndStream, s.baconTryD(callback));
+        return this;
+    }
     var _onRenderEnd = function(callback) {
         baseStreams.onValue(onRenderEndStream, s.baconTryD(callback));
         return this;
@@ -1731,8 +1746,10 @@ function Atlant(){
     /**
      * Events!
      */
-    // Called everytime when route/action is rendered.
+    // Called everytime when route/action is rendered. DEPRECATED
     this.onRenderEnd =  _onRenderEnd;
+    // Called when all atoms refreshed their views
+    this.onServerEnd =  _onServerEnd;
     // Called everytime when draw renders.
     this.onDrawEnd =  _onDrawEnd;
     // Accepts element. After publish and first render the contents will be attached to this element.
@@ -1752,6 +1769,8 @@ function Atlant(){
     this.build = require('./atlant-build');
 
     this.destroy = _destroy;
+    this.isServer = function(){ return 'undefined' === typeof window }
+    this.isBrowser = function(){ return 'undefined' !== typeof window }
 
     this.utils = require('./inc/tools'); // @TODO: rename to 'tools'
 

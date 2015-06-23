@@ -117,14 +117,14 @@ var Stat = function(){
                                         var actionNum = replacer( action && 'atomList' in action ? action.atomList : [] )
                                                     .reduce( function(acc, i){ return acc + i }, 0) // sum
 
-                                        console.log('OOO:', weights, action.atomList, actionNum, viewsNum)
+                                        // console.log('OOO:', weights, action.atomList, actionNum, viewsNum)
 
                                         return viewsNum * actionNum;
                                     }.bind(this))
                                     .reduce( function(acc, i){ return acc + i }, 0) // sum
             }.bind(this)) 
 
-        console.log('pre:',number )
+        // console.log('pre:',number )
 
         return number.reduce(function(acc, i){ return acc + i}, 0);
     }
