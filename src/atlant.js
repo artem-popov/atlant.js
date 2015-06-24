@@ -282,7 +282,7 @@ function Atlant(){
 
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, atom){ 
-                                // console.log('atom:', viewName, atom.value ) 
+                                console.log('atom:', viewName, atom.value ) 
                                 var data = scopeFn();
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = scopeFn();
@@ -584,7 +584,7 @@ function Atlant(){
         var calculated = statistics.getSum(lastPath);
         var signalled = sumCounter(atomCounter);
 
-        // console.log('atom signal received', signalled, calculated)
+        console.log('atom signal received', signalled, calculated, atomCounter.list)
         if (0 === signalled + calculated) {
             // console.log('render end!')
             onServerEndStream.push()
@@ -595,7 +595,7 @@ function Atlant(){
     atomRecalculateSignal.onValue(function(atomCounter, object){
         var signalled = sumCounter(atomCounter);
         var calculated = statistics.getSum(lastPath);
-        // console.log('atom cancel signal received', signalled, calculated)
+        console.log('atom cancel signal received', signalled, calculated, atomCounter.list)
         if (0 === signalled + calculated) {
             // console.log('render end!')
             onServerEndStream.push()
@@ -746,6 +746,11 @@ function Atlant(){
             Counter.reset();
             renderStreams.nullifyScan.push('nullify');
             atomCounter.list = {};
+            statistics.cleanUpRemovedUpdates();
+            // Object.keys(viewSubscriptionsUnsubscribe) // Unsubscribing of all atoms. I think we don't need it.
+            //             .map(function(viewName){
+            //                 viewSubscriptionsUnsubscribe[viewName]();
+            //             })
 
             atlantState.viewRendered = {};
             atlantState.isLastWasMatched = false;
@@ -1117,7 +1122,7 @@ function Atlant(){
         thisIfNegate.onValue(function(ifId, actionId, condition, u){
             var updates = statistics.getUpdatesByUrl(actionId, lastPath, ifId);
             if(updates.length) {
-                // console.log("UPDATES:", updates)
+                console.log("UPDATES:", updates)
                 statistics.removeUpdates(u.whenId, u.masks, updates);
 
                 atomRecalculateSignal.push({whenId: u.whenId}); 

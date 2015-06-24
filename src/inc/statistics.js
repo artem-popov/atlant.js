@@ -37,7 +37,7 @@ var Stat = function(){
                 statObject[mask] = {}
             
             if( !(actionId in statObject[mask]) )  
-                statObject[mask][actionId] = { updatesList: [], lastOp: [], ifList: {}, atomList: [], viewList: [] }
+                statObject[mask][actionId] = { updatesList: [], removedUpdatesList: [], lastOp: [], ifList: {}, atomList: [], viewList: [] }
 
             if (ifId) { 
                 statObject[mask][actionId].ifList[ifId] = {updatesList: []}
@@ -56,16 +56,22 @@ var Stat = function(){
         return statObject;
     }
 
+    this.cleanUpRemovedUpdates = function(){
+        Object.keys(statObject)
+            .forEach(function(mask){
+                Object.keys(statObject[mask])
+                    .forEach(function(actionId){
+                        statObject[mask][actionId].removedUpdatesList = []
+                    })
+            })
+    }
+
     this.removeUpdates = function(actionId, masks, updates){
-        // console.log('removing updates...', updates)
         masks.forEach(function(mask){
             mask = utils.sanitizeUrl(mask);
             updates.forEach(function(update){
                 if (actionId in statObject[mask]) {
-                    var index = statObject[mask][actionId].updatesList.indexOf(update);
-                    // console.log('before removal!', mask, update, statObject[mask].updatesList)
-                    if( -1 !== index ) statObject[mask][actionId].updatesList.splice(index, 1);
-                    // console.log('removed!', mask, update, statObject[mask][actionId].updatesList)
+                    statObject[mask][actionId].removedUpdatesList.push(update);
                 }
             }) 
 
@@ -137,7 +143,7 @@ var Stat = function(){
             .map(function(mask){ 
                 return Object.keys(statObject[mask])
                                     .map(function(actionId){
-                                        return statObject[mask][actionId].updatesList
+                                        return s.diff(statObject[mask][actionId].updatesList, statObject[mask][actionId].removedUpdatesList) 
                                     })
                                     .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
             })

@@ -217,6 +217,16 @@ var s = (function(){
             return void 0;
         }
     };
+
+    this.diff = function(a, b) {
+        a = a.slice();
+        b.forEach(function(_){
+            var index = a.indexOf(_);
+            if( -1 !==  index) a.splice(index, 1);
+        })
+        return a;
+    };
+
     this.negate = function(obj) {
         return !obj;
     }
