@@ -227,7 +227,10 @@ function Atlant(){
                             }
 
                             // turn off all subscriptions of atoms for this view
-                            if( viewSubscriptions[viewName] ) viewSubscriptionsUnsubscribe[viewName](); // finish Bus if it exists;
+                            if( viewSubscriptions[viewName] ) {  // finish Bus if it exists;
+                                viewSubscriptionsUnsubscribe[viewName]();
+                                console.log('atom: unsubscribe', viewName)
+                            } 
 
                             // if(upstream.atoms) console.log('atoms:', viewName, upstream.atoms.length, 'updates for this when:', upstream.stats);
 
@@ -295,12 +298,12 @@ function Atlant(){
                                     // console.log('updating view...', viewName, atom)
                                     var rendered = renderIntoView(data, true) // Here we using scope updated from store!
                                     return rendered.then(function(o){
-                                        atomEndSignal.push({whenId: upstream.whenId});
+                                        atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                                         return o;
                                     });
                                 } else {
                                     console.log('canceled render due the same data', viewName)
-                                    atomEndSignal.push({whenId: upstream.whenId});
+                                    atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                                 }
                             }.bind(void 0, upstream, viewName, scope));
 
@@ -590,7 +593,7 @@ function Atlant(){
         var calculated = statistics.getSum(lastPath);
         var signalled = sumCounter(atomCounter);
 
-        console.log('atom signal received', signalled, calculated, atomCounter.list)
+        console.log('atom signal received', signalled, calculated, atomCounter.list, object.id, activeStreamId)
         if (0 === signalled + calculated) {
             // console.log('render end!')
             onServerEndStream.push()
@@ -601,7 +604,7 @@ function Atlant(){
     atomRecalculateSignal.onValue(function(atomCounter, object){
         var signalled = sumCounter(atomCounter);
         var calculated = statistics.getSum(lastPath);
-        console.log('atom cancel signal received', signalled, calculated, atomCounter.list)
+        console.log('atom cancel signal received', signalled, calculated, atomCounter.list, object.id, activeStreamId)
         if (0 === signalled + calculated) {
             // console.log('render end!')
             onServerEndStream.push()
@@ -1123,7 +1126,7 @@ function Atlant(){
                 console.log("UPDATES:", updates)
                 statistics.removeUpdates(u.whenId, u.masks, updates);
 
-                atomRecalculateSignal.push({whenId: u.whenId}); 
+                atomRecalculateSignal.push({id: u.id, whenId: u.whenId}); 
             }
 
         }.bind(void 0, ifId, TopState.state.lastActionId, condition))
