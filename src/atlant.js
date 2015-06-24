@@ -581,6 +581,7 @@ function Atlant(){
     var onServerEndStream = baseStreams.bus();
 
     var atomCounter = { list: {} };
+    var isRendered = { value: false };
     var defValue = function(){ return { value: 0 } };
     var sumCounter = function(actomCounter){
         return Object.keys(atomCounter.list)
@@ -588,6 +589,7 @@ function Atlant(){
                             .reduce(function(acc, i){ return acc + i }, 0) 
     }
     atomEndSignal.onValue(function(atomCounter, object){
+        if ( isRendered.value ) return;
 
         atomCounter.list[object.whenId].value--;
         var calculated = statistics.getSum(lastPath);
@@ -596,17 +598,21 @@ function Atlant(){
         console.log('atom signal received', signalled, calculated, atomCounter.list, object.id, activeStreamId)
         if (0 === signalled + calculated) {
             // console.log('render end!')
+            isRendered.value = true;
             onServerEndStream.push()
         }
 
     }.bind(void 0, atomCounter))
 
     atomRecalculateSignal.onValue(function(atomCounter, object){
+        if ( isRendered.value ) return;
+
         var signalled = sumCounter(atomCounter);
         var calculated = statistics.getSum(lastPath);
         console.log('atom cancel signal received', signalled, calculated, atomCounter.list, object.id, activeStreamId)
         if (0 === signalled + calculated) {
             // console.log('render end!')
+            isRendered.value = true;
             onServerEndStream.push()
         }
     }.bind(void 0, atomCounter))
@@ -766,6 +772,7 @@ function Atlant(){
             //             .map(function(viewName){
             //                 viewSubscriptionsUnsubscribe[viewName]();
             //             })
+            isRendered.value = false;
 
             atlantState.viewRendered = {};
             atlantState.isLastWasMatched = false;
