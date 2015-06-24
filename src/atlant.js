@@ -110,6 +110,12 @@ function Atlant(){
         ,nope: parseInt(_.uniqueId())
     }
 
+    var atlantState = {
+        viewRendered: {} // Flag that this view is rendered. Stops other streams to perform render then.
+        ,isLastWasMatched: false // Allow lastWhen to stop other when's execution
+        ,actions: {}
+    }
+
     /* Helpers */
     var assignRenders = function(){
 
@@ -650,8 +656,6 @@ function Atlant(){
             return upstreams;
         })
 
-    var renderBeginStream = baseStreams.bus();
-
     var firstRender = renderStreams.renderEndStream.take(1);
     baseStreams.onValue(firstRender, function(value) { // value contains all rendered upstreams.
             if( 'undefined' !== typeof window && prefs.rootSelector )   {
@@ -735,16 +739,24 @@ function Atlant(){
         })
         .filter( s.compose( s.empty, s.flip(matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
         .map(function(upstream) {
+            var stream = Object.create(null); 
+            stream = _.extend(upstream);
+
             // Storing here the data for actions.
-            lastPath = upstream.path;
-            lastReferrer = upstream.referrer;
+            lastPath = stream.path;
+            lastReferrer = stream.referrer;
             lastMask = [];
+
+            stream.id = _.uniqueId();
+            activeStreamId.value = stream.id;
+
 
             // Nil values.
             whenCount.value = 0;
-            activeStreamId.value = 0;
             Counter.reset();
             renderStreams.nullifyScan.push('nullify');
+
+            // New system of nil values
             atomCounter.list = {};
             statistics.cleanUpRemovedUpdates();
             // Object.keys(viewSubscriptionsUnsubscribe) // Unsubscribing of all atoms. I think we don't need it.
@@ -754,15 +766,8 @@ function Atlant(){
 
             atlantState.viewRendered = {};
             atlantState.isLastWasMatched = false;
-            renderBeginStream.push();
-            return upstream;
+            return stream;
         });
-
-    var atlantState = {
-        viewRendered: {} // Flag that this view is rendered. Stops other streams to perform render then.
-        ,isLastWasMatched: false // Allow lastWhen to stop other when's execution
-        ,actions: {}
-    }
 
     var rootStream = Bacon.fromBinder(function(sink) {
             baseStreams.onValue(routeChangedStream, function(_) {
@@ -771,13 +776,6 @@ function Atlant(){
             });
         })
         .takeUntil(baseStreams.destructorStream)
-        .map(function(upstream){
-            var stream = Object.create(null); // Here we change id of the stream. Hence this is should be new object, because otherwise we will change all existed streams
-            stream = _.extend(upstream)
-            stream.id = _.uniqueId();
-            activeStreamId.value = stream.id;
-            return stream;
-        })
 
     var otherWiseRootStream = rootStream
         .filter( s.compose( s.empty, s.flip(matchRoutes)(Matching.stop, routes), s.dot('path') ) )
