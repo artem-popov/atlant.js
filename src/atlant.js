@@ -163,7 +163,7 @@ function Atlant(){
                         var viewName = s.dot('.render.viewName', upstream);
                         savedViewScope[viewName] = clientFuncs.getScopeDataFromStream(upstream);
 
-                        var scope = function() { return clientFuncs.createScope(savedViewScope[viewName]) };
+                        var scopeFn = function() { return clientFuncs.createScope(savedViewScope[viewName]) };
                         var viewProvider = s.dot('.render.renderProvider', upstream);
 
                         // Choose appropriate render.
@@ -176,7 +176,7 @@ function Atlant(){
 
                         if (RenderOperation.redirect === upstream.render.renderOperation ){
                             if ('function' === typeof viewProvider) {
-                                upstream.doLater = function(){utils.goTo(viewProvider(scope()))}
+                                upstream.doLater = function(){utils.goTo(viewProvider(scopeFn()))}
                             } else {
                                 upstream.doLater = function(){utils.goTo(viewProvider)}
                             }
@@ -192,7 +192,7 @@ function Atlant(){
                             return;
                         } else if (RenderOperation.replace === upstream.render.renderOperation ){
                             upstream.doLater = function(){
-                                var path = s.apply(viewProvider, scope());
+                                var path = s.apply(viewProvider, scopeFn());
                                 lastPath = path; 
                                 utils.replace(path);
                             }
@@ -202,7 +202,7 @@ function Atlant(){
                             return;
                         } else if (RenderOperation.change === upstream.render.renderOperation ){
                             upstream.doLater = function(){
-                                var path = s.apply(viewProvider, scope());
+                                var path = s.apply(viewProvider, scopeFn());
                                 lastReferrer = lastPath;
                                 lastPath = path;
                                 utils.change(path);
@@ -214,7 +214,7 @@ function Atlant(){
                         } else if (RenderOperation.move === upstream.render.renderOperation){
 
                             if ('function' === typeof viewProvider) 
-                                window.location.assign(viewProvider(scope()))
+                                window.location.assign(viewProvider(scopeFn()))
                             else 
                                 window.location.assign(viewProvider)
 
@@ -268,7 +268,7 @@ function Atlant(){
                                     .then(function(_){
                                         // @TODO make it better
                                         // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
-                                        // console.log('csope: view...', viewName, scope)
+                                        // console.log('csope: view...', viewName, scopeFn)
                                         var atoms = upstream.atoms;
                                         upstream.atoms = void 0;
 
@@ -291,8 +291,8 @@ function Atlant(){
 
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, atom){ 
-                                console.log('atom:', viewName, atom.value ) 
                                 var data = scopeFn();
+                                console.log('atom:', viewName, atom.value) 
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = scopeFn();
                                     // console.log('updating view...', viewName, atom)
@@ -305,9 +305,9 @@ function Atlant(){
                                     console.log('canceled render due the same data', viewName)
                                     atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                                 }
-                            }.bind(void 0, upstream, viewName, scope));
+                            }.bind(void 0, upstream, viewName, scopeFn));
 
-                            var data = scope();
+                            var data = scopeFn();
                             return renderIntoView(data, false) // Here we using scope updated from store!
 
                         }
@@ -589,7 +589,7 @@ function Atlant(){
                             .reduce(function(acc, i){ return acc + i }, 0) 
     }
     atomEndSignal.onValue(function(atomCounter, object){
-        if ( isRendered.value ) return;
+        if ( isRendered.value ) { console.log('Canceled atom signal after render is completed'); return }
 
         atomCounter.list[object.whenId].value--;
         var calculated = statistics.getSum(lastPath);
@@ -605,7 +605,7 @@ function Atlant(){
     }.bind(void 0, atomCounter))
 
     atomRecalculateSignal.onValue(function(atomCounter, object){
-        if ( isRendered.value ) return;
+        if ( isRendered.value ) { console.log('Canceled atom canceling signal after render is completed'); return }
 
         var signalled = sumCounter(atomCounter);
         var calculated = statistics.getSum(lastPath);

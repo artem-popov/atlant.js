@@ -70,26 +70,17 @@ var Render = function(React) {
             state.check(name);
             if( rootName !== name && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate(/* console.timeEnd.bind(console, 'renering ' + name) */);
 
-            l.logTimeEnd('rendered view ' + name);
+            console.log('Atlant.js: rendered the view.', name)
             return resolve(state.getInstance(name));  
         });
 
         return rendered;
     }
 
-    this.clear = function(viewProvider, upstream, activeStreamId, name, scope) {
-        return new Promise( function( resolve, reject ){
-
-            if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.  
-                state.set(name, React.DOM.div(null));
-            }
-            var instance = state.getThis(name);
-            state.check(name);
-            if( rootName !== name && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate();
-
-            return resolve(state.getInstance(name));
-        });
+    this.clear = function(viewProvider, upstream, activeStreamId, name, scope ) {
+        return this.render(function(){return React.DOM.div(null)}, upstream, activeStreamId, name, scope )
     }
+
 
     this.attach = function(name, selector) {
         var attached = new Promise( function( resolve, reject ){
@@ -140,6 +131,7 @@ var Render = function(React) {
     }
 
     this.put = function(name, component){
+        console.log('Atlant.js: put the view.')
         state.set(name, component);  
         state.check(name);
         return component;
