@@ -1,6 +1,6 @@
 {
   "name": "Atlant.js",
-  "version": "0.4.18",
+  "version": "0.4.19",
   "homepage": "https://github.com/artem-popov/atlant.js",
   "authors": [
     "Artem Popov <artem.popov@frumatic.com>"
@@ -26,7 +26,7 @@
   "dependencies": {
     "lodash": "~2.4.1",
     "bacon": "~0.7.18",
-    "react": "~0.11.0",
+    "react": "0.12.2",
     "native-promise-only": "~0.7.5-e"
   }
 }

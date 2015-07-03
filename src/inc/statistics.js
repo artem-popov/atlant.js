@@ -82,10 +82,14 @@ var Stat = function(){
 
         return tools
             .returnAll(url, getAllExceptAsterisk(statObject) )
+            .filter(function(_){ 
+                return actionId in statObject[_] 
+            })
             .map(function(_){ 
-                return (actionId in statObject[_] 
-                                      && 'ifList' in statObject[_][actionId] 
-                                      && ifId in statObject[_][actionId].ifList) ? statObject[_][actionId].ifList[ifId].updatesList : [] 
+                return ( 'ifList' in statObject[_][actionId] 
+                                      && ifId in statObject[_][actionId].ifList) 
+                                          ? statObject[_][actionId].ifList[ifId].updatesList 
+                                          : [] 
             })
             .filter( function(_){ return _.length })
             .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap

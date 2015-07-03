@@ -29,6 +29,8 @@ var utils = function() {
                 : route +'/';
         }
         ,parseURL: s.memoize( function(url) {
+            if (!url) return void 0;
+
             var q = url.indexOf('?');
             var and = url.indexOf('&');
 
@@ -56,6 +58,15 @@ var utils = function() {
         })
         ,getLocation: function() {
             return window.location.pathname + window.location.search;
+        }
+        ,rebuildURL: function(path) {
+            path = this.parseURL( path ); 
+            if(path) { 
+                path = path.pathname + ( path.search ? '?' + path.search : ''); 
+                path = path.slice(0, path.length - 1);
+            }
+
+            return path
         }
         ,parseURLDeprecated: function(url) {
             var urlParseRE = /^(((([^:\/#\?]+:)?(?:(\/\/)((?:(([^:@\/#\?]+)(?:\:([^:@\/#\?]+))?)@)?(([^:\/#\?\]\[]+|\[[^\/\]@#?]+\])(?:\:([0-9]+))?))?)?)?((\/?(?:[^\/\?#]+\/+)*)([^\?#]*)))?(\?[^#]+)?)(#.*)?/;
