@@ -700,7 +700,7 @@ function Atlant(){
                             path = utils.getLocation(); // On popstate utils.getLocation() always return current URI.
                         }
 
-                        path = utils.rebuildUrl(path);
+                        path = utils.rebuildURL(path);
 
                         // lastScrollTop[path] = document.querySelector('body').scrollTop;
 
@@ -847,7 +847,6 @@ function Atlant(){
 
             State.state.lastWhen = rootStream
                 .map( function(upstream) {
-                    // console.log('---looking for path:', upstream.path);
                     var mask = _(masks)
                                     .filter(function() { if(WhenOrMatch.match === whenType) return true; else return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched. .match() streams are immune.
                                     .map( matchRouteLast( upstream.path, matchingBehaviour ) )

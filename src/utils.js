@@ -63,7 +63,7 @@ var utils = function() {
             path = this.parseURL( path ); 
             if(path) { 
                 path = path.pathname + ( path.search ? '?' + path.search : ''); 
-                path = path.slice(0, path.length - 1);
+                if( '/' === path[path.length - 1] && 1 !== path.length ) path = path.slice(0, path.length - 1);
             }
 
             return path
