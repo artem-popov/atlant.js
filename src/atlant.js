@@ -490,9 +490,6 @@ function Atlant(){
 
                         // atomBus.onValue(function(store, atomId, stats, value, whenId){console.log('imthebus!:', atomId, store.storeName, stats, whenId )}.bind(void 0, store, atomId, upstream.stats, upstream.whenId))
 
-                        var weight = statistics.getWeight(upstream.whenId, upstream.path, store.storeName);
-                        var overWeight = weight + (upstream.lastAtom ? upstream.lastAtom.overWeight : 0);
-
                         // console.log('subscribing to lastAtom:', atomId, stream.ref, (upstream.lastAtom || {ref: 'no previous'}).ref)
                         
                         var atom = { id: atomId
@@ -501,8 +498,6 @@ function Atlant(){
                                         ,store: store.storeName
                                         ,atom: store.partName
                                         ,bus: bus
-                                        ,weight: weight 
-                                        ,overWeight: overWeight // sum previous
                                         ,prev: upstream.lastAtom
                         };
 
@@ -593,6 +588,7 @@ function Atlant(){
     }
     atomEndSignal.onValue(function(atomCounter, object){
         if ( isRendered.value ) { /* console.log('Canceled atom signal after render is completed'); */ return }
+        if ( !(object.whenId in atomCounter.list) ) { return } // no atoms here 
 
         atomCounter.list[object.whenId].value--;
         var calculated = statistics.getSum(lastPath);

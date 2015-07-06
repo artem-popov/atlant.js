@@ -87,9 +87,9 @@ var Stat = function(){
             })
             .map(function(_){ 
                 return ( 'ifList' in statObject[_][actionId] 
-                                      && ifId in statObject[_][actionId].ifList) 
-                                          ? statObject[_][actionId].ifList[ifId].updatesList 
-                                          : [] 
+                                        && ifId in statObject[_][actionId].ifList) 
+                                            ? statObject[_][actionId].ifList[ifId].updatesList 
+                                            : [] 
             })
             .filter( function(_){ return _.length })
             .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
@@ -156,11 +156,6 @@ var Stat = function(){
             .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
             .reduce(function(acc, i){ if(i in acc ) acc[i]++; else acc[i] = 1; return acc }, {})
 
-    }
-
-    this.getWeight = function(actionId, url, storeName){
-        var weights = this.getStoreWeights(url);
-        return (storeName in weights) ? weights[storeName] : 0;
     }
 
     this.putLink = function(storeName, eventName) {
