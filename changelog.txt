@@ -1,3 +1,5 @@
+0.4.21 fix red color on whens without atoms, fix errors on old atoms counter
+(overweights)
 0.4.20 fix mistake 
 0.4.19 cut / from end of route 
 0.4.18 invisible server render compatibility improvements.
