@@ -290,7 +290,7 @@ utils.addSlashes = function(masks){
         .reduce(function(v, i) { return v.concat(i); }, [])
 }
 
-utils.stripLastSlash = function(_){ if( '/' === _[_.length-1] ) return _.substring(0, _.length - 1 ); else return _ }
+utils.stripLastSlash = function(_){ if( 1 !== _.length && '/' === _[_.length-1] ) return _.substring(0, _.length - 1 ); else return _ }
 
 utils.sanitizeUrl = function(url){
     if ('' === url) throw new Error('Atlant.js: url cannot be empty')

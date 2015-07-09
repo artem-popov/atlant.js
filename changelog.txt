@@ -1,3 +1,4 @@
+0.4.23 fix '/' was "" for route matcher 
 0.4.22 recognize "/story//moment", "/story/moment/" and
 "/story/moment/?some=weird&stuff" as "/story/moment" . cleanup, internally
 always think that above url is "/story/moment", not "/story/moment/"
