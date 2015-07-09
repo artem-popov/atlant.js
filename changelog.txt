@@ -1,3 +1,6 @@
+0.4.22 recognize "/story//moment", "/story/moment/" and
+"/story/moment/?some=weird&stuff" as "/story/moment" . cleanup, internally
+always think that above url is "/story/moment", not "/story/moment/"
 0.4.21 fix red color on whens without atoms, fix errors on old atoms counter
 (overweights)
 0.4.20 fix mistake 

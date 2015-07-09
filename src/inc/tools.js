@@ -2,6 +2,7 @@
 
 var utils = require('../utils');
 var _ = require('lodash');
+var s = require('./../lib');
 
 var _test = function(path, mask){
     if ( !path || !mask ) return false;
@@ -29,6 +30,7 @@ var _returnAll = function(path, masks){
     return utils.addSlashes(masks)
                 .map(_return.bind(void 0, path))
                 .filter( function(_){ return _ })
+                .map(utils.stripLastSlash)
 }
 
 var _parse = function(path, mask){

@@ -236,6 +236,7 @@ utils.matchRoute = s.memoize( function(path, mask){ //@TODO add real match, now 
     var parsed = utils.parseURL( path );
     path = parsed.pathname;
     path = decodeURIComponent(path);
+    path = utils.stripLastSlash(path).replace(/\/\/+/g, '/'); // remove slash on end on string and replace multiple slashes with one
 
     // Successefully find *
     if ( '*' === mask[0] ) return {};
@@ -289,6 +290,7 @@ utils.addSlashes = function(masks){
         .reduce(function(v, i) { return v.concat(i); }, [])
 }
 
+utils.stripLastSlash = function(_){ if( '/' === _[_.length-1] ) return _.substring(0, _.length - 1 ); else return _ }
 
 utils.sanitizeUrl = function(url){
     if ('' === url) throw new Error('Atlant.js: url cannot be empty')

@@ -229,7 +229,7 @@ function Atlant(){
                             }
 
                             // turn off all subscriptions of atoms for this view
-                            if( viewSubscriptions[viewName] ) {  // finish Bus if it exists;
+                            if( viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
                                 viewSubscriptionsUnsubscribe[viewName]();
                                 // console.log('atom: unsubscribe', viewName)
                             } 
@@ -834,9 +834,8 @@ function Atlant(){
 
             var whenMasks = masks;
             if( WhenOrMatch.when === whenType )
-                masks.forEach(function(mask) {
-                    s.push({mask: mask}, routes);
-                    s.push({mask: utils.getPossiblePath(mask), redirectTo: mask}, routes);
+                masks.forEach(function(mask) {  // @TODO: old thing
+                    s.push({mask: utils.stripLastSlash(mask)}, routes);
                 });
 
             masks = _(masks).map(function(mask){return [mask, utils.getPossiblePath(mask)]}).flatten().value();
@@ -889,15 +888,6 @@ function Atlant(){
                 })
 
             State.state.lastWhen = State.state.lastWhen.map( function(stream) { stream.conditionId = whenId; return stream; })
-
-            baseStreams.onValue( State.state.lastWhen, function(upstream) {
-                    // console.log('----Matched route!', upstream.path, upstream.masks);
-                    if( upstream.redirectTo) {  // If the route is a "bad clone", then redirecting.
-                        l.log('----------------Redirect:',upstream);
-                        utils.goTo(upstream.redirectTo);
-                    }
-            });
-
 
             State.state.lastIf = void 0;
             State.state.lastDep = void 0;
