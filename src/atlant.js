@@ -124,21 +124,14 @@ function Atlant(){
             if (!upstream.isAction && upstream.id !== activeStreamId.value) return // this streams should not be counted.
 
             if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction ){
-                // console.log('RENDER SIGNAL')
-                renderStreams.whenRenderedStream.push(upstream); // This will count the renders
+                console.log('end render:', upstream.whenId)
+                renderEndSignal.push({ id: upstream.id, whenId: upstream.whenId }); // This will count the renders
             }
-
-            if (upstream.render.renderOperation === RenderOperation.draw && !upstream.isAction || 'isAtom' in upstream && upstream.isAtom ) // Special draw stream also applyes to atoms: don't count these renders - they are brilliant.
-                renderStreams.drawEnd.push(upstream);
-
-            if ( upstream.render.renderOperation !== RenderOperation.draw && upstream.isAction && !upstream.isAtom )
-                renderStreams.actionRendered.push(upstream);
-
         };
 
         // when render applyed, no more renders will be accepted for this .when and viewName
         var renderStopper = function(upstream) {
-            if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw || upstream.isAction || upstream.render.renderOperation === RenderOperation.move || upstream.render.renderOperation === RenderOperation.redirect || upstream.render.renderOperation === RenderOperation.replace || upstream.render.renderOperation === RenderOperation.change || upstream.isAtom )
+            if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw || upstream.isAction || upstream.render.renderOperation === RenderOperation.move || upstream.render.renderOperation === RenderOperation.redirect || upstream.render.renderOperation === RenderOperation.replace || upstream.render.renderOperation === RenderOperation.change )
                 return true;
 
             if ( upstream.render.viewName in atlantState.viewRendered ) {  // If this view is already rendered...
@@ -263,7 +256,7 @@ function Atlant(){
                                 // console.log('WARNING! ACTION ON THE BOARD!')
                             }
 
-                            var renderIntoView = function(scope, isAtom, countThisRender) {
+                            var renderIntoView = function(scope, countThisRender) {
                                 var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
                                 // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
                                 return renderD(viewProvider, upstream, activeStreamId, viewName, scope)
@@ -282,7 +275,6 @@ function Atlant(){
                                         if(_.code && 'notActiveStream' === _.code){
                                         } else {
                                             stream.render.component = _;  // pass rendered component. it stale hold before streams get zipped.
-                                            stream.isAtom = isAtom;
                                         }
                                         return stream 
                                     })
@@ -297,20 +289,20 @@ function Atlant(){
                                 // console.log('atom:', viewName, atom.value) 
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = scopeFn();
-                                    // console.log('updating view...', viewName, atom)
-                                    var rendered = renderIntoView(data, true, function(_){return _}); // Here we using scope updated from store!
+                                    console.log('updating view...', viewName, atom.name, atom.ref)
+                                    var rendered = renderIntoView(data, function(_){return _}); // Here we using scope updated from store!
                                     return rendered.then(function(o){
                                         atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                                         return o;
                                     });
                                 } else {
-                                    // console.log('canceled render due the same data', viewName)
+                                    console.log('canceled render due the same data', viewName, atom.name, atom.ref)
                                     atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                                 }
                             }.bind(void 0, upstream, viewName, scopeFn));
 
                             var data = scopeFn();
-                            return renderIntoView(data, false, whenRenderedSignal) // Here we using scope updated from store!
+                            return renderIntoView(data, whenRenderedSignal) // Here we using scope updated from store!
 
                         }
 
@@ -554,9 +546,9 @@ function Atlant(){
 
     var publishStream = baseStreams.bus();  // Here we can put init things.
     var errorStream = baseStreams.bus();
-    var onRenderEndStream = baseStreams.bus();
-    var onDrawEndStream = baseStreams.bus();
     var interceptorBus = baseStreams.bus();
+
+
 
     // Browser specific actions.
     if ('undefined' !== typeof window) {
@@ -573,58 +565,61 @@ function Atlant(){
     var renderStreams = require('./render-streams')(Counter, whenCount);
 
 
-    var atomEndSignal = baseStreams.bus();
-    var atomRecalculateSignal = baseStreams.bus();
-    var onServerEndStream = baseStreams.bus(); 
-    var onFinalEndStream = onServerEndStream.zip(onRenderEndStream, function(x,y){return y});
-
-    var atomCounter = { list: {} };
-    var isRendered = { value: false };
     var defValue = function(){ return { value: 0 } };
-    var sumCounter = function(actomCounter){
-        return Object.keys(atomCounter.list)
-                            .map( function(id){ return atomCounter.list[id].value })
+    var onRenderEndStream = baseStreams.bus();
+    var onDrawEndStream = baseStreams.bus();
+    var onServerEndStream = baseStreams.bus(); 
+    // var onFinalEndStream = onServerEndStream.zip(onRenderEndStream, function(x,y){return y});
+
+    var sumCounter = function(counter){
+        return Object.keys(counter.list)
+                            .map( function(id){ return counter.list[id].value })
                             .reduce(function(acc, i){ return acc + i }, 0) 
     }
-    atomEndSignal.onValue(function(atomCounter, object){
-        if ( isRendered.value ) { /* console.log('Canceled atom signal after render is completed'); */ return }
-        if ( !(object.whenId in atomCounter.list) ) { return } // no atoms here 
 
-        atomCounter.list[object.whenId].value--;
-        var calculated = statistics.getSum(lastPath);
-        var signalled = sumCounter(atomCounter);
+    var checker = function(about, isFinished, isNeedToDecrease, stream, counter, object){
+        if ( isFinished.value ) { /* console.log('Canceled atom signal after render is completed'); */ return }
+        if ( !(object.whenId in counter.list) ) { return } // no atoms here 
 
-        // console.log('atom signal received', signalled, calculated, atomCounter.list, object.id, activeStreamId)
+        if(isNeedToDecrease) counter.list[object.whenId].value--;
+        var signalled = sumCounter(counter);
+        var calculated = 'atom' == about ? statistics.getSum(lastPath) : statistics.getRenderSum(lastPath);
+
+        console.log(about, signalled + calculated)
         if (0 === signalled + calculated) {
-            // console.log('render end!')
-            isRendered.value = true;
+            console.log('GOTTCHA!')
+            isFinished.value = true;
             onServerEndStream.push()
         }
 
-    }.bind(void 0, atomCounter))
+    }
 
-    atomRecalculateSignal.onValue(function(atomCounter, object){
-        if ( isRendered.value ) { /* console.log('Canceled atom canceling signal after render is completed'); */ return }
 
-        var signalled = sumCounter(atomCounter);
-        var calculated = statistics.getSum(lastPath);
-        // console.log('atom cancel signal received', signalled, calculated, atomCounter.list, object.id, activeStreamId)
-        if (0 === signalled + calculated) {
-            // console.log('render end!')
-            isRendered.value = true;
-            onServerEndStream.push()
-        }
-    }.bind(void 0, atomCounter))
+    var atomCounter = { list: {} };
+    var isAtomed = { value: false };
+    var atomEndSignal = baseStreams.bus();
+    var atomRecalculateSignal = baseStreams.bus();
+    atomEndSignal.onValue(checker.bind(void 0, 'atom', isAtomed, true, onServerEndStream, atomCounter ))
+    atomRecalculateSignal.onValue(checker.bind(void 0, 'atomCancel:', isAtomed, false, onServerEndStream, atomCounter ))
 
-    // onServerEndStream.onValue(function(value){console.log('SERVER END STREAM!')})
-    // onRenderEndStream.onValue(function(value){console.log('RENDER END STREAM!')})
+    var renderCounter = { list: {} };
+    var isRendered = { value: false };
+    var renderEndSignal = baseStreams.bus();
+    var renderRecalculateSignal = baseStreams.bus();
+    renderEndSignal.onValue(checker.bind(void 0, 'render:', isRendered, true, onRenderEndStream, renderCounter));
+    renderRecalculateSignal.onValue(checker.bind(void 0, 'renderCanceled:', isRendered, false, onRenderEndStream, renderCounter));
+
+    onServerEndStream.onValue(function(value){console.log('SERVER END STREAM!')})
+    onRenderEndStream.onValue(function(value){console.log('RENDER END STREAM!')})
     // onFinalEndStream.onValue(function(value){console.log('FINAL END STREAM!')})
 
     var performCallback = function(upstreams, callbackStream, postponedActions) {
         if (Object.keys(upstreams).length) {
             try {
                 var scopeMap = s.map(clientFuncs.createScope, upstreams)
-                callbackStream.push(scopeMap);
+                // callbackStream.push(scopeMap);
+
+                console.log('performCallback!!!')
 
                 postponedActions.forEach(function(action){
                     action();
@@ -772,11 +767,12 @@ function Atlant(){
 
             // New system of nil values
             atomCounter.list = {};
-            statistics.cleanUpRemovedUpdates();
+            statistics.cleanUpRemoved();
             // Object.keys(viewSubscriptionsUnsubscribe) // Unsubscribing of all atoms. I think we don't need it.
             //             .map(function(viewName){
             //                 viewSubscriptionsUnsubscribe[viewName]();
             //             })
+            isAtomed.value = false;
             isRendered.value = false;
 
             atlantState.viewRendered = {};
@@ -821,6 +817,7 @@ function Atlant(){
 
             var whenId = _.uniqueId();
 
+            console.log('when!:', whenId, masks)
             TopState.state.lastMasks = masks;
 
             if (masks.filter(function(mask){ return '*' === mask}).length && whenType === WhenOrMatch.when) { throw new Error( 'Atlant.js: Error! You using atlant.when("*") which is prohibited. For astericks use atlant.match("*")' ); }
@@ -841,7 +838,7 @@ function Atlant(){
             masks = _(masks).map(function(mask){return [mask, utils.getPossiblePath(mask)]}).flatten().value();
 
             State.state.lastWhen = rootStream
-                .map( function(upstream) {
+                .map( function(masks, upstream) {
                     var mask = _(masks)
                                     .filter(function() { if(WhenOrMatch.match === whenType) return true; else return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched. .match() streams are immune.
                                     .map( matchRouteLast( upstream.path, matchingBehaviour ) )
@@ -858,9 +855,9 @@ function Atlant(){
                             stream.route = mask.route;
                             return stream;
                         }
-                })
+                }.bind(void 0, masks))
                 .filter(s.id)
-                .map(function (upstream) {
+                .map(function (masks, whenMasks, upstream) {
                     upstream.whenId = whenId;
                     upstream.route.when = masks;
                     upstream.isFinally = false;
@@ -868,6 +865,7 @@ function Atlant(){
                     if(activeStreamId.value === upstream.id) whenCount.value++;
 
                     atomCounter.list[whenId] = defValue();
+                    renderCounter.list[whenId] = defValue();
                     upstream.stats = stats;
                     upstream.masks = whenMasks;
 
@@ -885,7 +883,7 @@ function Atlant(){
 
                     var stream = injectsGrabber.add(name, depData, injects, upstream);
                     return stream;
-                })
+                }.bind(void 0, masks, whenMasks))
 
             State.state.lastWhen = State.state.lastWhen.map( function(stream) { stream.conditionId = whenId; return stream; })
 
@@ -1124,10 +1122,15 @@ function Atlant(){
 
         thisIfNegate.onValue(function(ifId, actionId, condition, u){
             var updates = statistics.getUpdatesByUrl(actionId, lastPath, ifId);
+            var renders = statistics.getRendersByUrl(actionId, lastPath, ifId);
+            if(renders.length) {
+                console.log("RENDERS:", renders)
+                statistics.removeRenders(u.whenId, u.masks, renders);
+                renderRecalculateSignal.push({id: u.id, whenId: u.whenId}); 
+            }
             if(updates.length) {
-                // console.log("UPDATES:", updates)
+                console.log("UPDATES:", updates )
                 statistics.removeUpdates(u.whenId, u.masks, updates);
-
                 atomRecalculateSignal.push({id: u.id, whenId: u.whenId}); 
             }
 
@@ -1143,8 +1146,8 @@ function Atlant(){
         statistics.whenStat({
             actionId: TopState.state.lastActionId
             ,ifId: ifId
-            ,masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction]
-        });  // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
+            ,masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction] // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
+        });  
         return this;
     }
 
@@ -1237,6 +1240,13 @@ function Atlant(){
             // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewName.
             if ( ! renders[viewName] ) renders[viewName] = [];
             renders[viewName].push(thisRender);
+
+
+            if (RenderOperation.draw !== renderOperation) statistics.whenStat({ actionId: TopState.state.lastActionId,
+                                ifIds: State.state.lastIfIds,
+                                masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction],
+                                render: renderId
+            });
 
             if (void 0 !== State.state.lastIf && renderOperation !== RenderOperation.draw){ 
                 State.rollback(); 

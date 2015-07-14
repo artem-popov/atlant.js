@@ -23,7 +23,7 @@
     "vinyl-source-stream": "~0.1.1"
   },
   "engines": {
-    "node": ">=0.10.0"
+    "node": "0.10.36"
   },
   "dependencies": {
     "sweetify": "~0.4.0"

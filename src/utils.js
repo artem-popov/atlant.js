@@ -293,7 +293,7 @@ utils.addSlashes = function(masks){
 utils.stripLastSlash = function(_){ if( 1 !== _.length && '/' === _[_.length-1] ) return _.substring(0, _.length - 1 ); else return _ }
 
 utils.sanitizeUrl = function(url){
-    if ('' === url) throw new Error('Atlant.js: url cannot be empty')
+    if (!url || '' === url) throw new Error('Atlant.js: url cannot be empty')
         var escapedRoute = url
     .toLowerCase()
     .replace(/\/+$/, "");  // replacing last /

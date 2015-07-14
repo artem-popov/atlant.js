@@ -17,13 +17,14 @@ var Stat = function(){
 
     if('undefined' !== typeof window) window.statObject = statObject; //@TODO debug information
 
-    var getAllExceptAsterisk = function(statObject){
-        return Object.keys(statObject).filter( function(_){ return '*' !== _ } )
+    this.whens = function(){
+        return Object.keys(statObject).filter( function(_){ return '*' === _ || -1 !== _.indexOf('/') })
     }
 
     this.whenStat = function(params){
         var masks = params.masks
             ,eventKey = params.eventKey
+            ,render = params.render
             ,ifId = params.ifId
             ,ifIds = params.ifIds
             ,atom = params.atom
@@ -37,15 +38,21 @@ var Stat = function(){
                 statObject[mask] = {}
             
             if( !(actionId in statObject[mask]) )  
-                statObject[mask][actionId] = { updatesList: [], removedUpdatesList: [], lastOp: [], ifList: {}, atomList: [], viewList: [] }
+                statObject[mask][actionId] = { updatesList: [], rendersList: [], removedRendersList: [], removedUpdatesList: [], lastOp: [], ifList: {}, atomList: [], viewList: [] }
 
             if (ifId) { 
-                statObject[mask][actionId].ifList[ifId] = {updatesList: []}
+                statObject[mask][actionId].ifList[ifId] = {updatesList: [], rendersList: []}
             }
 
             if(eventKey && ifIds) ifIds.forEach(function(ifId) { 
                 statObject[mask][actionId].ifList[ifId].updatesList.push(eventKey);
             })
+
+            if(render && ifIds) ifIds.forEach(function(ifId) { 
+                statObject[mask][actionId].ifList[ifId].rendersList.push(render);
+            })
+
+            if(render) statObject[mask][actionId].rendersList.push(render);
             if(eventKey) statObject[mask][actionId].updatesList.push(eventKey);
 
             if(atom) statObject[mask][actionId].atomList.push(atom);
@@ -56,45 +63,54 @@ var Stat = function(){
         return statObject;
     }
 
-    this.cleanUpRemovedUpdates = function(){
+    this.cleanUpRemoved = function(){
         Object.keys(statObject)
             .forEach(function(mask){
                 Object.keys(statObject[mask])
                     .forEach(function(actionId){
                         statObject[mask][actionId].removedUpdatesList = []
+                        statObject[mask][actionId].removedRendersList = []
                     })
             })
     }
 
-    this.removeUpdates = function(actionId, masks, updates){
+    var removeTokenized = function(listOfRemoved, actionId, masks, items){
         masks.forEach(function(mask){
             mask = utils.sanitizeUrl(mask);
-            updates.forEach(function(update){
+            items.forEach(function(item){
                 if (actionId in statObject[mask]) {
-                    statObject[mask][actionId].removedUpdatesList.push(update);
+                    statObject[mask][actionId][listOfRemoved].push(item);
                 }
             }) 
 
         })
     }
 
-    this.getUpdatesByUrl = function(actionId, url, ifId){
+    this.removeUpdates = removeTokenized.bind(this, 'removedUpdatesList');
+    this.removeRenders = removeTokenized.bind(this, 'removedRendersList');
+
+    // asked by canceled ifs to pipe into removeUpdates and removeRenders
+    var getTokenByUrl = function(token, actionId, url, ifId){
 
         return tools
-            .returnAll(url, getAllExceptAsterisk(statObject) )
+            .returnAll(url, this.whens() )
             .filter(function(_){ 
                 return actionId in statObject[_] 
             })
             .map(function(_){ 
+
                 return ( 'ifList' in statObject[_][actionId] 
                                         && ifId in statObject[_][actionId].ifList) 
-                                            ? statObject[_][actionId].ifList[ifId].updatesList 
+                                            ? statObject[_][actionId].ifList[ifId][token] 
                                             : [] 
             })
             .filter( function(_){ return _.length })
             .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
 
     }
+
+    this.getRendersByUrl = getTokenByUrl.bind(this, 'rendersList')
+    this.getUpdatesByUrl = getTokenByUrl.bind(this, 'updatesList')
 
     var countActionViews = function(mask, actionId){
         var action = statObject[mask][actionId];
@@ -110,11 +126,29 @@ var Stat = function(){
             .map( function(_){ return void 0 === _ ? 0 : _ } )
     }
 
-    this.getSum = function(url){ 
+    this.getRenderSum = function(url){ // Returns predicted count of renders
+        var number = tools
+            .returnAll(url, this.whens() )
+            .map( function(mask){ // each action is atoms group/seq with it's own view names
+                return Object.keys(statObject[mask])
+                                    .map(function(actionId){
+                                        var removedRenders = statObject[mask][actionId].removedRendersList.length;
+                                        var renders = statObject[mask][actionId].rendersList.length;
+                                        return renders - removedRenders
+                                    })
+                                    .reduce( function(acc, i){ return acc + i }, 0) // sum
+            })
+
+        number = number.reduce(function(acc, i){ return acc + i}, 0);
+
+        return number
+    }
+
+    this.getSum = function(url){  // Returns predicted sum of atom calls
 
         var number = tools
-            .returnAll(url, Object.keys(statObject) )
-            .filter(function(mask){ return '*/' !== mask })
+            .returnAll(url, this.whens() )
+            .filter(function(mask){ return '*/' !== mask })  //just ignore */ in ['*', '*/']
             .map( function(mask){ // each action is atoms group/seq with it's own view names
                 return Object.keys(statObject[mask])
                                     .map(function(actionId){
@@ -134,7 +168,6 @@ var Stat = function(){
                                     .reduce( function(acc, i){ return acc + i }, 0) // sum
             }.bind(this)) 
 
-        // console.log('pre:',number )
 
         return number.reduce(function(acc, i){ return acc + i}, 0);
     }
@@ -142,8 +175,8 @@ var Stat = function(){
     this.getStoreWeights = function(url){
 
         return tools
-            .returnAll(url, Object.keys(statObject) )
-            .filter(function(mask){ return '*/' !== mask })
+            .returnAll(url, this.whens() )
+            .filter(function(mask){ return '*/' !== mask }) //just ignore */ in ['*', '*/']
             .map(function(mask){ 
                 return Object.keys(statObject[mask])
                                     .map(function(actionId){

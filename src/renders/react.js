@@ -16,13 +16,13 @@ var State = function(React){
                 wrappers[name] = React.createClass({
                     render: function(){
                         thises[name] = this;
-                        if ( !views[name] ) views[name] = React.DOM.div(null); 
+                        if ( !views[name] ) views[name] = React.createElement('div');
 
                         return views[name];
                     }
             })}    
             if ( !instances[name] ) 
-                instances[name] = wrappers[name]();
+                instances[name] = React.createFactory(wrappers[name])();
         }
 
         this.getState = function(name) {
@@ -78,7 +78,7 @@ var Render = function(React) {
     }
 
     this.clear = function(viewProvider, upstream, activeStreamId, name, scope ) {
-        return this.render(function(){return React.DOM.div(null)}, upstream, activeStreamId, name, scope )
+        return this.render(function(){return React.createElement('div')}, upstream, activeStreamId, name, scope )
     }
 
 
@@ -94,7 +94,7 @@ var Render = function(React) {
             if ( !root ) { throw new Error('AtlantJs: Please use .render(component, "' + name + '") to render something') }
 
             try{
-                React.renderComponent(root, element, function(){ rootName = name; resolve() } );
+                React.render(root, element, function(){ rootName = name; resolve() } );
             } catch(e) {
                 console.error(e.message, e.stack)
 
@@ -114,7 +114,7 @@ var Render = function(React) {
      * */
     this.stringify = function(name, options) {
         if ( options && options.static)
-            return React.renderComponentToStaticMarkup(state.getInstance(name));
+            return React.renderToString(state.getInstance(name));
         else 
             return React.renderComponentToString(state.getInstance(name));
     }
@@ -142,7 +142,7 @@ var Render = function(React) {
      */
     this.innerView = React.createClass({
         render: function() {
-            return React.DOM.div(null);
+            return React.createElement('div');
         }
     })
 }
