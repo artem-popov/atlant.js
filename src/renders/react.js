@@ -94,7 +94,7 @@ var Render = function(React) {
             if ( !root ) { throw new Error('AtlantJs: Please use .render(component, "' + name + '") to render something') }
 
             try{
-                React.render(root, element, function(){ rootName = name; resolve() } );
+                React.render(root, element, function(){ rootName = name; console.log('react said it\'s attached!'); resolve() } );
             } catch(e) {
                 console.error(e.message, e.stack)
 

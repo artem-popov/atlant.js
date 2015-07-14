@@ -31,6 +31,7 @@ var _returnAll = function(path, masks){
                 .map(_return.bind(void 0, path))
                 .filter( function(_){ return _ })
                 .map(utils.stripLastSlash)
+                .reduce(function(acc, i){if(-1 === acc.indexOf(i)) acc.push(i); return acc}, []) // only unique elements because of stripped slash on end */ became * 
 }
 
 var _parse = function(path, mask){

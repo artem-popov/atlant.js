@@ -31,6 +31,7 @@ var Stat = function(){
             ,actionId = params.actionId
             ,view = params.view
 
+        // console.log('whenStat:', params)
         masks.forEach(function(mask){
             mask = utils.sanitizeUrl(mask);
 
@@ -45,6 +46,7 @@ var Stat = function(){
             }
 
             if(eventKey && ifIds) ifIds.forEach(function(ifId) { 
+                console.log('registering update for', eventKey, ifId)
                 statObject[mask][actionId].ifList[ifId].updatesList.push(eventKey);
             })
 
@@ -99,6 +101,7 @@ var Stat = function(){
             })
             .map(function(_){ 
 
+                console.log('getToken:', statObject[_][actionId].ifList[ifId].updatesList.length)
                 return ( 'ifList' in statObject[_][actionId] 
                                         && ifId in statObject[_][actionId].ifList) 
                                             ? statObject[_][actionId].ifList[ifId][token] 
@@ -148,7 +151,7 @@ var Stat = function(){
 
         var number = tools
             .returnAll(url, this.whens() )
-            .filter(function(mask){ return '*/' !== mask })  //just ignore */ in ['*', '*/']
+            // .filter(function(mask){ return '|)}>#' !== mask })  //just ignore |)}># in ['*', '|)}>#']
             .map( function(mask){ // each action is atoms group/seq with it's own view names
                 return Object.keys(statObject[mask])
                                     .map(function(actionId){
@@ -176,7 +179,7 @@ var Stat = function(){
 
         return tools
             .returnAll(url, this.whens() )
-            .filter(function(mask){ return '*/' !== mask }) //just ignore */ in ['*', '*/']
+            // .filter(function(mask){ return '|)}>#' !== mask }) //just ignore |)}># in ['*', '|)}>#']
             .map(function(mask){ 
                 return Object.keys(statObject[mask])
                                     .map(function(actionId){

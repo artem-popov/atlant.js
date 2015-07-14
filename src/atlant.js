@@ -110,6 +110,17 @@ function Atlant(){
         ,nope: parseInt(_.uniqueId())
     }
 
+    var RenderOperationKey = {};
+    RenderOperationKey[RenderOperation.render] = 'render'; 
+    RenderOperationKey[RenderOperation.draw] = 'draw'; 
+    RenderOperationKey[RenderOperation.replace] = 'replace'; 
+    RenderOperationKey[RenderOperation.change] = 'change'; 
+    RenderOperationKey[RenderOperation.clear] = 'clear'; 
+    RenderOperationKey[RenderOperation.redirect] = 'redirect'; 
+    RenderOperationKey[RenderOperation.refresh] = 'refresh'; 
+    RenderOperationKey[RenderOperation.move] = 'move'; 
+    RenderOperationKey[RenderOperation.nope] = 'nope'; 
+
     var atlantState = {
         viewRendered: {} // Flag that this view is rendered. Stops other streams to perform render then.
         ,isLastWasMatched: false // Allow lastWhen to stop other when's execution
@@ -124,7 +135,6 @@ function Atlant(){
             if (!upstream.isAction && upstream.id !== activeStreamId.value) return // this streams should not be counted.
 
             if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction ){
-                console.log('end render:', upstream.whenId)
                 renderEndSignal.push({ id: upstream.id, whenId: upstream.whenId }); // This will count the renders
             }
         };
@@ -279,7 +289,7 @@ function Atlant(){
                                         return stream 
                                     })
                                     .then( countThisRender )
-                                    .catch( clientFuncs.catchError )
+                                    .catch( clientFuncs.catchErRor )
                             }
 
 
@@ -569,7 +579,8 @@ function Atlant(){
     var onRenderEndStream = baseStreams.bus();
     var onDrawEndStream = baseStreams.bus();
     var onServerEndStream = baseStreams.bus(); 
-    // var onFinalEndStream = onServerEndStream.zip(onRenderEndStream, function(x,y){return y});
+    var onBothEndStreams = onRenderEndStream; // onServerEndStream.merge(onRenderEndStream, function(x,y){return y}).first(); //onServerEndStream.zip(onRenderEndStream, function(x,y){return y});
+    var onFinalEndStream = baseStreams.bus();  // will be returned to user. will be called after postponed actions. will be user for first render.
 
     var sumCounter = function(counter){
         return Object.keys(counter.list)
@@ -577,19 +588,20 @@ function Atlant(){
                             .reduce(function(acc, i){ return acc + i }, 0) 
     }
 
-    var checker = function(about, isFinished, isNeedToDecrease, stream, counter, object){
+    var checker = function(about, isFinished, isNeedToDecrease, signalStream, counter, object){
         if ( isFinished.value ) { /* console.log('Canceled atom signal after render is completed'); */ return }
         if ( !(object.whenId in counter.list) ) { return } // no atoms here 
 
+        console.log('check!:', object.whenId)
         if(isNeedToDecrease) counter.list[object.whenId].value--;
         var signalled = sumCounter(counter);
         var calculated = 'atom' == about ? statistics.getSum(lastPath) : statistics.getRenderSum(lastPath);
 
-        console.log(about, signalled + calculated)
+        console.log(about, signalled, calculated, object.whenId, counter, statObject)
         if (0 === signalled + calculated) {
-            console.log('GOTTCHA!')
+            console.log('GOTTCHA!', about)
             isFinished.value = true;
-            onServerEndStream.push()
+            signalStream.push()
         }
 
     }
@@ -611,14 +623,11 @@ function Atlant(){
 
     onServerEndStream.onValue(function(value){console.log('SERVER END STREAM!')})
     onRenderEndStream.onValue(function(value){console.log('RENDER END STREAM!')})
-    // onFinalEndStream.onValue(function(value){console.log('FINAL END STREAM!')})
 
     var performCallback = function(upstreams, callbackStream, postponedActions) {
-        if (Object.keys(upstreams).length) {
             try {
-                var scopeMap = s.map(clientFuncs.createScope, upstreams)
-                // callbackStream.push(scopeMap);
 
+                callbackStream.push();
                 console.log('performCallback!!!')
 
                 postponedActions.forEach(function(action){
@@ -629,7 +638,6 @@ function Atlant(){
                 console.error('Atlant Error:', e)
                 errorStream.push(e);
             }
-        }
     }
 
     baseStreams.onValue( renderStreams.drawEnd, function(upstream){
@@ -641,38 +649,32 @@ function Atlant(){
 
     /* Except .draw() every render get this*/
     
-    baseStreams.onValue( renderStreams.renderEndStream, function(upstreams){
-            var isAction = false;
-            var firstUpstream = _(Object.keys(upstreams)).first();
-            if (firstUpstream) firstUpstream = upstreams[firstUpstream];
-            if ('isAction' in firstUpstream && firstUpstream.isAction) isAction = true;
+    baseStreams.onValue( onBothEndStreams, function(upstreams){
+        if (typeof window !== 'undefined') lastPath = utils.rebuildURL(utils.getLocation());
 
-            if (!isAction) renderStreams.nullifyScan.push('nullify'); // Do not nullify anything of action
+        var doLater = _.first(  _(upstreams).reduce( function(acc, v, k){ if(v.doLater) acc.push(v.doLater); return acc }, [])  ); 
+        var redirectAction = function(doLater){ if(doLater) setTimeout( doLater, 0 ) }.bind(void 0, doLater);
+        var postponedActions = _(upstreams).reduce( function(acc, v, k){ if(v.postponed) acc.push(v.postponed); return acc}, []);
 
-            if (typeof window !== 'undefined') lastPath = utils.rebuildURL(utils.getLocation());
+        if (redirectAction) postponedActions.push(redirectAction);
 
-            var doLater = _.first(  _(upstreams).reduce( function(acc, v, k){ if(v.doLater) acc.push(v.doLater); return acc }, [])  ); 
-            var redirectAction = function(doLater){ if(doLater) setTimeout( doLater, 0 ) }.bind(void 0, doLater);
-            var postponedActions = _(upstreams).reduce( function(acc, v, k){ if(v.postponed) acc.push(v.postponed); return acc}, []);
+        performCallback(upstreams, onFinalEndStream, postponedActions);
 
-            if (redirectAction) postponedActions.push(redirectAction);
+        return upstreams;
+    })
 
-            performCallback(upstreams, onRenderEndStream, postponedActions);
-
-            return upstreams;
-        })
-
-    var firstRender = renderStreams.renderEndStream.take(1);
+    var firstRender = onFinalEndStream.take(1);
     baseStreams.onValue(firstRender, function(value) { // value contains all rendered upstreams.
-            if( 'undefined' !== typeof window && prefs.rootSelector )   {
-                prefs
-                    .render.attach('root', prefs.rootSelector )
-                    .catch(function(e) {
-                        console.error(e.message, e.stack);
-                        errorStream.push(e);
-                    })
-            }
-        });
+        if( 'undefined' !== typeof window && prefs.rootSelector )   {
+            prefs
+                .render.attach('root', prefs.rootSelector )
+                .catch(function(e) {
+                    console.error(e.message, e.stack);
+                    errorStream.push(e);
+                })
+                .then( s.logIt('we\' done.') )
+        }
+    });
 
 
     var routeChangedStream =  publishStream
@@ -1121,13 +1123,13 @@ function Atlant(){
             .filter( s.id )
 
         thisIfNegate.onValue(function(ifId, actionId, condition, u){
-            var updates = statistics.getUpdatesByUrl(actionId, lastPath, ifId);
             var renders = statistics.getRendersByUrl(actionId, lastPath, ifId);
+                console.log('negating renders...:', renders)
             if(renders.length) {
-                console.log("RENDERS:", renders)
                 statistics.removeRenders(u.whenId, u.masks, renders);
                 renderRecalculateSignal.push({id: u.id, whenId: u.whenId}); 
             }
+            var updates = statistics.getUpdatesByUrl(actionId, lastPath, ifId);
             if(updates.length) {
                 console.log("UPDATES:", updates )
                 statistics.removeUpdates(u.whenId, u.masks, updates);
@@ -1242,11 +1244,14 @@ function Atlant(){
             renders[viewName].push(thisRender);
 
 
-            if (RenderOperation.draw !== renderOperation) statistics.whenStat({ actionId: TopState.state.lastActionId,
+            if (RenderOperation.draw !== renderOperation) {
+                console.log('registering render:', renderId, TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], viewName, RenderOperationKey[renderOperation], renderProvider, 'ifIds:', State.state.lastIfIds);
+                statistics.whenStat({ actionId: TopState.state.lastActionId,
                                 ifIds: State.state.lastIfIds,
                                 masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction],
                                 render: renderId
-            });
+                }); 
+            } 
 
             if (void 0 !== State.state.lastIf && renderOperation !== RenderOperation.draw){ 
                 State.rollback(); 
@@ -1369,7 +1374,7 @@ function Atlant(){
         return this;
     }
     var _onRenderEnd = function(callback) {
-        baseStreams.onValue(onRenderEndStream, s.baconTryD(callback));
+        baseStreams.onValue(onFinalEndStream, s.baconTryD(callback));
         return this;
     }
 
@@ -1539,7 +1544,7 @@ function Atlant(){
         baseStreams.onValue( thisOp, function(updateCallback, upstream) { 
         });
 
-        TopState.state.stats.keys.push(key);
+        // TopState.state.stats.keys.push(key);
         statistics.whenStat({
             eventKey: key
             ,actionId: TopState.state.lastActionId
