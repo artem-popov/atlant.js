@@ -579,7 +579,7 @@ function Atlant(){
     var onRenderEndStream = baseStreams.bus();
     var onDrawEndStream = baseStreams.bus();
     var onServerEndStream = baseStreams.bus(); 
-    var onBothEndStreams = onRenderEndStream; // onServerEndStream.merge(onRenderEndStream, function(x,y){return y}).first(); //onServerEndStream.zip(onRenderEndStream, function(x,y){return y});
+    var onBothEndStreams = onServerEndStream.zip(onRenderEndStream, function(x,y){return y});
     var onFinalEndStream = baseStreams.bus();  // will be returned to user. will be called after postponed actions. will be user for first render.
 
     var sumCounter = function(counter){
@@ -597,7 +597,7 @@ function Atlant(){
         var signalled = sumCounter(counter);
         var calculated = 'atom' == about ? statistics.getSum(lastPath) : statistics.getRenderSum(lastPath);
 
-        console.log(about, signalled, calculated, object.whenId, counter, statObject)
+        console.log(about, signalled, calculated, object.whenId, counter)
         if (0 === signalled + calculated) {
             console.log('GOTTCHA!', about)
             isFinished.value = true;
@@ -1370,7 +1370,7 @@ function Atlant(){
     }
 
     var _onServerEnd = function(callback) {
-        baseStreams.onValue(onServerEndStream, s.baconTryD(callback));
+        baseStreams.onValue(onBothEndStreams , s.baconTryD(callback));
         return this;
     }
     var _onRenderEnd = function(callback) {
