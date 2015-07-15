@@ -118,8 +118,6 @@ var Stat = function(){
     var countActionViews = function(mask, actionId){
         var action = statObject[mask][actionId];
         return ( action && 'viewList' in action ? action.viewList : [] )
-                .reduce(function(acc, i){ return acc.concat(i) }, []) // flatmap
-                .reduce(function(acc, i){ if (-1 !== acc.indexOf(i)) { return acc } else { acc.push(i); return acc}}, [])
                 .reduce(function(acc, i){ return acc + 1 }, 0);
     }
 
@@ -151,7 +149,6 @@ var Stat = function(){
 
         var number = tools
             .returnAll(url, this.whens() )
-            // .filter(function(mask){ return '|)}>#' !== mask })  //just ignore |)}># in ['*', '|)}>#']
             .map( function(mask){ // each action is atoms group/seq with it's own view names
                 return Object.keys(statObject[mask])
                                     .map(function(actionId){
@@ -163,8 +160,6 @@ var Stat = function(){
 
                                         var actionNum = replacer( action && 'atomList' in action ? action.atomList : [] )
                                                     .reduce( function(acc, i){ return acc + i }, 0) // sum
-
-                                        // console.log('OOO:', weights, action.atomList, actionNum, viewsNum)
 
                                         return viewsNum * actionNum;
                                     }.bind(this))
@@ -179,7 +174,6 @@ var Stat = function(){
 
         return tools
             .returnAll(url, this.whens() )
-            // .filter(function(mask){ return '|)}>#' !== mask }) //just ignore |)}># in ['*', '|)}>#']
             .map(function(mask){ 
                 return Object.keys(statObject[mask])
                                     .map(function(actionId){

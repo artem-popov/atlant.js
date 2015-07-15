@@ -582,42 +582,52 @@ function Atlant(){
     var onBothEndStreams = onServerEndStream.zip(onRenderEndStream, function(x,y){return y});
     var onFinalEndStream = baseStreams.bus();  // will be returned to user. will be called after postponed actions. will be user for first render.
 
+    var atomCounter = { list: {} };
+    var isAtomed = { value: false };
+    var atomEndSignal = baseStreams.bus();
+    var atomRecalculateSignal = baseStreams.bus();
+
+    var renderCounter = { list: {} };
+    var isRendered = { value: false };
+    var renderEndSignal = baseStreams.bus();
+    var renderRecalculateSignal = baseStreams.bus();
+
     var sumCounter = function(counter){
         return Object.keys(counter.list)
                             .map( function(id){ return counter.list[id].value })
                             .reduce(function(acc, i){ return acc + i }, 0) 
     }
 
-    var checker = function(about, isFinished, isNeedToDecrease, signalStream, counter, object){
-        if ( isFinished.value ) { /* console.log('Canceled atom signal after render is completed'); */ return }
-        if ( !(object.whenId in counter.list) ) { return } // no atoms here 
+    var checker = function(name, isFinished, isNeedToDecrease, signalStream, counter, object){
+        try{
+            if ( isFinished.value ) { /*console.log('Canceled atom signal after render is completed');*/  return }
+            if ( !(object.whenId in counter.list) ) { /*console.log('no atoms here');*/ return } // no atoms here 
 
-        console.log('check!:', object.whenId)
-        if(isNeedToDecrease) counter.list[object.whenId].value--;
-        var signalled = sumCounter(counter);
-        var calculated = 'atom' == about ? statistics.getSum(lastPath) : statistics.getRenderSum(lastPath);
 
-        console.log(about, signalled, calculated, object.whenId, counter)
-        if (0 === signalled + calculated) {
-            console.log('GOTTCHA!', about)
-            isFinished.value = true;
-            signalStream.push()
+            if(isNeedToDecrease) counter.list[object.whenId].value--;
+            var signalled = sumCounter(counter);
+            var calculated = ( -1 !== name.indexOf('atom') ) ? statistics.getSum(lastPath) : statistics.getRenderSum(lastPath);
+
+            console.log(name, signalled, calculated, object.whenId, counter)
+
+            if (0 === signalled + calculated) {
+                console.log('GOTTCHA!', name)
+                isFinished.value = true
+                signalStream.push()
+                if(-1 === name.indexOf('atom'))  {
+                    checker( 'atomAsk:', isAtomed, false, onServerEndStream, atomCounter, object ) // In case if there are no atoms and atom cancels we can check here and it will be clear, should server end or not.
+                }
+            }   
+        } catch(e){
+            console.error(e.stack)
         }
 
     }
 
 
-    var atomCounter = { list: {} };
-    var isAtomed = { value: false };
-    var atomEndSignal = baseStreams.bus();
-    var atomRecalculateSignal = baseStreams.bus();
     atomEndSignal.onValue(checker.bind(void 0, 'atom', isAtomed, true, onServerEndStream, atomCounter ))
     atomRecalculateSignal.onValue(checker.bind(void 0, 'atomCancel:', isAtomed, false, onServerEndStream, atomCounter ))
 
-    var renderCounter = { list: {} };
-    var isRendered = { value: false };
-    var renderEndSignal = baseStreams.bus();
-    var renderRecalculateSignal = baseStreams.bus();
     renderEndSignal.onValue(checker.bind(void 0, 'render:', isRendered, true, onRenderEndStream, renderCounter));
     renderRecalculateSignal.onValue(checker.bind(void 0, 'renderCanceled:', isRendered, false, onRenderEndStream, renderCounter));
 
