@@ -72,6 +72,7 @@ var Stat = function(){
                     .forEach(function(actionId){
                         statObject[mask][actionId].removedUpdatesList = []
                         statObject[mask][actionId].removedRendersList = []
+                        statObject[mask][actionId].viewList = []
                     })
             })
     }

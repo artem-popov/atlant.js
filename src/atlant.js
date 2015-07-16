@@ -612,7 +612,8 @@ function Atlant(){
             var signalled = sumCounter(counter);
             var calculated = ( -1 !== name.indexOf('atom') ) ? statistics.getSum(lastPath) : statistics.getRenderSum(lastPath);
 
-            console.log(name, signalled, calculated, 'whenId:', object.whenId, 'itemIds:', object.itemIds, counter, object.item ? object.item.type : "", object.item ? object.item.viewName : '')
+            // if(-1!==name.indexOf('atom')) 
+                console.log(name, signalled, calculated, 'whenId:', object.whenId, 'itemIds:', object.itemIds, counter, object.item ? object.item.type : "", object.item ? object.item.viewName : '')
 
             if (0 === signalled + calculated) {
                 console.log('GOTTCHA!', name)
@@ -769,6 +770,7 @@ function Atlant(){
 
             // New system of nil values
             atomCounter.list = {};
+            renderCounter.list = {};
             statistics.cleanUpRemoved();
             // Object.keys(viewSubscriptionsUnsubscribe) // Unsubscribing of all atoms. I think we don't need it.
             //             .map(function(viewName){
