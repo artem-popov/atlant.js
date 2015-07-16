@@ -134,8 +134,12 @@ function Atlant(){
         var whenRenderedSignal = function( upstream ) {
             if (!upstream.isAction && upstream.id !== activeStreamId.value) return // this streams should not be counted.
 
+            if (upstream.render.renderOperation === RenderOperation.draw && !upstream.isAction ){
+                renderStreams.drawEnd.push({ id: upstream.id, whenId: upstream.whenId, itemIds: [upstream.render.id], item: upstream.render }); // This is mostly for first render and for user
+            }
+
             if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction ){
-                renderEndSignal.push({ id: upstream.id, whenId: upstream.whenId }); // This will count the renders
+                renderEndSignal.push({ id: upstream.id, whenId: upstream.whenId, itemIds: [upstream.render.id], item: upstream.render }); // This will count the renders
             }
         };
 
@@ -608,7 +612,7 @@ function Atlant(){
             var signalled = sumCounter(counter);
             var calculated = ( -1 !== name.indexOf('atom') ) ? statistics.getSum(lastPath) : statistics.getRenderSum(lastPath);
 
-            console.log(name, signalled, calculated, object.whenId, counter)
+            console.log(name, signalled, calculated, 'whenId:', object.whenId, 'itemIds:', object.itemIds, counter, object.item ? object.item.type : "", object.item ? object.item.viewName : '')
 
             if (0 === signalled + calculated) {
                 console.log('GOTTCHA!', name)
@@ -650,12 +654,12 @@ function Atlant(){
             }
     }
 
-    baseStreams.onValue( renderStreams.drawEnd, function(upstream){
-            var upstreams = {};
-            upstreams[upstream.render.viewName] = upstream;
-
-            performCallback(upstreams, onDrawEndStream, upstream.postponed ? [upstream.postponed] : []);
-    });
+    // baseStreams.onValue( renderStreams.drawEnd, function(upstream){
+    //         var upstreams = {};
+    //         upstreams[upstream.render.viewName] = upstream;
+    //
+    //         performCallback(upstreams, onDrawEndStream, upstream.postponed ? [upstream.postponed] : []);
+    // });
 
     /* Except .draw() every render get this*/
     
@@ -672,20 +676,6 @@ function Atlant(){
 
         return upstreams;
     })
-
-    var firstRender = onFinalEndStream.take(1);
-    baseStreams.onValue(firstRender, function(value) { // value contains all rendered upstreams.
-        if( 'undefined' !== typeof window && prefs.rootSelector )   {
-            prefs
-                .render.attach('root', prefs.rootSelector )
-                .catch(function(e) {
-                    console.error(e.message, e.stack);
-                    errorStream.push(e);
-                })
-                .then( s.logIt('we\' done.') )
-        }
-    });
-
 
     var routeChangedStream =  publishStream
         .merge( Bacon.fromBinder(function(sink) {
@@ -1137,7 +1127,7 @@ function Atlant(){
                 console.log('negating renders...:', renders)
             if(renders.length) {
                 statistics.removeRenders(u.whenId, u.masks, renders);
-                renderRecalculateSignal.push({id: u.id, whenId: u.whenId}); 
+                renderRecalculateSignal.push({id: u.id, whenId: u.whenId, itemIds: renders}); 
             }
             var updates = statistics.getUpdatesByUrl(actionId, lastPath, ifId);
             if(updates.length) {
@@ -1242,12 +1232,12 @@ function Atlant(){
                 .map( function(u){ return _.extend( {}, u) } )
                 .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
                 .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
-                .map(function(u) { 
+                .map(function(renderId, renderProvider, viewName, renderOperation, u) { 
                     var ups = new Upstream();
                     ups.fmap(_.extend)(u);
-                    var a = { renderId: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, RenderOperation: RenderOperation};
+                    var a = { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: RenderOperationKey[renderOperation]};
                     return ups.join('render', void 0)(a)
-                })
+                }.bind(void 0, renderId, renderProvider, viewName, renderOperation))
 
             // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewName.
             if ( ! renders[viewName] ) renders[viewName] = [];
@@ -1255,7 +1245,7 @@ function Atlant(){
 
 
             if (RenderOperation.draw !== renderOperation) {
-                console.log('registering render:', renderId, TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], viewName, RenderOperationKey[renderOperation], renderProvider, 'ifIds:', State.state.lastIfIds);
+                // console.log('registering render:', renderId, TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], viewName, RenderOperationKey[renderOperation], renderProvider, 'ifIds:', State.state.lastIfIds);
                 statistics.whenStat({ actionId: TopState.state.lastActionId,
                                 ifIds: State.state.lastIfIds,
                                 masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction],
@@ -1403,13 +1393,37 @@ function Atlant(){
         return this;
     }
 
-    var _attachTo = function(selector) {
-        prefs.rootSelector = selector;
+
+    var _attach = function(rootView, selector) {
+        s.type(rootView, 'string');
+        s.type(selector, 'string');
+
+        if( 'undefined' === typeof window )   {}
+
+        var firstRender = renderStreams
+                            .drawEnd
+                            .merge(renderEndSignal)
+                            .filter(function(_){
+                                if ( _.item && (_.item.renderOperation === RenderOperation.render || _.item.renderOperation === RenderOperation.draw ) && _.item.viewName === rootView)  return true // accept only first render/draw of rootComponent
+                                else return false
+                            })
+                            .take(1);
+
+        baseStreams.onValue(firstRender, function(value) { // value contains all rendered upstreams.
+            prefs
+                .render.attach(rootView, selector )
+                .catch(function(e) {
+                    console.error(e.message, e.stack);
+                    errorStream.push(e);
+                })
+                .then( s.logIt('we\' done.') )
+        });
+
         return this;
     }
 
-    var _stringify = function(fn, options) {
-        return prefs.render.stringify('root', options );
+    var _stringify = function(rootView, options) {
+        return prefs.render.stringify(rootView, options );
     }
 
     var _await = function(shouldAWait) {
@@ -1790,7 +1804,7 @@ function Atlant(){
     // Called everytime when draw renders.
     this.onDrawEnd =  _onDrawEnd;
     // Accepts element. After publish and first render the contents will be attached to this element.
-    this.attachTo =  _attachTo;
+    this.attach =  _attach;
     // After publish and first render the contents will be transferet to callback (first parameter).
     this.stringify =  _stringify;
     this.setTimeout =  _setTimeout;
