@@ -70,7 +70,7 @@ var Render = function(React) {
             state.check(name);
             if( rootName !== name && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate(/* console.timeEnd.bind(console, 'renering ' + name) */);
 
-            console.log('Atlant.js: rendered the view.', name)
+            // console.log('Atlant.js: rendered the view.', name)
             return resolve(state.getInstance(name));  
         }.bind(void 0, name, upstream, activeStreamId, viewProvider, scope));
 
@@ -94,7 +94,7 @@ var Render = function(React) {
             if ( !root ) { throw new Error('AtlantJs: Please use .render(component, "' + name + '") to render something') }
 
             try{
-                React.render(root, element, function(){ rootName = name; console.log("react said it's attached!"); resolve() } );
+                React.render(root, element, function(){ rootName = name; /* console.log("React said it's attached!"); */ resolve() } );
             } catch(e) {
                 console.error(e.message, e.stack)
 
@@ -131,7 +131,7 @@ var Render = function(React) {
     }
 
     this.put = function(name, component){
-        console.log('Atlant.js: put the view.')
+        // console.log('Atlant.js: put the view.')
         state.set(name, component);  
         state.check(name);
         return component;

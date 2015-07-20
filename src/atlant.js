@@ -61,7 +61,7 @@ function Atlant(){
             ,viewState: ['root']
             ,on: { renderEnd: void 0 }// callback which will be called on finishing when rendering
             ,scrollElement: function(){ return 'undefined' !== typeof document ? document.querySelector('body') : void 0 }
-
+            ,defaultScrollToTop: true
     }
 
     var injectsGrabber = new interfaces.injectsGrabber();
@@ -134,8 +134,8 @@ function Atlant(){
         var whenRenderedSignal = function( upstream ) {
             if (!upstream.isAction && upstream.id !== activeStreamId.value) return // this streams should not be counted.
 
-            if (upstream.render.renderOperation === RenderOperation.draw && !upstream.isAction ){
-                renderStreams.drawEnd.push({ id: upstream.id, whenId: upstream.whenId, itemIds: [upstream.render.id], item: upstream.render }); // This is mostly for first render and for user
+            if (upstream.render.renderOperation === RenderOperation.draw ){ // This is first render and for user to subscribe
+                renderStreams.drawEnd.push({ id: upstream.id, whenId: upstream.whenId, itemIds: [upstream.render.id], item: upstream.render }); 
             }
 
             if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction ){
@@ -301,14 +301,14 @@ function Atlant(){
                                 // console.log('atom:', viewName, atom.value) 
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = scopeFn();
-                                    console.log('updating view...', viewName, atom.name, atom.ref)
+                                    // console.log('updating view...', viewName, atom.name, atom.ref)
                                     var rendered = renderIntoView(data, function(_){return _}); // Here we using scope updated from store!
                                     return rendered.then(function(upstream, o){
                                         atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                                         return o;
                                     }.bind(void 0, upstream));
                                 } else {
-                                    console.log('canceled render due the same data', viewName, atom.name, atom.ref)
+                                    // console.log('canceled render due the same data', viewName, atom.name, atom.ref)
                                     atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                                 }
                             }.bind(void 0, upstream, viewName, scopeFn));
@@ -328,14 +328,14 @@ function Atlant(){
             if ( isRenderApplyed ) return;
 
             isRenderApplyed = true
-            console.time('assign renders')
+            // console.time('assign renders')
             var count = 0;
             for(var viewName in renders) { //@TODO assign only those streams and for those views which are existent on this route
                 count+=renders[viewName].length;
                 s.map(assignRender, renders[viewName]);
             }
-            console.timeEnd('assign renders')
-            console.log('assign renders to:', count, 'streams')
+            // console.timeEnd('assign renders')
+            // console.log('assign renders to:', count, 'streams')
 
         };
     }();
@@ -580,9 +580,9 @@ function Atlant(){
     var defValue = function(){ return { value: 0 } };
     var onRenderEndStream = baseStreams.bus();
     var onDrawEndStream = baseStreams.bus();
-    var onServerEndStream = baseStreams.bus(); 
-    var onBothEndStreams = onServerEndStream.zip(onRenderEndStream, function(x,y){return y});
-    var onFinalEndStream = baseStreams.bus();  // will be returned to user. will be called after postponed actions. will be user for first render.
+    var onAtomEndStream = baseStreams.bus(); 
+    var onBothEndStreams = onAtomEndStream.zip(onRenderEndStream, function(x,y){return y});
+    var onRedirectEndStream = baseStreams.bus();  // will be returned to user. will be called after postponed actions. will be user for first render.
 
     var atomCounter = { list: {} };
     var isAtomed = { value: false };
@@ -611,14 +611,14 @@ function Atlant(){
             var calculated = ( -1 !== name.indexOf('atom') ) ? statistics.getSum(lastPath) : statistics.getRenderSum(lastPath);
 
             // if(-1!==name.indexOf('atom')) 
-                console.log(name, signalled, calculated, 'whenId:', object.whenId, 'itemIds:', object.itemIds, counter, object.item ? object.item.type : "", object.item ? object.item.viewName : '')
+                // console.log(name, signalled, calculated, 'whenId:', object.whenId, 'itemIds:', object.itemIds, counter, object.item ? object.item.type : "", object.item ? object.item.viewName : '')
 
             if (0 === signalled + calculated) {
-                console.log('GOTTCHA!', name, 'is completed')
+                // console.log('GOTTCHA!', name, 'is completed')
                 isFinished.value = true
                 signalStream.push()
                 if(-1 === name.indexOf('atom'))  {
-                    checker( 'atomAsk:', isAtomed, false, onServerEndStream, atomCounter, object ) // In case if there are no atoms and atom cancels we can check here and it will be clear, should server end or not.
+                    checker( 'atomAsk:', isAtomed, false, onAtomEndStream, atomCounter, object ) // In case if there are no atoms and atom cancels we can check here and it will be clear, should server end or not.
                 }
             }   
         } catch(e){
@@ -628,13 +628,13 @@ function Atlant(){
     }
 
 
-    atomEndSignal.onValue(checker.bind(void 0, 'atom', isAtomed, true, onServerEndStream, atomCounter ))
-    atomRecalculateSignal.onValue(checker.bind(void 0, 'atomCancel:', isAtomed, false, onServerEndStream, atomCounter ))
+    atomEndSignal.onValue(checker.bind(void 0, 'atom', isAtomed, true, onAtomEndStream, atomCounter ))
+    atomRecalculateSignal.onValue(checker.bind(void 0, 'atomCancel:', isAtomed, false, onAtomEndStream, atomCounter ))
 
     renderEndSignal.onValue(checker.bind(void 0, 'render:', isRendered, true, onRenderEndStream, renderCounter));
     renderRecalculateSignal.onValue(checker.bind(void 0, 'renderCanceled:', isRendered, false, onRenderEndStream, renderCounter));
 
-    onServerEndStream.onValue(function(value){console.log('SERVER END STREAM!')})
+    onAtomEndStream.onValue(function(value){console.log('SERVER END STREAM!')})
     onRenderEndStream.onValue(function(value){console.log('RENDER END STREAM!')})
 
     var performCallback = function(upstreams, callbackStream, postponedActions) {
@@ -652,13 +652,6 @@ function Atlant(){
             }
     }
 
-    // baseStreams.onValue( renderStreams.drawEnd, function(upstream){
-    //         var upstreams = {};
-    //         upstreams[upstream.render.viewName] = upstream;
-    //
-    //         performCallback(upstreams, onDrawEndStream, upstream.postponed ? [upstream.postponed] : []);
-    // });
-
     /* Except .draw() every render get this*/
     
     baseStreams.onValue( onBothEndStreams, function(upstreams){
@@ -670,7 +663,7 @@ function Atlant(){
 
         if (redirectAction) postponedActions.push(redirectAction);
 
-        performCallback(upstreams, onFinalEndStream, postponedActions);
+        performCallback(upstreams, onRedirectEndStream, postponedActions);
 
         return upstreams;
     })
@@ -828,12 +821,15 @@ function Atlant(){
             // Allows attaching injects to .when().
             var injects = injectsGrabber.init(name, State.state);
             var stats = TopState.state.stats;
+            var scrollToTop = { value: true };
+            State.state.scrollToTop = scrollToTop;
 
             var whenMasks = masks;
             if( WhenOrMatch.when === whenType )
                 masks.forEach(function(mask) {  // @TODO: old thing
                     s.push({mask: utils.stripLastSlash(mask)}, routes);
                 });
+
 
             masks = _(masks).map(function(mask){return [mask, utils.getPossiblePath(mask)]}).flatten().value();
 
@@ -857,7 +853,7 @@ function Atlant(){
                         }
                 }.bind(void 0, masks))
                 .filter(s.id)
-                .map(function (whenId, whenType, stats, name, injects, masks, whenMasks, upstream) {
+                .map(function (whenId, whenType, stats, name, injects, masks, whenMasks, scrollToTop, upstream) {
                     upstream.whenId = whenId;
                     upstream.route.when = masks;
                     upstream.isFinally = false;
@@ -881,9 +877,14 @@ function Atlant(){
                                             ,referrer: upstream.referrer
                     });
 
+                    if (scrollToTop.value) {
+                        // console.log('scrolling to Top!!!')
+                        // prefs.scrollElement().scrollTop = 0;
+                    } 
+
                     var stream = injectsGrabber.add(name, depData, injects, upstream);
                     return stream;
-                }.bind(void 0, whenId, whenType, stats, name, injects, masks, whenMasks))
+                }.bind(void 0, whenId, whenType, stats, name, injects, masks, whenMasks, scrollToTop))
 
             State.state.lastWhen = State.state.lastWhen.map( function(whenId, stream) { stream.conditionId = whenId; return stream; }.bind(void 0, whenId))
 
@@ -1159,6 +1160,20 @@ function Atlant(){
         return this
     }
 
+    var _defaultScrollToTop = function(value) {
+        this.prefs.defaultScrollToTop = value;
+
+        return this
+    }
+
+    var _scrollToTop = function(value) {
+        if (void 0 !== State.state.scrollToTop) {
+            State.state.scrollToTop.value = value;
+        }
+
+        return this
+    }
+
     /**
         Received - every depends include this stream after execution
      * @param fn
@@ -1240,7 +1255,7 @@ function Atlant(){
             renders[viewName].push(thisRender);
 
             if (RenderOperation.draw !== renderOperation) {
-                console.log('registering render:', renderId, TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], viewName, RenderOperationKey[renderOperation], renderProvider, 'ifIds:', State.state.lastIfIds);
+                // console.log('registering render:', renderId, TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], viewName, RenderOperationKey[renderOperation], renderProvider, 'ifIds:', State.state.lastIfIds);
                 statistics.whenStat({ actionId: TopState.state.lastActionId,
                                 ifIds: State.state.lastIfIds,
                                 masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction],
@@ -1360,16 +1375,17 @@ function Atlant(){
     }
 
     var _onDrawEnd = function(callback) {
-        baseStreams.onValue(onDrawEndStream, s.baconTryD(callback));
+        baseStreams.onValue(renderStreams.drawEnd, function() { return s.tryD(callback)(/*should send nothing here!*/) } );
         return this;
     }
 
-    var _onServerEnd = function(callback) {
+    var _onRenderEnd = function(callback) { // Use this to get early callback for server render
         baseStreams.onValue(onBothEndStreams , s.baconTryD(callback));
         return this;
     }
-    var _onRenderEnd = function(callback) {
-        baseStreams.onValue(onFinalEndStream, s.baconTryD(callback));
+
+    var _onRedirectEnd = function(callback) { // use this to get know when render ends. Also all redirects are already completed.
+        baseStreams.onValue(onRedirectEndStream, s.baconTryD(callback));
         return this;
     }
 
@@ -1707,6 +1723,8 @@ function Atlant(){
     this.if = _if.bind(this, s.id);
     this.unless =  _if.bind(this, s.negate);
     this.end = _end;
+    this.scrollToTop = _scrollToTop;
+
 
     /**
      * Renders declaratins
@@ -1751,7 +1769,10 @@ function Atlant(){
     this.unset = _unset;
     // Use another render. simple render is default
     this.use = _use;
+    // the element which will be scrolled on scroll to top / history top
     this.scrollElement = _scrollElement;
+    // the default value of to scroll or not to scroll to top on route change. Default is true.
+    this.defaultScrollToTop = _defaultScrollToTop;
 
 
     /**
@@ -1792,12 +1813,12 @@ function Atlant(){
     /**
      * Events!
      */
-    // Called everytime when route/action is rendered. DEPRECATED
+    // Called everytime when route/action is rendered. 
     this.onRenderEnd =  _onRenderEnd;
-    // Called when all atoms refreshed their views
-    this.onServerEnd =  _onServerEnd;
     // Called everytime when draw renders.
     this.onDrawEnd =  _onDrawEnd;
+    // Called when redirect is completed (actually it happens soon after onRenderEnd)
+    this.onRedirectEnd =  _onRedirectEnd;
     // Accepts element. After publish and first render the contents will be attached to this element.
     this.attach =  _attach;
     // After publish and first render the contents will be transferet to callback (first parameter).
