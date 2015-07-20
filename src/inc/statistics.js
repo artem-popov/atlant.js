@@ -46,7 +46,7 @@ var Stat = function(){
             }
 
             if(eventKey && ifIds) ifIds.forEach(function(ifId) { 
-                console.log('registering update for', eventKey, ifId)
+                // console.log('registering update for', eventKey, ifId)
                 statObject[mask][actionId].ifList[ifId].updatesList.push(eventKey);
             })
 
@@ -131,11 +131,17 @@ var Stat = function(){
     this.getRenderSum = function(url){ // Returns predicted count of renders
         var number = tools
             .returnAll(url, this.whens() )
+
+        console.log('whens:', number)
+        number = number
             .map( function(mask){ // each action is atoms group/seq with it's own view names
                 return Object.keys(statObject[mask])
                                     .map(function(actionId){
                                         var removedRenders = statObject[mask][actionId].removedRendersList.length;
                                         var renders = statObject[mask][actionId].rendersList.length;
+
+                                        console.log('for actionId', actionId, renders-removedRenders, ':::', statObject[mask][actionId].removedRendersList, statObject[mask][actionId].rendersList)
+
                                         return renders - removedRenders
                                     })
                                     .reduce( function(acc, i){ return acc + i }, 0) // sum

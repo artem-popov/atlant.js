@@ -14,12 +14,12 @@ var State = function(React){
         this.check = function(name) {
             if ( !wrappers[name] ) {
                 wrappers[name] = React.createClass({
-                    render: function(){
+                    render: function(name){
                         thises[name] = this;
                         if ( !views[name] ) views[name] = React.createElement('div');
 
                         return views[name];
-                    }
+                    }.bind(void 0, name)
             })}    
             if ( !instances[name] ) 
                 instances[name] = React.createFactory(wrappers[name])();
@@ -54,10 +54,10 @@ var Render = function(React) {
     var state = new State(React);
 
     this.name = 'React';
-    var rootName = void 0;
+    var rootName = void 0; // @TODO should be another way to recognize rootName, because there are can be more then 1 of attaches 
 
     this.render = function(viewProvider, upstream, activeStreamId, name, scope ) {
-        var rendered = new Promise( function( resolve, reject ){
+        var rendered = new Promise( function( name, upstream, activeStreamId, viewProvider, scope, resolve, reject ){
             l.log('%cbegin rendering view ' + name, 'color: #0000ff');
             l.logTime('rendered view ' + name);
 
@@ -72,7 +72,7 @@ var Render = function(React) {
 
             console.log('Atlant.js: rendered the view.', name)
             return resolve(state.getInstance(name));  
-        });
+        }.bind(void 0, name, upstream, activeStreamId, viewProvider, scope));
 
         return rendered;
     }
@@ -83,18 +83,18 @@ var Render = function(React) {
 
 
     this.attach = function(name, selector) {
-        var attached = new Promise( function( resolve, reject ){
+        var attached = new Promise( function( name, selector, resolve, reject ){
             if ( typeof window === 'undefined') throw Error('AtlantJs, React render: attach not possible in browser.')
 
             var element = document.querySelector(selector);
-            if ( !element )   throw Error('AtlantJs, React render: can\'t find the selector' + selector )
+            if ( !element )   throw Error("AtlantJs, React render: can\'t find the selector" + selector )
 
             var root = state.getInstance(name);
 
             if ( !root ) { throw new Error('AtlantJs: Please use .render(component, "' + name + '") to render something') }
 
             try{
-                React.render(root, element, function(){ rootName = name; console.log('react said it\'s attached!'); resolve() } );
+                React.render(root, element, function(){ rootName = name; console.log("react said it's attached!"); resolve() } );
             } catch(e) {
                 console.error(e.message, e.stack)
 
@@ -104,7 +104,7 @@ var Render = function(React) {
                 reject(e);
             }
 
-        });
+        }.bind(void 0, name, selector));
 
         return attached;
     }

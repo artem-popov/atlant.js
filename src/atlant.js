@@ -158,8 +158,6 @@ function Atlant(){
             }
         };
 
-        var renderState = {};
-
         // Registering render for view.
         var assignRender = function(stream) {
             var theStream = stream
@@ -167,12 +165,13 @@ function Atlant(){
 
             baseStreams.onValue( theStream, function(upstream){
                     if( void 0 === upstream || activeStreamId.value !== upstream.id ) { return void 0; }
+                    console.log('--a--upstream.id:', upstream.render.id, upstream.id)
 
                     try{ 
                         var viewName = s.dot('.render.viewName', upstream);
                         savedViewScope[viewName] = clientFuncs.getScopeDataFromStream(upstream);
 
-                        var scopeFn = function() { return clientFuncs.createScope(savedViewScope[viewName]) };
+                        var scopeFn = function(viewName) { return clientFuncs.createScope(savedViewScope[viewName]) }.bind(void 0, viewName);
                         var viewProvider = s.dot('.render.renderProvider', upstream);
 
                         // Choose appropriate render.
@@ -185,9 +184,9 @@ function Atlant(){
 
                         if (RenderOperation.redirect === upstream.render.renderOperation ){
                             if ('function' === typeof viewProvider) {
-                                upstream.doLater = function(){utils.goTo(viewProvider(scopeFn()))}
+                                upstream.doLater = function(viewProvider, scopeFn){utils.goTo(viewProvider(scopeFn())).bind(void 0, viewProvider, scopeFn)}
                             } else {
-                                upstream.doLater = function(){utils.goTo(viewProvider)}
+                                upstream.doLater = function(viewProvider){utils.goTo(viewProvider).bind(void 0, viewProvider)}
                             }
 
                             whenRenderedSignal(upstream);
@@ -200,22 +199,22 @@ function Atlant(){
 
                             return;
                         } else if (RenderOperation.replace === upstream.render.renderOperation ){
-                            upstream.doLater = function(){
+                            upstream.doLater = function(viewProvider, scopeFn){
                                 var path = s.apply(viewProvider, scopeFn());
                                 lastPath = path; 
                                 utils.replace(path);
-                            }
+                            }.bind(void 0, viewProvider, scopeFn)
 
                             whenRenderedSignal(upstream);
 
                             return;
                         } else if (RenderOperation.change === upstream.render.renderOperation ){
-                            upstream.doLater = function(){
+                            upstream.doLater = function(viewProvider, scopeFn){
                                 var path = s.apply(viewProvider, scopeFn());
                                 lastReferrer = lastPath;
                                 lastPath = path;
                                 utils.change(path);
-                            }
+                            }.bind(void 0, viewProvider, scopeFn)
 
                             whenRenderedSignal(upstream);
 
@@ -270,7 +269,7 @@ function Atlant(){
                                 // console.log('WARNING! ACTION ON THE BOARD!')
                             }
 
-                            var renderIntoView = function(scope, countThisRender) {
+                            var renderIntoView = function(viewProvider, upstream, viewName, scope, whenRenderedSignal ) {
                                 var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
                                 // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
                                 return renderD(viewProvider, upstream, activeStreamId, viewName, scope)
@@ -292,9 +291,9 @@ function Atlant(){
                                         }
                                         return stream 
                                     })
-                                    .then( countThisRender )
-                                    .catch( clientFuncs.catchErRor )
-                            }
+                                    .then( whenRenderedSignal )
+                                    .catch( clientFuncs.catchError )
+                            }.bind(void 0, viewProvider, upstream, viewName)
 
 
 
@@ -305,10 +304,10 @@ function Atlant(){
                                     viewData[viewName] = scopeFn();
                                     console.log('updating view...', viewName, atom.name, atom.ref)
                                     var rendered = renderIntoView(data, function(_){return _}); // Here we using scope updated from store!
-                                    return rendered.then(function(o){
+                                    return rendered.then(function(upstream, o){
                                         atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                                         return o;
-                                    });
+                                    }.bind(void 0, upstream));
                                 } else {
                                     console.log('canceled render due the same data', viewName, atom.name, atom.ref)
                                     atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
@@ -337,7 +336,7 @@ function Atlant(){
                 s.map(assignRender, renders[viewName]);
             }
             console.timeEnd('assign renders')
-            // console.log('assign renders to:', count, 'streams')
+            console.log('assign renders to:', count, 'streams')
 
         };
     }();
@@ -394,15 +393,15 @@ function Atlant(){
 
             if ('function' !== typeof dep) {
                 stream = stream
-                    .map( function(upstream) { 
+                    .map( function(depName, dep, upstream) { 
                         if (!upstream.depends) upstream.depends = {};
                         upstream.depends[depName] = dep;
                         return upstream;
-                    })
+                    }.bind(void 0, depName, dep))
             } else {
 
                 stream = stream
-                    .flatMap(function(upstream) {
+                    .flatMap(function(store, depName, upstream) {
                         var scope = clientFuncs.createScope(upstream);
                         var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
                         var atomParams = function(atomIds, scope, where, store, ref, isConsole/*variable for debug*/, parentRef) { 
@@ -412,13 +411,13 @@ function Atlant(){
                             if ( 'undefined' !== typeof store) {
 
                                 dependAtoms = (atomIds || [])
-                                    .map( function( atom ){
+                                    .map( function( aParentRef, atom ){
                                         var atom_id = atom.fn(false, aParentRef)
 
                                         var atomValue = s.tryF( void 0, function() { return atom.partProvider(atom.storeData.staticValue, atom_id) })();
                                         var res = { ref: atom.ref, value: atomValue, id: atom_id, atom: atom } // @TODO: Optimize it! Now atom calls all it's parents again and again. This can't be called best :)
                                         return res
-                                    })
+                                    }.bind(void 0, aParentRef))
 
                                 dependAtoms = dependAtoms.reduce(function(res, atomValue){
                                     var result = {};
@@ -439,7 +438,7 @@ function Atlant(){
                         
                         var treatDep = s.compose( clientFuncs.convertPromiseD, s.promiseTryD );
                         return treatDep( dep )( atomParams(true) )
-                            .map(function(upstream, atomParams, store, results){
+                            .map(function(upstream, atomParams, store, depName, results){
                                 if ( 'function' === typeof results ) results = results.bind(void 0, atomParams);
                                 if ( !upstream.isInterceptor ) interceptorBus.push({upstream: upstream, scope: results}); // pushing into global depends .interceptor() 
                                 if (!upstream.depends) upstream.depends = {};
@@ -453,12 +452,12 @@ function Atlant(){
                                 } 
 
                                 return upstream;
-                            }.bind(void 0, upstream, atomParams, store))
-                    })
+                            }.bind(void 0, upstream, atomParams, store, depName))
+                    }.bind(void 0, store, depName))
             }
 
             stream = stream
-                .map(function(upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
+                .map(function(depName, store, injects, upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
                     var stream = injectsGrabber.add(depName, upstream.depends[depName], injects, upstream);
 
                     if ( !stream.atoms ) stream.atoms = [];
@@ -514,7 +513,7 @@ function Atlant(){
                     } 
 
                     return stream;
-                })
+                }.bind(void 0, depName, store, injects))
 
             return stream;
         }
@@ -681,7 +680,7 @@ function Atlant(){
     var routeChangedStream =  publishStream
         .merge( Bacon.fromBinder(function(sink) {
             if ( 'undefined' !== typeof window) {
-                var routeChanged = function(event) {
+                var routeChanged = function(sink, event) {
                     try{
                         event.preventDefault();
                         var path;
@@ -718,7 +717,7 @@ function Atlant(){
                             });
                         }
                     }catch(e){console.error(e.stack)}
-                };
+                }.bind(void 0, sink);
                 window.addEventListener( 'popstate', routeChanged );
                 window.addEventListener( 'pushstate', routeChanged );
                 // window.addEventListener( 'scroll', utils.saveScroll );
@@ -785,10 +784,10 @@ function Atlant(){
         });
 
     var rootStream = Bacon.fromBinder(function(sink) {
-            baseStreams.onValue(routeChangedStream, function(_) {
+            baseStreams.onValue(routeChangedStream, function(sink, _) {
                 assignRenders();
                 sink(_);
-            });
+            }.bind(void 0, sink));
         })
         .takeUntil(baseStreams.destructorStream)
 
@@ -844,7 +843,7 @@ function Atlant(){
             State.state.lastWhen = rootStream
                 .map( function(masks, upstream) {
                     var mask = _(masks)
-                                    .filter(function() { if(WhenOrMatch.match === whenType) return true; else return ! atlantState.isLastWasMatched; }) // do not let stream go further if other is already matched. .match() streams are immune.
+                                    .filter(function(whenType) { if(WhenOrMatch.match === whenType) return true; else return ! atlantState.isLastWasMatched; }.bind(void 0, whenType)) // do not let stream go further if other is already matched. .match() streams are immune.
                                     .map( matchRouteLast( upstream.path, matchingBehaviour ) )
                                     // .map(s.logIt('---matched routes!!!', upstream))
                                     .filter( s.notEmpty )                              // empty params means fails of route identity.
@@ -861,7 +860,7 @@ function Atlant(){
                         }
                 }.bind(void 0, masks))
                 .filter(s.id)
-                .map(function (masks, whenMasks, upstream) {
+                .map(function (whenId, whenType, stats, name, injects, masks, whenMasks, upstream) {
                     upstream.whenId = whenId;
                     upstream.route.when = masks;
                     upstream.isFinally = false;
@@ -887,9 +886,9 @@ function Atlant(){
 
                     var stream = injectsGrabber.add(name, depData, injects, upstream);
                     return stream;
-                }.bind(void 0, masks, whenMasks))
+                }.bind(void 0, whenId, whenType, stats, name, injects, masks, whenMasks))
 
-            State.state.lastWhen = State.state.lastWhen.map( function(stream) { stream.conditionId = whenId; return stream; })
+            State.state.lastWhen = State.state.lastWhen.map( function(whenId, stream) { stream.conditionId = whenId; return stream; }.bind(void 0, whenId))
 
             State.state.lastIf = void 0;
             State.state.lastDep = void 0;
@@ -936,7 +935,7 @@ function Atlant(){
         var stats = TopState.state.stats;
 
         State.state.lastWhen = otherWiseRootStream
-            .map( function(upstream) {
+            .map( function(depName, injects, whenId, stats, upstream) {
                 var depValue = {};
                 depValue.masks = lastMask;
                 depValue.pattern = utils.getPattern(lastMask);
@@ -954,7 +953,7 @@ function Atlant(){
                 if(activeStreamId.value === stream.id) whenCount.value++;
                 l.log('---Matched otherwise!!!')
                 return stream;
-            })
+            }.bind(void 0, depName, injects, whenId, stats))
 
         State.state.lastIf = void 0;
         State.state.lastDep = void 0;
@@ -983,7 +982,7 @@ function Atlant(){
         var stats = TopState.state.stats;
 
         State.state.lastWhen = action
-            .map( function(depValue) {
+            .map( function(depName, injects, nameContainer, stats, whenId, isAction, depValue) {
                 if ( 'undefined' === typeof depValue ) {
                     depValue = {}
                 }
@@ -1009,7 +1008,7 @@ function Atlant(){
                 l.log('---Matched action!!!', depValue)
 
                 return stream;
-            })
+            }.bind(void 0, depName, injects, nameContainer, stats, whenId, isAction ))
 
         State.state.lastIf = void 0;
         State.state.lastDep = void 0;
@@ -1035,7 +1034,7 @@ function Atlant(){
         var stats = TopState.state.stats;
 
         State.state.lastWhen = errorStream
-            .map( function(depValue) {
+            .map( function(depName, injects, whenId, stats, depValue) {
 
                 depValue.masks = lastMask;
                 depValue.pattern = utils.getPattern(lastMask);
@@ -1056,7 +1055,7 @@ function Atlant(){
                 l.log('---Matched error!!!')
                 return stream;
 
-            })
+            }.bind(void 0, depName, injects, whenId, stats))
 
         State.state.lastIf = void 0;
         State.state.lastDep = void 0;
@@ -1106,14 +1105,14 @@ function Atlant(){
                 else return void 0;
             }.bind(void 0, ifId, fn, condition))
             .filter( s.id )
-            .map( function(ifId, upstream) {
+            .map( function(ifId, depName, injects, upstream) {
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
 
                 if ( !upstream.isAction && activeStreamId.value === upstream.id ) whenCount.value++; // increasing counter only if this stream is not yet obsolete
 
                 stream.conditionId = ifId;
                 return stream;
-            }.bind(void 0, ifId))
+            }.bind(void 0, ifId, depName, injects))
 
         var thisIfNegate = thisCommonIf 
             .map(function(ifId, fnNegate, condition, upstream){
@@ -1231,23 +1230,27 @@ function Atlant(){
 
 
             var thisRender = State.state.lastOp
-                .map( function(u){ return _.extend( {}, u) } )
-                .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
-                .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
+                // .map( function(u){ return _.extend( {}, u) } )
+                // .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
+                // .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
                 .map(function(renderId, renderProvider, viewName, renderOperation, u) { 
-                    var ups = new Upstream();
-                    ups.fmap(_.extend)(u);
-                    var a = { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: RenderOperationKey[renderOperation]};
-                    return ups.join('render', void 0)(a)
+                    var render = { render: { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: RenderOperationKey[renderOperation]}};
+                    return _.extend( {}, u, render )
                 }.bind(void 0, renderId, renderProvider, viewName, renderOperation))
+                .map(function(_){
+                    console.log('aaaaa:', _.render.id)
+                    return _
+                })
 
             // Later when the picture of streams inheritance will be all defined, the streams will gain onValue per viewName.
             if ( ! renders[viewName] ) renders[viewName] = [];
             renders[viewName].push(thisRender);
 
 
+            console.log('set render:', renderId)
+
             if (RenderOperation.draw !== renderOperation) {
-                // console.log('registering render:', renderId, TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], viewName, RenderOperationKey[renderOperation], renderProvider, 'ifIds:', State.state.lastIfIds);
+                console.log('registering render:', renderId, TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], viewName, RenderOperationKey[renderOperation], renderProvider, 'ifIds:', State.state.lastIfIds);
                 statistics.whenStat({ actionId: TopState.state.lastActionId,
                                 ifIds: State.state.lastIfIds,
                                 masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction],
@@ -1281,7 +1284,7 @@ function Atlant(){
         var stats = TopState.state.stats;
 
         State.state.lastWhen = interceptorBus
-            .map( function(obj) {
+            .map( function(depName, injects, stats, whenId, obj) {
 
                 var depValue = {};  // @TODO RETHINK
                 depValue.name = obj.upstream.ref;
@@ -1305,7 +1308,7 @@ function Atlant(){
                 l.log('---Matched interceptor!!!', depValue)
 
                 return stream;
-            })
+            }.bind(void 0, depName, injects, stats, whenId))
 
         State.state.lastIf = void 0;
         State.state.lastDep = void 0;
@@ -1411,15 +1414,15 @@ function Atlant(){
                             })
                             .take(1);
 
-        baseStreams.onValue(firstRender, function(value) { // value contains all rendered upstreams.
+        baseStreams.onValue(firstRender, function(rootView, selector, value) { // value contains all rendered upstreams.
             prefs
                 .render.attach(rootView, selector )
                 .catch(function(e) {
                     console.error(e.message, e.stack);
                     errorStream.push(e);
                 })
-                .then( s.logIt('we\' done.') )
-        });
+                .then( s.logIt("we' done.") )
+        }.bind(void 0, rootView, selector));
 
         return this;
     }
@@ -1488,7 +1491,7 @@ function Atlant(){
         stores[storeName]._constructor = constructorProvider;
         stores[storeName].updater = baseStreams.bus();
         stores[storeName].staticValue = constructorProvider();
-        stores[storeName].bus = stores[storeName].updater.scan(constructorProvider(), function(state, updater){ 
+        stores[storeName].bus = stores[storeName].updater.scan(constructorProvider(), function(storeName, state, updater){ 
             var newState = updater(state);
             stores[storeName].staticValue = newState;
 
@@ -1498,7 +1501,7 @@ function Atlant(){
             }
 
             return newState 
-        }).toEventStream();  
+        }.bind(void 0, storeName)).toEventStream();  
 
         baseStreams.onValue(stores[storeName].bus, function() {});
 
@@ -1517,8 +1520,8 @@ function Atlant(){
 
         if( !(updaterName in emitStreams ) ) emitStreams[updaterName] = baseStreams.bus();
         
-        baseStreams.onValue(emitStreams[updaterName], function(scope){
-            stores[storeName].updater.push( function(state){ 
+        baseStreams.onValue(emitStreams[updaterName], function(storeName, scope){
+            stores[storeName].updater.push( function(scope, state){ 
                 // console.log('updating!', updaterName, storeName)
                 try{ 
                     var newVal = updater( state, scope);
@@ -1526,9 +1529,9 @@ function Atlant(){
                 catch(e) { 
                     console.log('atlant.js: Warning: updater failed', e)
                     return state
-                }} 
+                }}.bind(void 0, scope) 
             )
-        });
+        }.bind(void 0, storeName));
 
         return this;
     }
@@ -1553,10 +1556,10 @@ function Atlant(){
 
 
         var thisOp = State.state.lastOp
-            .map( function(upstream){
+            .map( function(withs, upstream){
                 return withGrabber.add(withs, upstream)
-            })
-            .map( function(upstream) { 
+            }.bind(void 0, withs))
+            .map( function(key, upstream) { 
                 var refsData = clientFuncs.getRefsData( upstream ); 
                 
                 var data = ( upstream.with && 'value' in upstream.with ) ? upstream.with.value( refsData ) : refsData;
@@ -1565,7 +1568,7 @@ function Atlant(){
                 else console.log("\nAtlant.js: Warning: event key" + key + " is not defined");
 
                 return upstream;
-            });
+            }.bind(void 0, key));
 
         baseStreams.onValue( thisOp, function(updateCallback, upstream) { 
         });
@@ -1601,15 +1604,15 @@ function Atlant(){
 
         statistics.whenStat({actionId: TopState.state.lastActionId, masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], atom: storeName });
 
-        return _depends.bind(this)( function(){
-            return function(id){
+        return _depends.bind(this)( function(storeName, partName){
+            return function(storeName, partName, id){
                 try{
                     return stores[storeName].parts[partName](stores[storeName].staticValue, id());
                 } catch(e) {
                     return void 0;
                 }
-            }
-        }, dependsBehaviour, { storeName: storeName, partName: partName, bus: stores[storeName].bus, partProvider: stores[storeName].parts[partName], storeData: stores[storeName]} );
+            }.bind(void 0, storeName, partName)
+        }.bind(void 0, storeName, partName), dependsBehaviour, { storeName: storeName, partName: partName, bus: stores[storeName].bus, partProvider: stores[storeName].parts[partName], storeData: stores[storeName]} );
     }
 
     // Create scope for prefixed method (currently .select(), .update(), .depends())
