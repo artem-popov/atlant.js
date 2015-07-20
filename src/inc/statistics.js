@@ -102,7 +102,6 @@ var Stat = function(){
             })
             .map(function(_){ 
 
-                console.log('getToken:', statObject[_][actionId].ifList[ifId].updatesList.length)
                 return ( 'ifList' in statObject[_][actionId] 
                                         && ifId in statObject[_][actionId].ifList) 
                                             ? statObject[_][actionId].ifList[ifId][token] 
@@ -132,7 +131,6 @@ var Stat = function(){
         var number = tools
             .returnAll(url, this.whens() )
 
-        console.log('whens:', number)
         number = number
             .map( function(mask){ // each action is atoms group/seq with it's own view names
                 return Object.keys(statObject[mask])
@@ -140,7 +138,7 @@ var Stat = function(){
                                         var removedRenders = statObject[mask][actionId].removedRendersList.length;
                                         var renders = statObject[mask][actionId].rendersList.length;
 
-                                        console.log('for actionId', actionId, renders-removedRenders, ':::', statObject[mask][actionId].removedRendersList, statObject[mask][actionId].rendersList)
+                                        // console.log('for actionId', actionId, renders-removedRenders, ':::', statObject[mask][actionId].removedRendersList, statObject[mask][actionId].rendersList)
 
                                         return renders - removedRenders
                                     })
