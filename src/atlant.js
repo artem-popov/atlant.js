@@ -637,8 +637,8 @@ function Atlant(){
     renderEndSignal.onValue(checker.bind(void 0, 'render:', isRendered, true, onRenderEndStream, renderCounter));
     renderRecalculateSignal.onValue(checker.bind(void 0, 'renderCanceled:', isRendered, false, onRenderEndStream, renderCounter));
 
-    onAtomEndStream.onValue(function(value){console.log('SERVER END STREAM!')})
-    onRenderEndStream.onValue(function(value){console.log('RENDER END STREAM!')})
+    // onAtomEndStream.onValue(function(value){console.log('SERVER END STREAM!')})
+    // onRenderEndStream.onValue(function(value){console.log('RENDER END STREAM!')})
 
     var performCallback = function(upstreams, callbackStream, postponedActions) {
             try {
@@ -824,8 +824,8 @@ function Atlant(){
             // Allows attaching injects to .when().
             var injects = injectsGrabber.init(name, State.state);
             var stats = TopState.state.stats;
-            var scrollToTop = { value: true };
-            State.state.scrollToTop = scrollToTop;
+            var scrollToTop = { value: whenType === WhenOrMatch.match ? false : true };
+            TopState.state.scrollToTop = scrollToTop;
 
             var whenMasks = masks;
             if( WhenOrMatch.when === whenType )
@@ -881,7 +881,6 @@ function Atlant(){
                     });
 
                     if (scrollToTop.value && 'undefined' !== typeof window) {
-                        console.log('scrolling to Top!!!')
                         setTimeout( function() { prefs.scrollElement().scrollTop = 0}, 0);
                     } 
 
@@ -915,6 +914,10 @@ function Atlant(){
         var nameContainer = dependsName.init(depName, State.state);
         var stats = TopState.state.stats;
 
+        var scrollToTop = { value: false };
+        State.state.scrollToTop = scrollToTop;
+
+
         State.state.lastWhen = action
             .map( function(depName, injects, nameContainer, stats, whenId, isAction, depValue) {
                 if ( 'undefined' === typeof depValue ) {
@@ -938,6 +941,10 @@ function Atlant(){
                 stream.isAction = isAction;
                 stream.id = activeStreamId.value;
                 // stream.id = _.uniqueId(); // Should it be so at error?
+
+                if (scrollToTop.value && 'undefined' !== typeof window) {
+                    setTimeout( function() { prefs.scrollElement().scrollTop = 0}, 0);
+                } 
 
                 return stream;
             }.bind(void 0, depName, injects, nameContainer, stats, whenId, isAction ))
@@ -1055,8 +1062,8 @@ function Atlant(){
     }
 
     var _scrollToTop = function(value) {
-        if (void 0 !== State.state.scrollToTop) {
-            State.state.scrollToTop.value = value;
+        if (void 0 !== TopState.state.scrollToTop) {
+            TopState.state.scrollToTop.value = value;
         }
 
         return this
