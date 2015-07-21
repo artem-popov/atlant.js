@@ -73,6 +73,9 @@ function Atlant(){
         ,lastMask = []
         ,lastReferrer
 
+
+    var titleStore = { value: "" };
+
     var State = new StateClass(); // State which up to any last conditional: when, if
     var TopState = new StateClass(); // State which up to when
 
@@ -877,9 +880,9 @@ function Atlant(){
                                             ,referrer: upstream.referrer
                     });
 
-                    if (scrollToTop.value) {
-                        // console.log('scrolling to Top!!!')
-                        // prefs.scrollElement().scrollTop = 0;
+                    if (scrollToTop.value && 'undefined' !== typeof window) {
+                        console.log('scrolling to Top!!!')
+                        setTimeout( function() { prefs.scrollElement().scrollTop = 0}, 0);
                     } 
 
                     var stream = injectsGrabber.add(name, depData, injects, upstream);
@@ -1842,7 +1845,8 @@ function Atlant(){
     this.isBrowser = function(){ return 'undefined' !== typeof window }
 
     this.utils = require('./inc/tools'); // @TODO: rename to 'tools'
-
+    this.utils.setTitle = this.utils.setTitle.bind(void 0, titleStore);
+    this.utils.getTitle = this.utils.getTitle.bind(void 0, titleStore);
 
     this.data = {
         get routes() { return _(routes) 
