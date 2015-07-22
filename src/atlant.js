@@ -1078,19 +1078,6 @@ function Atlant(){
         return this;
     }
 
-    /**
-     *  Continuesly run the dependency. First executed previous dependency, and only after - this one.
-     */
-    var __depends = function( dependency ) {
-        return _depends.bind(this)( dependency, Depends.continue);
-    }
-
-    /**
-     *  Asyncroniously run the dependency. 
-     */
-    var _async = function( dependency ) {
-        return _depends.bind(this)( dependency, Depends.async);
-    }
 
     var _inject = function( key, expression ) {
         s.type(key, 'string');
@@ -1430,8 +1417,8 @@ function Atlant(){
                 catch(e) { 
                     console.log('atlant.js: Warning: updater failed', e)
                     return state
-                }}.bind(void 0, scope) 
-            )
+                }
+            }.bind(void 0, scope))
         }.bind(void 0, storeName));
 
         return this;
@@ -1449,32 +1436,17 @@ function Atlant(){
         return this;
     }
 
-    var _update = function( key ) {
+    var _update = function( dependsBehaviour, key ) {
         if ( ! State.state.lastOp ) throw new Error('"update" should nest something');
         s.type(key, 'string');
 
-        var withs = withGrabber.init(State.state);
+        return _depends.bind(this)( function(key, id){
+            console.log('hoho:', key, id)
+            if ( key in emitStreams ) emitStreams[key].push(id);
+            else console.log("\nAtlant.js: Warning: event key" + key + " is not defined");
+        }.bind(void 0, key), dependsBehaviour);
 
-
-        var thisOp = State.state.lastOp
-            .map( function(withs, upstream){
-                return withGrabber.add(withs, upstream)
-            }.bind(void 0, withs))
-            .map( function(key, upstream) { 
-                var refsData = clientFuncs.getRefsData( upstream ); 
-                
-                var data = ( upstream.with && 'value' in upstream.with ) ? upstream.with.value( refsData ) : refsData;
-
-                if ( key in emitStreams ) emitStreams[key].push(data);
-                else console.log("\nAtlant.js: Warning: event key" + key + " is not defined");
-
-                return upstream;
-            }.bind(void 0, key));
-
-        baseStreams.onValue( thisOp, function(updateCallback, upstream) { 
-        });
-
-        // TopState.state.stats.keys.push(key);
+        // doing at static stage
         statistics.whenStat({
             eventKey: key
             ,actionId: TopState.state.lastActionId
@@ -1572,12 +1544,15 @@ function Atlant(){
     // creates branch which can destruct all what declared by .when() or .match()
     // this.finally =  _finally; // not supported because used ups = new Upstream() which is deprecated.
     // side-effect
-    this.depends =  _async;
-    this.dep =  _async;
+
+    /**
+     *  Asyncroniously run the dependency. 
+     */
+    this.async =  function( dependency ) { return _depends.bind(this)( dependency, Depends.async) };
     /*
-     * Blocking .depends(): the same as ".depends()", but executes only after last ".depends()" or ".and()" ends.
+     *  Continuesly run the dependency. First executed previous dependency, and only after - this one.
      * */
-    this.and =  __depends;
+    this.dep =  function( dependency ) { return _depends.bind(this)( dependency, Depends.continue) };
     /*
      * .data() allow catch every peace of data which where piped with .depends(), .and()
      **/
@@ -1598,7 +1573,7 @@ function Atlant(){
     // Register receiver for atom
     this.part = _part;
     // Store dispatch
-    this.update = _update;
+    this.update = _update.bind(this, Depends.continue);
     // Query store
     this.select = _select.bind(this, Depends.continue);
 

@@ -1,3 +1,5 @@
+0.4.25 .update() now sync operation. .depends() now sync operation, .and()
+	deleted, .async() now async depends
 0.4.24 fixes for server render. rewrited render end event. no more data
 returned in render end. atlant.utils.setTitle.
 atlant.when(something).scrollTop(true). instant redirects.
