@@ -31,6 +31,7 @@ var _returnAll = function(path, masks){
                 .map(_return.bind(void 0, path))
                 .filter( function(_){ return _ })
                 .map(utils.stripLastSlash)
+                .reduce(function(acc, i){if(-1 === acc.indexOf(i)) acc.push(i); return acc}, []) // only unique elements because of stripped slash on end */ became * 
 }
 
 var _parse = function(path, mask){
@@ -50,6 +51,20 @@ var _parseAll = function(path, masks){
     .reduce( function(v, i) { return _.merge(v, i) }, {})
 }
 
+var _setTitle = function(titleStore, title){
+    if (!title) return;
+
+    if( typeof document !== 'undefined' ) {
+        document.title = title;
+    } else {
+        titleStore.value = title
+    }
+
+}
+
+var _getTitle = function(titleStore, title){
+    return titleStore.value
+}
 
 module.exports = {
     // test :: path -> mask -> Bool
@@ -62,5 +77,7 @@ module.exports = {
     ,parse: _parse
     // parseAll :: path -> [mask] -> {params}
     ,parseAll: _parseAll
+    ,setTitle: _setTitle
+    ,getTitle: _getTitle
 };
 

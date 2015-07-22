@@ -27,7 +27,7 @@ var wrapPushState = function(window){
         try { 
            return pushState.apply(window.history, params); 
         } catch (e) {
-           console.error('Can\'t push state:', e);
+           console.error("Can't push state:", e);
            return void 0;
         }
     };
