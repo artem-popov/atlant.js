@@ -114,9 +114,9 @@ var Render = function(React) {
      * */
     this.stringify = function(name, options) {
         if ( options && options.static)
-            return React.renderToString(state.getInstance(name));
+            return React.renderToStaticMarkup(state.getInstance(name));
         else 
-            return React.renderComponentToString(state.getInstance(name));
+            return React.renderToString(state.getInstance(name));
     }
 
     /* Can return inner view representation. For React.js it means React component */

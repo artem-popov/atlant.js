@@ -1440,11 +1440,6 @@ function Atlant(){
         if ( ! State.state.lastOp ) throw new Error('"update" should nest something');
         s.type(key, 'string');
 
-        return _depends.bind(this)( function(key, id){
-            if ( key in emitStreams ) emitStreams[key].push(id);
-            else console.log("\nAtlant.js: Warning: event key" + key + " is not defined");
-        }.bind(void 0, key), dependsBehaviour);
-
         // doing at static stage
         statistics.whenStat({
             eventKey: key
@@ -1452,6 +1447,12 @@ function Atlant(){
             ,ifIds: State.state.lastIfIds
             ,masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction]
         });  // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
+
+        return _depends.bind(this)( function(key, id){
+            if ( key in emitStreams ) emitStreams[key].push(id);
+            else console.log("\nAtlant.js: Warning: event key" + key + " is not defined");
+        }.bind(void 0, key), dependsBehaviour);
+
 
         return this;
     }
