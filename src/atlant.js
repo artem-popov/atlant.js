@@ -470,7 +470,7 @@ function Atlant(){
                         var getValue = function( ref, atomParams, store, upstream, firstTime, u ){ 
                             var source = store.storeData.staticValue;
                             var atomIdValue = atomParams(true);
-                            var value = s.tryF(void 0, function() { return s.copy(store.partProvider(source, atomIdValue )) })()
+                            var value = s.tryF(void 0, function() { return s.clone(store.partProvider(source, atomIdValue )) })()
                             var noDehydrotizedData = true;
                             return value;
                         }
@@ -1413,7 +1413,7 @@ function Atlant(){
                 // console.log('updating!', updaterName, storeName)
                 try{ 
                     var newVal = updater( state, scope);
-                    return void 0 === newVal ? void 0 : s.copy(newVal) }
+                    return void 0 === newVal ? void 0 : s.clone(newVal) }
                 catch(e) { 
                     console.log('atlant.js: Warning: updater failed', e)
                     return state
@@ -1441,7 +1441,6 @@ function Atlant(){
         s.type(key, 'string');
 
         return _depends.bind(this)( function(key, id){
-            console.log('hoho:', key, id)
             if ( key in emitStreams ) emitStreams[key].push(id);
             else console.log("\nAtlant.js: Warning: event key" + key + " is not defined");
         }.bind(void 0, key), dependsBehaviour);
