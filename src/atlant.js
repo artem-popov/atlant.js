@@ -186,12 +186,20 @@ function Atlant(){
 
                         if (RenderOperation.redirect === upstream.render.renderOperation ){
                             if ('function' === typeof viewProvider) {
-                                upstream.doLater = function(viewProvider, scopeFn){utils.goTo(viewProvider(scopeFn())).bind(void 0, viewProvider, scopeFn)}
+
+                                utils.goTo(viewProvider(scopeFn()), void 0, true)
                             } else {
-                                upstream.doLater = function(viewProvider){utils.goTo(viewProvider).bind(void 0, viewProvider)}
+                                utils.goTo(viewProvider, void 0, true)
                             }
 
-                            whenRenderedSignal(upstream);
+                            return;
+                        } else if (RenderOperation.move === upstream.render.renderOperation){
+                            if ('function' === typeof viewProvider) {
+
+                                window.location.assign(viewProvider(scopeFn()))
+                            } else {
+                                window.location.assign(viewProvider)
+                            }
 
                             return;
                         } if (RenderOperation.refresh === upstream.render.renderOperation ){
@@ -201,7 +209,9 @@ function Atlant(){
 
                             return;
                         } else if (RenderOperation.replace === upstream.render.renderOperation ){
+
                             upstream.doLater = function(viewProvider, scopeFn){
+
                                 var path = s.apply(viewProvider, scopeFn());
                                 lastPath = path; 
                                 utils.replace(path);
@@ -219,14 +229,6 @@ function Atlant(){
                             }.bind(void 0, viewProvider, scopeFn)
 
                             whenRenderedSignal(upstream);
-
-                            return;
-                        } else if (RenderOperation.move === upstream.render.renderOperation){
-
-                            if ('function' === typeof viewProvider) 
-                                window.location.assign(viewProvider(scopeFn()))
-                            else 
-                                window.location.assign(viewProvider)
 
                             return;
                         } else {
@@ -562,8 +564,6 @@ function Atlant(){
     var publishStream = baseStreams.bus();  // Here we can put init things.
     var errorStream = baseStreams.bus();
     var interceptorBus = baseStreams.bus();
-
-
 
     // Browser specific actions.
     if ('undefined' !== typeof window) {
