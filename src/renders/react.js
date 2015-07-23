@@ -47,6 +47,13 @@ var State = function(React){
             return Object.keys(views);
         }
 
+        this.destructor = function(){
+            wrappers = {};
+            views = {};
+            thises = {};
+            instances = {};
+        }
+
         return this;
 };
 
@@ -145,6 +152,11 @@ var Render = function(React) {
             return React.createElement('div');
         }
     })
+
+    this.destructor = function(){
+        rootName = void 0;
+        state.destructor()
+    }
 }
 
 module.exports = Render;

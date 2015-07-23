@@ -277,6 +277,7 @@ function Atlant(){
                             var renderIntoView = function(viewProvider, upstream, viewName, scope, whenRenderedSignal ) {
                                 var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
                                 // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
+                                // console.log('rendering into view', viewName)
                                 return renderD(viewProvider, upstream, activeStreamId, viewName, scope)
                                     .then(function(_){
                                         // @TODO make it better
@@ -1748,6 +1749,19 @@ function Atlant(){
     this.redirectTo = _redirectTo;
     // Will hard redirect to param url (page will be reloaded by browser)
     this.moveTo = _moveTo;
+
+
+    this.destructor = function(){
+        Object.keys(viewSubscriptionsUnsubscribe).forEach(function(viewName){
+            viewSubscriptionsUnsubscribe[viewName]();
+            console.log('atom: unsubscribe', viewName)
+        })
+        Object.keys(viewData).forEach(function(viewName){
+            viewData[viewName] = void 0
+            console.log('clear view cache', viewName)
+        })
+        prefs.render.destructor();  
+    }
 
     return this;
 
