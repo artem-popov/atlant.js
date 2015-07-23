@@ -240,6 +240,7 @@ function Atlant(){
 
                             // turn off all subscriptions of atoms for this view
                             if( viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
+                                viewData[viewName] = void 0;
                                 viewSubscriptionsUnsubscribe[viewName]();
                                 // console.log('atom: unsubscribe', viewName)
                             } 
@@ -305,7 +306,7 @@ function Atlant(){
                                 var data = scopeFn();
                                 // console.log('atom:', viewName, atom.value) 
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
-                                    viewData[viewName] = scopeFn();
+                                    viewData[viewName] = data;
                                     // console.log('updating view...', viewName, atom.name, atom.ref)
                                     var rendered = renderIntoView(data, function(_){return _}); // Here we using scope updated from store!
                                     return rendered.then(function(upstream, o){
@@ -319,6 +320,7 @@ function Atlant(){
                             }.bind(void 0, upstream, viewName, scopeFn));
 
                             var data = scopeFn();
+                            viewData[viewName] = data;
                             return renderIntoView(data, whenRenderedSignal) // Here we using scope updated from store!
 
                         }
@@ -637,7 +639,7 @@ function Atlant(){
     renderEndSignal.onValue(checker.bind(void 0, 'render:', isRendered, true, onRenderEndStream, renderCounter));
     renderRecalculateSignal.onValue(checker.bind(void 0, 'renderCanceled:', isRendered, false, onRenderEndStream, renderCounter));
 
-    // onAtomEndStream.onValue(function(value){console.log('SERVER END STREAM!')})
+    // onAtomEndStream.onValue(function(value){console.log('ATOM END STREAM!')})
     // onRenderEndStream.onValue(function(value){console.log('RENDER END STREAM!')})
 
     var performCallback = function(upstreams, callbackStream, postponedActions) {
