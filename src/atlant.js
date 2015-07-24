@@ -149,10 +149,10 @@ function Atlant(){
         // when render applyed, no more renders will be accepted for this .when and viewName
         var renderStopper = function(upstream) {
             if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw || upstream.isAction || upstream.render.renderOperation === RenderOperation.move || upstream.render.renderOperation === RenderOperation.redirect || upstream.render.renderOperation === RenderOperation.replace || upstream.render.renderOperation === RenderOperation.change )
-                return true;
+                return true; // alwayes continue for this operations
 
             if ( upstream.render.viewName in atlantState.viewRendered ) {  // If this view is already rendered...
-                whenRenderedSignal(upstream);
+                whenRenderedSignal(upstream); // we should not continue
                 return false;
             } else { // If this view not yet rendered...
                 atlantState.viewRendered[upstream.render.viewName] = upstream.id;
@@ -186,7 +186,6 @@ function Atlant(){
 
                         if (RenderOperation.redirect === upstream.render.renderOperation ){
                             if ('function' === typeof viewProvider) {
-
                                 utils.goTo(viewProvider(scopeFn()), void 0, true)
                             } else {
                                 utils.goTo(viewProvider, void 0, true)
@@ -195,7 +194,6 @@ function Atlant(){
                             return;
                         } else if (RenderOperation.move === upstream.render.renderOperation){
                             if ('function' === typeof viewProvider) {
-
                                 window.location.assign(viewProvider(scopeFn()))
                             } else {
                                 window.location.assign(viewProvider)
@@ -203,30 +201,25 @@ function Atlant(){
 
                             return;
                         } if (RenderOperation.refresh === upstream.render.renderOperation ){
-                            upstream.doLater = function(){utils.goTo( window.location.pathname, void(0), true)}
+                            utils.goTo( window.location.pathname, void 0, true)
 
                             whenRenderedSignal(upstream);
 
                             return;
                         } else if (RenderOperation.replace === upstream.render.renderOperation ){
 
-                            upstream.doLater = function(viewProvider, scopeFn){
-
-                                var path = s.apply(viewProvider, scopeFn());
-                                lastPath = path; 
-                                utils.replace(path);
-                            }.bind(void 0, viewProvider, scopeFn)
+                            var path = s.apply(viewProvider, scopeFn());
+                            lastPath = path; 
+                            utils.replace(path); // just rename url
 
                             whenRenderedSignal(upstream);
 
                             return;
                         } else if (RenderOperation.change === upstream.render.renderOperation ){
-                            upstream.doLater = function(viewProvider, scopeFn){
-                                var path = s.apply(viewProvider, scopeFn());
-                                lastReferrer = lastPath;
-                                lastPath = path;
-                                utils.change(path);
-                            }.bind(void 0, viewProvider, scopeFn)
+                            var path = s.apply(viewProvider, scopeFn());
+                            lastReferrer = lastPath;
+                            lastPath = path;
+                            utils.change(path); // Push url to history without atlant to react on new value.
 
                             whenRenderedSignal(upstream);
 
@@ -588,7 +581,6 @@ function Atlant(){
     var onDrawEndStream = baseStreams.bus();
     var onAtomEndStream = baseStreams.bus(); 
     var onBothEndStreams = onAtomEndStream.zip(onRenderEndStream, function(x,y){return y});
-    var onRedirectEndStream = baseStreams.bus();  // will be returned to user. will be called after postponed actions. will be user for first render.
 
     var atomCounter = { list: {} };
     var isAtomed = { value: false };
@@ -657,22 +649,6 @@ function Atlant(){
                 errorStream.push(e);
             }
     }
-
-    /* Except .draw() every render get this*/
-    
-    baseStreams.onValue( onBothEndStreams, function(upstreams){
-        if (typeof window !== 'undefined') lastPath = utils.rebuildURL(utils.getLocation());
-
-        var doLater = _.first(  _(upstreams).reduce( function(acc, v, k){ if(v.doLater) acc.push(v.doLater); return acc }, [])  ); 
-        var redirectAction = function(doLater){ if(doLater) setTimeout( doLater, 0 ) }.bind(void 0, doLater);
-        var postponedActions = _(upstreams).reduce( function(acc, v, k){ if(v.postponed) acc.push(v.postponed); return acc}, []);
-
-        if (redirectAction) postponedActions.push(redirectAction);
-
-        performCallback(upstreams, onRedirectEndStream, postponedActions);
-
-        return upstreams;
-    })
 
     var routeChangedStream =  publishStream
         .merge( Bacon.fromBinder(function(sink) {
@@ -1269,11 +1245,6 @@ function Atlant(){
         return this;
     }
 
-    var _onRedirectEnd = function(callback) { // use this to get know when render ends. Also all redirects are already completed.
-        baseStreams.onValue(onRedirectEndStream, s.baconTryD(callback));
-        return this;
-    }
-
     var _use = function(render) {
         s.type(render, 'object');
         //@TODO: check render for internal structure
@@ -1702,8 +1673,6 @@ function Atlant(){
     this.onRenderEnd =  _onRenderEnd;
     // Called everytime when draw renders.
     this.onDrawEnd =  _onDrawEnd;
-    // Called when redirect is completed (actually it happens soon after onRenderEnd)
-    this.onRedirectEnd =  _onRedirectEnd;
     // Accepts element. After publish and first render the contents will be attached to this element.
     this.attach =  _attach;
     // After publish and first render the contents will be transferet to callback (first parameter).
