@@ -577,6 +577,7 @@ function Atlant(){
 
 
     var defValue = function(){ return { value: 0 } };
+    var onDestroyStream = baseStreams.bus();
     var onRenderEndStream = baseStreams.bus();
     var onDrawEndStream = baseStreams.bus();
     var onAtomEndStream = baseStreams.bus(); 
@@ -1245,6 +1246,11 @@ function Atlant(){
         return this;
     }
 
+    var _onDestroy = function(callback) { // Use this to get early callback for server render
+        baseStreams.onValue(onDestroyStream, s.baconTryD(callback));
+        return this;
+    }
+
     var _use = function(render) {
         s.type(render, 'object');
         //@TODO: check render for internal structure
@@ -1314,15 +1320,6 @@ function Atlant(){
         else
             console.error('Atlant.js: no window object...')
     }
-
-    var _destroy = function() {
-        baseStreams.destroy(); 
-        baseStreams = null;
-
-        s = l = simpleRender = reactRender = utils = Counter = Bacon = _ = interfaces = StateClass = clientFuncs =  baseStreams = safeGoToCopy = null;// @TODO more
-        return 
-    }
-
 
     var _push = function(actionName) {
         throw new Error('atlant.push() not implemented');
@@ -1481,6 +1478,27 @@ function Atlant(){
     var _setInterval = s.setInterval;
 
     var _setTimeout = s.setTimeout;
+
+    var _destroy = function(){
+        Object.keys(viewSubscriptionsUnsubscribe).forEach(function(viewName){ // Removing atom subscriptions
+            viewSubscriptionsUnsubscribe[viewName]();
+            console.log('atom: unsubscribe', viewName)
+        })
+        Object.keys(viewData).forEach(function(viewName){ // Destroying view scopes cache
+            viewData[viewName] = void 0
+            console.log('clear view cache', viewName)
+        })
+
+        prefs.render.destroy(); // Destroying view cache
+
+        baseStreams.destroy(); 
+        baseStreams = null;
+
+        s = l = simpleRender = reactRender = utils = Counter = Bacon = _ = interfaces = StateClass = clientFuncs =  baseStreams = safeGoToCopy = null;// @TODO more
+
+        onDestroyStream.push();
+    }
+
 
     /**
      * Atlant API
@@ -1671,6 +1689,8 @@ function Atlant(){
      */
     // Called everytime when route/action is rendered. 
     this.onRenderEnd =  _onRenderEnd;
+    // Called when destroy initiated.
+    this.onDestroy =  _onDestroy;
     // Called everytime when draw renders.
     this.onDrawEnd =  _onDrawEnd;
     // Accepts element. After publish and first render the contents will be attached to this element.
@@ -1719,18 +1739,6 @@ function Atlant(){
     // Will hard redirect to param url (page will be reloaded by browser)
     this.moveTo = _moveTo;
 
-
-    this.destructor = function(){
-        Object.keys(viewSubscriptionsUnsubscribe).forEach(function(viewName){
-            viewSubscriptionsUnsubscribe[viewName]();
-            console.log('atom: unsubscribe', viewName)
-        })
-        Object.keys(viewData).forEach(function(viewName){
-            viewData[viewName] = void 0
-            console.log('clear view cache', viewName)
-        })
-        prefs.render.destructor();  
-    }
 
     return this;
 

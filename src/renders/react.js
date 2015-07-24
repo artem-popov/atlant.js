@@ -47,7 +47,7 @@ var State = function(React){
             return Object.keys(views);
         }
 
-        this.destructor = function(){
+        this.destroy = function(){
             wrappers = {};
             views = {};
             thises = {};
@@ -153,9 +153,9 @@ var Render = function(React) {
         }
     })
 
-    this.destructor = function(){
+    this.destroy = function(){
         rootName = void 0;
-        state.destructor()
+        state.destroy()
     }
 }
 
