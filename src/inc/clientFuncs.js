@@ -85,7 +85,7 @@ var createScope = function ( upstream ) {
             })
         } else {  
             return s.baconTryD(function() {
-                return inject.expression( s.extend( s.clone(refsData), injectsData.object) ) 
+                return inject.expression( s.extend( s.copy(refsData), injectsData.object) ) 
             })
         }
     }
@@ -104,7 +104,7 @@ var createScope = function ( upstream ) {
     params['mask'] = (upstream.route) ? upstream.route.mask : void 0;    
     params['location'] = upstream.path;
 
-    data = s.extend( s.clone(refsData), params, data, joinsData ); 
+    data = s.extend( s.copy(refsData), params, data, joinsData ); 
 
     return data;
 };

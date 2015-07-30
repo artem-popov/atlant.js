@@ -466,7 +466,7 @@ function Atlant(){
                         var getValue = function( ref, atomParams, store, upstream, firstTime, u ){ 
                             var source = store.storeData.staticValue;
                             var atomIdValue = atomParams(true);
-                            var value = s.tryF(void 0, function() { return s.clone(store.partProvider(source, atomIdValue )) })()
+                            var value = s.tryF(void 0, function() { return s.copy(store.partProvider(source, atomIdValue )) })()
                             var noDehydrotizedData = true;
                             return value;
                         }
@@ -1384,7 +1384,7 @@ function Atlant(){
                 // console.log('updating!', updaterName, storeName)
                 try{ 
                     var newVal = updater( state, scope);
-                    return void 0 === newVal ? void 0 : s.clone(newVal) }
+                    return void 0 === newVal ? void 0 : s.copy(newVal) }
                 catch(e) { 
                     console.log('atlant.js: Warning: updater failed', e)
                     return state

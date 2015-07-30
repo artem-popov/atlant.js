@@ -473,6 +473,10 @@ var s = (function(){
        }
    }
 
+   this.copy = function(_){
+       return JSON.parse(JSON.stringify(_))
+   }
+
    this.clone = function(obj) {
        return _.cloneDeep(obj, function(value) {
            if (_.isFunction(value) || !_.isPlainObject(value)) {
