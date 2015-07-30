@@ -296,7 +296,7 @@ function Atlant(){
 
 
 
-                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, atom){ 
+                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, renderIntoView, atom){ 
                                 var data = scopeFn();
                                 // console.log('atom:', viewName, atom.value) 
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
@@ -311,7 +311,7 @@ function Atlant(){
                                     // console.log('canceled render due the same data', viewName, atom.name, atom.ref)
                                     atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                                 }
-                            }.bind(void 0, upstream, viewName, scopeFn));
+                            }.bind(void 0, upstream, viewName, scopeFn, renderIntoView ));
 
                             var data = scopeFn();
                             viewData[viewName] = data;
