@@ -1379,8 +1379,8 @@ function Atlant(){
 
         if( !(updaterName in emitStreams ) ) emitStreams[updaterName] = baseStreams.bus();
         
-        baseStreams.onValue(emitStreams[updaterName], function(storeName, scope){
-            stores[storeName].updater.push( function(scope, state){ 
+        baseStreams.onValue(emitStreams[updaterName], function(storeName, updater, scope){
+            stores[storeName].updater.push( function(scope, updater, state){ 
                 // console.log('updating!', updaterName, storeName)
                 try{ 
                     var newVal = updater( state, scope);
@@ -1389,8 +1389,8 @@ function Atlant(){
                     console.log('atlant.js: Warning: updater failed', e)
                     return state
                 }
-            }.bind(void 0, scope))
-        }.bind(void 0, storeName));
+            }.bind(void 0, scope, updater))
+        }.bind(void 0, storeName, updater));
 
         return this;
     }
