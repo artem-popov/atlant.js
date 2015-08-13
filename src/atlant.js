@@ -260,6 +260,7 @@ function Atlant(){
                                 .head();
 
                             viewSubscriptions[viewName] = lastAtom ? lastAtom.bus.map(putInfo.bind(this, lastAtom)) : Bacon.never(); 
+                            // console.log('viewSubscriptions', viewName, viewSubscriptions[viewName])
 
                             if (upstream.masks) {
                                 statistics.whenStat({ actionId: upstream.whenId, masks: upstream.masks.slice(), view: viewName });
@@ -275,7 +276,6 @@ function Atlant(){
                                     .then(function(_){
                                         // @TODO make it better
                                         // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
-                                        // console.log('scope: view...', viewName, scopeFn)
                                         var atoms = upstream.atoms;
                                         upstream.atoms = void 0;
 
@@ -298,7 +298,7 @@ function Atlant(){
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, renderIntoView, atom){ 
                                 var data = scopeFn();
-                                // console.log('atom:', viewName, atom.value) 
+                                // console.log('atom:', viewName, atom.name, atom.ref, data) 
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = data;
                                     // console.log('updating view...', viewName, atom.name, atom.ref)
@@ -1386,7 +1386,7 @@ function Atlant(){
                     var newVal = updater( state, scope);
                     return void 0 === newVal ? void 0 : s.copy(newVal) }
                 catch(e) { 
-                    console.log('atlant.js: Warning: updater failed', e)
+                    console.error('atlant.js: Warning: updater failed', e)
                     return state
                 }
             }.bind(void 0, scope, updater))

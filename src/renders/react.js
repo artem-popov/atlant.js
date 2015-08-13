@@ -11,14 +11,17 @@ var State = function(React){
         ,thises = {}
         ,instances = {};
 
-        this.check = function(name) {
+        this.getOrCreate = function(name) {
             if ( !wrappers[name] ) {
                 wrappers[name] = React.createClass({
                     render: function(){ // name in this function is passed by value 
                         thises[name] = this;
                         if ( !views[name] ) views[name] = React.createElement('div');
 
-                        return views[name];
+                        if ( _.isArray( views[name] ) )
+                            return  views[name][0]( _.extend( {}, this.props, views[name][1] ) )
+                        else 
+                            return views[name];
                     }
             })}    
             if ( !instances[name] ) 
@@ -70,11 +73,12 @@ var Render = function(React) {
 
             if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.  
                 // get new component somehow.
-                state.set(name, viewProvider(scope));  
+                state.set(name, [viewProvider, scope]);  
             }
-            var instance = state.getThis(name);
             // console.time('renering ' + name);
-            state.check(name);
+            state.getOrCreate(name);
+            var instance = state.getThis(name);
+
             if( rootName !== name && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate(/* console.timeEnd.bind(console, 'renering ' + name) */);
 
             // console.log('Atlant.js: rendered the view.', name)
@@ -128,9 +132,8 @@ var Render = function(React) {
 
     /* Can return inner view representation. For React.js it means React component */
     this.get = function(name, options) {
-        state.check(name);
-        var instance = state.getState(name);
-        return instance;
+        state.getOrCreate(name);
+        return state.getState(name);
     }
 
     this.list = function(){
@@ -140,7 +143,7 @@ var Render = function(React) {
     this.put = function(name, component){
         // console.log('Atlant.js: put the view.')
         state.set(name, component);  
-        state.check(name);
+        state.getOrCreate(name);
         return component;
     }
 
