@@ -1,4 +1,5 @@
-0.4.29 skip duplicates atom value changes
+0.4.30 skip duplicates atom value changes
+0.4.29 atlant views (like rootView) can now have default parameters
 0.4.28 add onDestroy(callback), destroy improvements
 0.4.27 fix refresh/replace/change for immediate execution. create destructor
 for atlant.

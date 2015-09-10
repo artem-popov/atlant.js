@@ -260,6 +260,7 @@ function Atlant(){
                                 .head();
 
                             viewSubscriptions[viewName] = lastAtom ? lastAtom.bus.map(putInfo.bind(this, lastAtom)) : Bacon.never(); 
+                            // console.log('viewSubscriptions', viewName, viewSubscriptions[viewName])
 
                             if (upstream.masks) {
                                 statistics.whenStat({ actionId: upstream.whenId, masks: upstream.masks.slice(), view: viewName });
@@ -275,7 +276,6 @@ function Atlant(){
                                     .then(function(_){
                                         // @TODO make it better
                                         // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
-                                        // console.log('scope: view...', viewName, scopeFn)
                                         var atoms = upstream.atoms;
                                         upstream.atoms = void 0;
 
@@ -296,9 +296,9 @@ function Atlant(){
 
 
 
-                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, atom){ 
+                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, renderIntoView, atom){ 
                                 var data = scopeFn();
-                                // console.log('atom:', viewName, atom.value) 
+                                // console.log('atom:', viewName, atom.name, atom.ref, data) 
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = data;
                                     // console.log('updating view...', viewName, atom.name, atom.ref)
@@ -311,7 +311,7 @@ function Atlant(){
                                     // console.log('canceled render due the same data', viewName, atom.name, atom.ref)
                                     atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                                 }
-                            }.bind(void 0, upstream, viewName, scopeFn));
+                            }.bind(void 0, upstream, viewName, scopeFn, renderIntoView ));
 
                             var data = scopeFn();
                             viewData[viewName] = data;
@@ -1372,18 +1372,18 @@ function Atlant(){
 
         if( !(updaterName in emitStreams ) ) emitStreams[updaterName] = baseStreams.bus();
         
-        baseStreams.onValue(emitStreams[updaterName], function(storeName, scope){
-            stores[storeName].updater.push( function(scope, state){ 
+        baseStreams.onValue(emitStreams[updaterName], function(storeName, updater, scope){
+            stores[storeName].updater.push( function(scope, updater, state){ 
                 // console.log('updating!', updaterName, storeName)
                 try{ 
                     var newVal = updater( state, scope);
-                    return void 0 === newVal ? void 0 : s.clone(newVal) }
+                    return void 0 === newVal ? void 0 : s.copy(newVal) }
                 catch(e) { 
-                    console.log('atlant.js: Warning: updater failed', e)
+                    console.error('atlant.js: Warning: updater failed', e)
                     return state
                 }
-            }.bind(void 0, scope))
-        }.bind(void 0, storeName));
+            }.bind(void 0, scope, updater))
+        }.bind(void 0, storeName, updater));
 
         return this;
     }
