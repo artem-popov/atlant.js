@@ -379,7 +379,7 @@ function Atlant(){
     /* depends */
     var _depends = function() {
 
-        var createDepStream = function(stream, depName, dep, injects, store) {
+        var createDepStream = function(stream, depName, dep, injects, store, isAtom) {
             var nameContainer = dependsName.init(depName, State.state);
             var withs = withGrabber.init(State.state);
 
@@ -401,7 +401,7 @@ function Atlant(){
             } else {
 
                 stream = stream
-                    .flatMap(function(store, depName, dep, upstream) {
+                    .flatMap(function(store, depName, dep, isAtom, upstream) {
                         var scope = clientFuncs.createScope(upstream);
                         var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
                         var atomParams = function(atomIds, scope, where, store, ref, isConsole/*variable for debug*/, parentRef) { 
@@ -438,7 +438,7 @@ function Atlant(){
                         
                         var treatDep = s.compose( clientFuncs.convertPromiseD, s.promiseTryD );
                         return treatDep( dep )( atomParams(true) )
-                            .map(function(upstream, atomParams, store, depName, results){
+                            .map(function(upstream, atomParams, store, depName, isAtom, results){
                                 if ( 'function' === typeof results ) results = results.bind(void 0, atomParams);
                                 if ( !upstream.isInterceptor ) interceptorBus.push({upstream: upstream, scope: results}); // pushing into global depends .interceptor() 
                                 if (!upstream.depends) upstream.depends = {};
@@ -446,14 +446,14 @@ function Atlant(){
 
                                 if ( !upstream.atomIds ) upstream.atomIds = [];
 
-                                if ( 'undefined' !== typeof store ) {
+                                if ( 'undefined' !== typeof store && isAtom) {
                                     upstream.atomParams = atomParams; 
                                     upstream.atomIds.push({ ref: upstream.ref, fn: atomParams, partProvider: store.partProvider, storeData: store.storeData });
                                 } 
 
                                 return upstream;
-                            }.bind(void 0, upstream, atomParams, store, depName))
-                    }.bind(void 0, store, depName, dep))
+                            }.bind(void 0, upstream, atomParams, store, depName, isAtom))
+                    }.bind(void 0, store, depName, dep, isAtom))
             }
 
             stream = stream
@@ -520,7 +520,7 @@ function Atlant(){
             return x;
         });
 
-        return function(dependency, dependsBehaviour, store ) {
+        return function(dependency, dependsBehaviour, store, isAtom ) {
             if ( ! State.state.lastWhen ) throw new Error('"depends" should nest "when"');
 
             var prefix = (dependsBehaviour === Depends.continue) ? '_and_' : '_';
@@ -533,7 +533,7 @@ function Atlant(){
 
             injectsGrabber.init(depName, State.state);
 
-            var thisDep = createDepStream(lastOp, depName, dependency, State.state.lastInjects, store)
+            var thisDep = createDepStream(lastOp, depName, dependency, State.state.lastInjects, store, isAtom)
 
             if( dependsBehaviour === Depends.async && State.state.lastDep) { // if deps was before then we need to zip all of them to be arrived simultaneously
                 thisDep = State.state.lastDep.zip( thisDep, zippersJoin( State.state.lastDepName, depName ) );
@@ -1435,7 +1435,7 @@ function Atlant(){
         }.bind(void 0, arr), Depends.continue );
     }
 
-    var _select = function(dependsBehaviour, partName, storeName) {
+    var _select = function(dependsBehaviour, partName, storeName, isAtom) {
         if (!(storeName in stores)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(', storeName + ')');
         if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(' + storeName + ')');
 
@@ -1449,7 +1449,7 @@ function Atlant(){
                     return void 0;
                 }
             }.bind(void 0, storeName, partName)
-        }.bind(void 0, storeName, partName), dependsBehaviour, { storeName: storeName, partName: partName, bus: stores[storeName].bus, partProvider: stores[storeName].parts[partName], storeData: stores[storeName]} );
+        }.bind(void 0, storeName, partName), dependsBehaviour, { storeName: storeName, partName: partName, bus: stores[storeName].bus, partProvider: stores[storeName].parts[partName], storeData: stores[storeName]}, isAtom );
     }
 
     // Create scope for prefixed method (currently .select(), .update(), .depends())
@@ -1559,8 +1559,10 @@ function Atlant(){
     this.part = _part;
     // Store dispatch
     this.update = _update.bind(this, Depends.continue);
-    // Query store
-    this.select = _select.bind(this, Depends.continue);
+    // Query store with atom creation
+    this.select = _select.bind(this, Depends.continue, true);
+    // Just query store, no updates will be received
+    this.query = _select.bind(this, Depends.continue, false);
 
 
     /*
