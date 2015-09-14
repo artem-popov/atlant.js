@@ -1416,7 +1416,7 @@ function Atlant(){
         }.bind(void 0, arr), Depends.continue );
     }
 
-    var _select = function(dependsBehaviour, partName, storeName, isAtom) {
+    var _select = function(isAtom, dependsBehaviour, partName, storeName) {
         if (!(storeName in stores)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(', storeName + ')');
         if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(' + storeName + ')');
 
