@@ -101,28 +101,8 @@ function Atlant(){
         ,continue: _.uniqueId()
     }
 
-    var RenderOperation = {
-        render: parseInt(_.uniqueId())
-        ,draw: parseInt(_.uniqueId())
-        ,replace: parseInt(_.uniqueId())
-        ,change: parseInt(_.uniqueId())
-        ,clear: parseInt(_.uniqueId())
-        ,redirect: parseInt(_.uniqueId())
-        ,refresh: parseInt(_.uniqueId())
-        ,move: parseInt(_.uniqueId())
-        ,nope: parseInt(_.uniqueId())
-    }
+    var types = require('./inc/types');
 
-    var RenderOperationKey = {};
-    RenderOperationKey[RenderOperation.render] = 'render'; 
-    RenderOperationKey[RenderOperation.draw] = 'draw'; 
-    RenderOperationKey[RenderOperation.replace] = 'replace'; 
-    RenderOperationKey[RenderOperation.change] = 'change'; 
-    RenderOperationKey[RenderOperation.clear] = 'clear'; 
-    RenderOperationKey[RenderOperation.redirect] = 'redirect'; 
-    RenderOperationKey[RenderOperation.refresh] = 'refresh'; 
-    RenderOperationKey[RenderOperation.move] = 'move'; 
-    RenderOperationKey[RenderOperation.nope] = 'nope'; 
 
     var atlantState = {
         viewRendered: {} // Flag that this view is rendered. Stops other streams to perform render then.
@@ -137,18 +117,18 @@ function Atlant(){
         var whenRenderedSignal = function( upstream ) {
             if (!upstream.isAction && upstream.id !== activeStreamId.value) return // this streams should not be counted.
 
-            if (upstream.render.renderOperation === RenderOperation.draw ){ // This is first render and for user to subscribe
+            if (upstream.render.renderOperation === types.RenderOperation.draw ){ // This is first render and for user to subscribe
                 renderStreams.drawEnd.push({ id: upstream.id, whenId: upstream.whenId, itemIds: [upstream.render.id], item: upstream.render }); 
             }
 
-            if (upstream.render.renderOperation !== RenderOperation.draw && !upstream.isAction ){
+            if (upstream.render.renderOperation !== types.RenderOperation.draw && !upstream.isAction ){
                 renderEndSignal.push({ id: upstream.id, whenId: upstream.whenId, itemIds: [upstream.render.id], item: upstream.render }); // This will count the renders
             }
         };
 
         // when render applyed, no more renders will be accepted for this .when and viewName
         var renderStopper = function(upstream) {
-            if (upstream.render.renderOperation === RenderOperation.nope || upstream.render.renderOperation === RenderOperation.draw || upstream.isAction || upstream.render.renderOperation === RenderOperation.move || upstream.render.renderOperation === RenderOperation.redirect || upstream.render.renderOperation === RenderOperation.replace || upstream.render.renderOperation === RenderOperation.change )
+            if (upstream.render.renderOperation === types.RenderOperation.nope || upstream.render.renderOperation === types.RenderOperation.draw || upstream.isAction || upstream.render.renderOperation === types.RenderOperation.move || upstream.render.renderOperation === types.RenderOperation.redirect || upstream.render.renderOperation === types.RenderOperation.replace || upstream.render.renderOperation === types.RenderOperation.change )
                 return true; // alwayes continue for this operations
 
             if ( upstream.render.viewName in atlantState.viewRendered ) {  // If this view is already rendered...
@@ -178,13 +158,13 @@ function Atlant(){
 
                         // Choose appropriate render.
                         var render;
-                        if (RenderOperation.nope === upstream.render.renderOperation ){
+                        if (types.RenderOperation.nope === upstream.render.renderOperation ){
                             whenRenderedSignal(upstream);
 
                             return;
                         }
 
-                        if (RenderOperation.redirect === upstream.render.renderOperation ){
+                        if (types.RenderOperation.redirect === upstream.render.renderOperation ){
                             if ('function' === typeof viewProvider) {
                                 utils.goTo(viewProvider(scopeFn()), void 0, true)
                             } else {
@@ -192,7 +172,7 @@ function Atlant(){
                             }
 
                             return;
-                        } else if (RenderOperation.move === upstream.render.renderOperation){
+                        } else if (types.RenderOperation.move === upstream.render.renderOperation){
                             if ('function' === typeof viewProvider) {
                                 window.location.assign(viewProvider(scopeFn()))
                             } else {
@@ -200,13 +180,13 @@ function Atlant(){
                             }
 
                             return;
-                        } if (RenderOperation.refresh === upstream.render.renderOperation ){
+                        } if (types.RenderOperation.refresh === upstream.render.renderOperation ){
                             utils.goTo( window.location.pathname, void 0, true)
 
                             whenRenderedSignal(upstream);
 
                             return;
-                        } else if (RenderOperation.replace === upstream.render.renderOperation ){
+                        } else if (types.RenderOperation.replace === upstream.render.renderOperation ){
 
                             var path = s.apply(viewProvider, scopeFn());
                             lastPath = path; 
@@ -215,7 +195,7 @@ function Atlant(){
                             whenRenderedSignal(upstream);
 
                             return;
-                        } else if (RenderOperation.change === upstream.render.renderOperation ){
+                        } else if (types.RenderOperation.change === upstream.render.renderOperation ){
                             var path = s.apply(viewProvider, scopeFn());
                             lastReferrer = lastPath;
                             lastPath = path;
@@ -225,9 +205,9 @@ function Atlant(){
 
                             return;
                         } else {
-                            if ( RenderOperation.render === upstream.render.renderOperation || RenderOperation.draw === upstream.render.renderOperation ) {
+                            if ( types.RenderOperation.render === upstream.render.renderOperation || types.RenderOperation.draw === upstream.render.renderOperation ) {
                                 render = prefs.render.render.bind(prefs.render)
-                            } else if ( RenderOperation.clear === upstream.render.renderOperation ){
+                            } else if ( types.RenderOperation.clear === upstream.render.renderOperation ){
                                 render = prefs.render.clear.bind(prefs.render)
                             }
 
@@ -340,6 +320,7 @@ function Atlant(){
 
         };
     }();
+
 
     /* matchRouteLast */
     var matchRouteLast = function(){
@@ -1081,7 +1062,7 @@ function Atlant(){
     var _render = function(renderProvider, viewName, renderOperation){
             if ( ! State.state.lastOp ) throw new Error('"render" should nest something');
 
-            if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider && renderOperation != RenderOperation.nope && renderOperation != RenderOperation.refresh ) {
+            if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider && renderOperation != types.RenderOperation.nope && renderOperation != types.RenderOperation.refresh ) {
                 throw new Error('Atlant.js: render first param should be function or URI')
             }
             s.type(viewName, 'string');
@@ -1090,9 +1071,9 @@ function Atlant(){
             viewName = viewName || s.last(prefs.viewState);
 
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
-            if ( renderOperation === RenderOperation.nope ) viewName = void 0;
+            if ( renderOperation === types.RenderOperation.nope ) viewName = void 0;
 
-            if ( renderOperation !== RenderOperation.draw && 'action' !== State.state.lastWhenType) Counter.increase(State.state);
+            if ( renderOperation !== types.RenderOperation.draw && 'action' !== State.state.lastWhenType) Counter.increase(State.state);
             var renderId = _.uniqueId();
 
 
@@ -1101,7 +1082,7 @@ function Atlant(){
                 // .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
                 // .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
                 .map(function(renderId, renderProvider, viewName, renderOperation, u) { 
-                    var render = { render: { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: RenderOperationKey[renderOperation]}};
+                    var render = { render: { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: types.RenderOperationKey[renderOperation]}};
                     return _.extend( {}, u, render )
                 }.bind(void 0, renderId, renderProvider, viewName, renderOperation))
 
@@ -1109,8 +1090,8 @@ function Atlant(){
             if ( ! renders[viewName] ) renders[viewName] = [];
             renders[viewName].push(thisRender);
 
-            if (RenderOperation.draw !== renderOperation) {
-                // console.log('registering render:', renderId, TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], viewName, RenderOperationKey[renderOperation], renderProvider, 'ifIds:', State.state.lastIfIds);
+            if (types.RenderOperation.draw !== renderOperation) {
+                // console.log('registering render:', renderId, TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], viewName, types.RenderOperationKey[renderOperation], renderProvider, 'ifIds:', State.state.lastIfIds);
                 statistics.whenStat({ actionId: TopState.state.lastActionId,
                                 ifIds: State.state.lastIfIds,
                                 masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction],
@@ -1118,7 +1099,7 @@ function Atlant(){
                 }); 
             } 
 
-            if (void 0 !== State.state.lastIf && renderOperation !== RenderOperation.draw){ 
+            if (void 0 !== State.state.lastIf && renderOperation !== types.RenderOperation.draw){ 
                 State.rollback(); 
             }
 
@@ -1270,7 +1251,7 @@ function Atlant(){
                             .drawEnd
                             .merge(renderEndSignal)
                             .filter(function(_){
-                                if ( _.item && (_.item.renderOperation === RenderOperation.render || _.item.renderOperation === RenderOperation.draw ) && _.item.viewName === rootView)  return true // accept only first render/draw of rootComponent
+                                if ( _.item && (_.item.renderOperation === types.RenderOperation.render || _.item.renderOperation === types.RenderOperation.draw ) && _.item.viewName === rootView)  return true // accept only first render/draw of rootComponent
                                 else return false
                             })
                             .take(1);
@@ -1601,25 +1582,25 @@ function Atlant(){
     //Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
     this.log =  _log;
     /* Renders the view. first - render provider, second - view name */
-    this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, RenderOperation.render);}
+    this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, types.RenderOperation.render);}
     /* Renders the view. first - render provider, second - view name. Not waiting for anything - draws immediatelly */
-    this.draw = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, RenderOperation.draw);}
+    this.draw = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, types.RenderOperation.draw);}
     /* clears default or provided viewName */
-    this.clear = function(viewName) {return _render.bind(this)(function(){}, viewName, RenderOperation.clear);}
+    this.clear = function(viewName) {return _render.bind(this)(function(){}, viewName, types.RenderOperation.clear);}
     // Soft atlant-inside redirect.
-    this.redirect = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.redirect);}
+    this.redirect = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, types.RenderOperation.redirect);}
     // Soft atlant-inside refresh.
-    this.refresh = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.refresh);}
+    this.refresh = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, types.RenderOperation.refresh);}
     //  Fake redirect. Atlant will just change URL but routes will not be restarted. Referrer stays the same.
-    this.replace = function(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, RenderOperation.replace);}
+    this.replace = function(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, types.RenderOperation.replace);}
     // Same as replace, but store the replaced url in html5 location history. Referrer also changed.
-    this.change = function(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, RenderOperation.change);}
+    this.change = function(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, types.RenderOperation.change);}
     // Force redirect event to current route
     // this.force = _.force;
     // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
-    this.move = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, RenderOperation.move);}
+    this.move = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, types.RenderOperation.move);}
     // render which render nothing into nowhere
-    this.nope = function(){ return _render.bind(this)(void 0, void 0, RenderOperation.nope)}
+    this.nope = function(){ return _render.bind(this)(void 0, void 0, types.RenderOperation.nope)}
 
     /**
      * Setups
