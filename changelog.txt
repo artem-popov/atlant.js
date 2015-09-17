@@ -1,3 +1,6 @@
+0.4.31 add initial persistent support. Be carefull because it writes into
+LocalStorage. Persisted only data returned by .serialize(_=>_) method of
+.store('store')
 0.4.30 skip duplicates atom value changes
 0.4.29 atlant views (like rootView) can now have default parameters
 0.4.28 add onDestroy(callback), destroy improvements

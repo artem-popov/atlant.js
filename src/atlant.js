@@ -21,7 +21,9 @@ function Atlant(){
         ,StateClass = require('./inc/state')
         ,clientFuncs = require('./inc/clientFuncs')
         ,baseStreams = require('./inc/base-streams')
-        ,Stat = require('./inc/statistics');
+        ,Stat = require('./inc/statistics')
+        ,Storage = require('./inc/storage')
+    ;
 
 
     var safeGoToCopy = utils.goTo;
@@ -419,6 +421,7 @@ function Atlant(){
                         
                         var treatDep = s.compose( clientFuncs.convertPromiseD, s.promiseTryD );
                         return treatDep( dep )( atomParams(true) )
+                            .mapError(function(_){ console.error('Network error: status === ', _.status); return _})
                             .map(function(upstream, atomParams, store, depName, isAtom, results){
                                 if ( 'function' === typeof results ) results = results.bind(void 0, atomParams);
                                 if ( !upstream.isInterceptor ) interceptorBus.push({upstream: upstream, scope: results}); // pushing into global depends .interceptor() 
@@ -488,6 +491,7 @@ function Atlant(){
 
                     return stream;
                 }.bind(void 0, depName, store, injects))
+                .mapError(function(_){ console.error('Unhandled error', _)})
 
             return stream;
         }
@@ -514,7 +518,7 @@ function Atlant(){
 
             injectsGrabber.init(depName, State.state);
 
-            var thisDep = createDepStream(lastOp, depName, dependency, State.state.lastInjects, store, isAtom)
+            var thisDep = createDepStream(lastOp, depName, dependency, State.state.lastInjects, store, isAtom);
 
             if( dependsBehaviour === Depends.async && State.state.lastDep) { // if deps was before then we need to zip all of them to be arrived simultaneously
                 thisDep = State.state.lastDep.zip( thisDep, zippersJoin( State.state.lastDepName, depName ) );
@@ -1307,13 +1311,25 @@ function Atlant(){
         if ( !(storeName in stores) ) stores[storeName] = { 
             _constructor: void 0, 
             updater: void 0,
-            value: void 0,
-            staticValue: void 0,
+            value: Storage.load(storeName) || void 0,
+            staticValue: Storage.load(storeName) || void 0,
             updaters: {},
             parts: {}
         };
+
         return this;
     };
+
+    var _serialize = function(serializeProvider){
+        var storeName = TopState.state.lastStoreName; 
+        if (!storeName) { throw new Error('.serialize() should be after .store()') }
+        if ( 'function' === typeof stores[storeName]._serialize ) { throw new Error("Serialize already implemented in store ", storeName)}
+        if( 'function' !== typeof serializeProvider ) { throw new Error("Serialize should be a function for ", storeName)}
+
+        stores[storeName]._serialize = serializeProvider;
+
+        return this
+    }
 
     var _constructor = function(constructorProvider){
         var storeName = TopState.state.lastStoreName; 
@@ -1323,10 +1339,13 @@ function Atlant(){
 
         stores[storeName]._constructor = constructorProvider;
         stores[storeName].updater = baseStreams.bus();
-        stores[storeName].staticValue = constructorProvider();
-        stores[storeName].bus = stores[storeName].updater.scan(constructorProvider(), function(storeName, state, updater){ 
+        stores[storeName].staticValue = Storage.load(storeName) || constructorProvider();
+        stores[storeName].bus = stores[storeName].updater.scan(stores[storeName].staticValue || constructorProvider(), function(storeName, state, updater){ 
             var newState = updater(state);
             stores[storeName].staticValue = newState;
+
+            var serialize = stores[storeName]._serialize;
+            if(serialize) setTimeout( function(){Storage.persist(storeName, serialize(newState))}, 1000);
 
             if ('undefined' !== typeof window) {
                 if (!window.stores) window.stores = {};
@@ -1427,6 +1446,7 @@ function Atlant(){
                 try{
                     return stores[storeName].parts[partName](stores[storeName].staticValue, id());
                 } catch(e) {
+                    console.error('select', partName, 'from', storeName,'failed:', e.stack)
                     return void 0;
                 }
             }.bind(void 0, storeName, partName)
@@ -1544,6 +1564,9 @@ function Atlant(){
     this.select = _select.bind(this, Depends.continue, true);
     // Just query store, no updates will be received
     this.query = _select.bind(this, Depends.continue, false);
+    // Do not use this until you know!
+    this.serialize = _serialize;
+
 
 
     /*
