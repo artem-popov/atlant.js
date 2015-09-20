@@ -5,15 +5,15 @@ var browserify = require('browserify')
     ,watch = require('gulp-watch')
     ,gulp = require('gulp')
     ,source = require('vinyl-source-stream')
-    ,literalify = require('literalify')
     ,connect = require('connect')
     ,fs = require('fs')
     ,serveStatic = require('serve-static')
     ,Promise = require('promise')
-    ,babel = require("gulp-babel");
+    ,gutil = require('gulp-util')
+    ,print = require('gulp-print')
+    ,rename = require('gulp-rename')
 
-var browOpt = {standalone: 'atlant'};
-var dest = 'lib/';
+var output = 'lib/';
 
 var getLocalIndex = function(req, res, next){
     return fs.createReadStream('examples/index.html', {encoding: 'utf8'})
@@ -39,6 +39,7 @@ gulp.task('watch', function() {
             .src(['src/**/*.js', 'src/**/*.sjs', 'src/**/*.ls'])
             .pipe( plumber() )
             .pipe( watch( function(){
+                var literalify = require('literalify');
                 var b = browserify( './src/atlant.js' );
                 b.ignore('react');
             //    b.transform(sweetify);
@@ -50,8 +51,86 @@ gulp.task('watch', function() {
                 }));
 
                 b.bundle({ standalone: 'Atlant' }).pipe(source('./atlant.js'))
-                    .pipe( gulp.dest(dest) )
+                    .pipe( gulp.dest(output) )
             }))
 });
 
-gulp.task('default', ['watch']);
+var browserifyOptions = {
+    entries: ['./src/atlant.js'],
+    debug: false,
+    verbose: true,
+    cache: {}, packageCache: {}, fullPaths: false, // Requirement of watchify
+    extensions: ['.js'],
+    global: false,
+    bundleExternal: true,
+    insertGlobals: false,
+    detectGlobals: false
+}
+
+var literalifyConfig = {
+    react: 'window.React'
+    ,lodash: 'window._'
+    ,baconjs: 'window.Bacon'
+    ,promise: 'window.Promise'
+}
+
+var build = function(bundle){
+    return bundle
+        .on('error', function(err){
+            gutil.log(gutil.colors.red('Error'), err.message);
+            this.emit('end') 
+        } )
+        // .pipe(progress(process.stderr)) // Not usefull here
+        .pipe(source('src/atlant.js'))
+        .pipe(rename('atlant.js'))
+        .pipe(print())
+        .pipe(gulp.dest(output))
+
+}
+
+var browserifyIt = function(isWatcher){
+    process.env.NODE_PATH = 'src/';
+
+    var browserify = require('browserify');
+
+    var b = browserify(browserifyOptions)
+
+    if (isWatcher) {
+
+        var watchify = require('watchify');
+
+        b = watchify(b)
+            .on('update', function () { // When any files update
+                var updateStart = Date.now();
+                console.log('Updating!');
+
+                build(b.bundle()); // at the moment browserify already obtained all transforms, etc.
+
+                console.log('Updated!', (Date.now() - updateStart) + 'ms');
+        })
+    }
+
+    var literalify = require('literalify');
+    var babelify = require('babelify');
+
+    b = b
+        .transform(babelify.configure({loose: 'es6.modules', blacklist: [], ast: false, compact: false}))
+        .transform(literalify.configure(literalifyConfig))
+        .on('log', gutil.log)
+        .on('time', function (time) {console.log('the time of:', time)})
+        .on('file', function(file, id, parent){process.stdout.write(".");})
+
+    return build(b.bundle({ standalone: 'Atlant' }));
+}
+
+gulp.task('browserify', function() {
+    return browserifyIt(false)
+});
+
+gulp.task('browserifyWatcher', function() {
+    return browserifyIt(true)
+});
+
+
+
+gulp.task('default', ['browserifyWatcher']);
