@@ -1,4 +1,7 @@
 #Atlant.js
+
+![Atlant.js](/images/atlant-logo.png?raw=true)
+
 Atlant.js is a micro-routing framework for React.js
 
 It provides robust routing and dependency injection mechanism. 
