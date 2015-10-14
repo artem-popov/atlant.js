@@ -1743,4 +1743,5 @@ function Atlant(){
 
 }
 
+if ('undefined' !== typeof window) window.Atlant = Atlant;
 module.exports = Atlant;
