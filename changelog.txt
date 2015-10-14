@@ -1,3 +1,4 @@
+0.4.32 babelify
 0.4.31 add initial persistent support. Be carefull because it writes into
 LocalStorage. Persisted only data returned by .serialize(_=>_) method of
 .store('store')
