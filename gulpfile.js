@@ -4,7 +4,7 @@ var browserify = require('browserify')
     ,plumber = require('gulp-plumber')
     ,watch = require('gulp-watch')
     ,gulp = require('gulp')
-    ,source = require('vinyl-source-stream')
+    ,sourceStream = require('vinyl-source-stream')
     ,connect = require('connect')
     ,fs = require('fs')
     ,serveStatic = require('serve-static')
@@ -13,8 +13,11 @@ var browserify = require('browserify')
     ,print = require('gulp-print')
     ,rename = require('gulp-rename')
     ,flow = require('babel-plugin-typecheck')
+    ,argv = require('yargs').argv // there is also minimist package
 
 var output = 'lib/';
+
+var source = 'source' in argv ? argv.source : 'atlant.js';
 
 var getLocalIndex = function(req, res, next){
     return fs.createReadStream('examples/index.html', {encoding: 'utf8'})
@@ -41,7 +44,7 @@ gulp.task('watch', function() {
             .pipe( plumber() )
             .pipe( watch( function(){
                 var literalify = require('literalify');
-                var b = browserify( './src/atlant.js' );
+                var b = browserify( './src/' + source );
                 b.ignore('react');
             //    b.transform(sweetify);
                 b.transform(literalify.configure({
@@ -51,13 +54,13 @@ gulp.task('watch', function() {
                     ,promise: 'window.Promise'
                 }));
 
-                b.bundle({ standalone: 'Atlant' }).pipe(source('./atlant.js'))
+                b.bundle({ standalone: 'Atlant' }).pipe(sourceStream('./' + source))
                     .pipe( gulp.dest(output) )
             }))
 });
 
 var browserifyOptions = {
-    entries: ['./src/atlant.js'],
+    entries: ['./src/' + source],
     debug: false,
     verbose: true,
     cache: {}, packageCache: {}, fullPaths: false, // Requirement of watchify
@@ -82,7 +85,7 @@ var build = function(bundle){
             this.emit('end') 
         } )
         // .pipe(progress(process.stderr)) // Not usefull here
-        .pipe(source('src/atlant.js'))
+        .pipe(sourceStream('src/' + source))
         .pipe(rename('atlant.js'))
         .pipe(print())
         .pipe(gulp.dest(output))
