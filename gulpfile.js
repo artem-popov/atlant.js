@@ -12,6 +12,7 @@ var browserify = require('browserify')
     ,gutil = require('gulp-util')
     ,print = require('gulp-print')
     ,rename = require('gulp-rename')
+    ,flow = require('babel-plugin-typecheck')
 
 var output = 'lib/';
 
@@ -114,7 +115,7 @@ var browserifyIt = function(isWatcher){
     var babelify = require('babelify');
 
     b = b
-        .transform(babelify.configure({loose: 'es6.modules', blacklist: [], ast: false, compact: false, optional: ["es7.comprehensions"]}))
+        .transform(babelify.configure({loose: 'es6.modules', blacklist: [], ast: false, compact: false, optional: ["es7.comprehensions"], plugins: [flow] }))
         .transform(literalify.configure(literalifyConfig))
         .on('log', gutil.log)
         .on('time', function (time) {console.log('the time of:', time)})
