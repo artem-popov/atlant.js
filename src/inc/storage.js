@@ -13,12 +13,16 @@ var Storage = {
         this.storage = storage
     },
     persist: function(storeName, newState){
+        if (!this.storage) return void 0;
+
         console.time('persist'+ storeName)
         this.storage.setItem(storeName, JSON.stringify(newState) );
         console.timeEnd('persist'+ storeName)
         return
     },
     load: function(storeName){
+        if (!this.storage) return void 0;
+
         console.time('load'+ storeName)
         var value = JSON.parse(this.storage.getItem(storeName));
         console.timeEnd('load'+ storeName)
