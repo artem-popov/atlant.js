@@ -1,6 +1,6 @@
 {
   "name": "atlant.js",
-  "version": "0.4.32",
+  "version": "0.4.33",
   "description": "Atlant.js is a reactive application flow/data flow/routing framework. It provides robust routing and dependency injection mechanism. It uses bacon.js streams to rule all out. It supports React.js to render views.",
   "homepage": "",
   "main": "src/atlant.js",
@@ -8,12 +8,15 @@
     "node": "0.10.36"
   },
   "dependencies": {
+    "babel": "^5.8.23",
     "babel-plugin-typecheck": "^1.3.0",
+    "babel-runtime": "^5.8.25",
     "babelify": "^6.3.0",
     "baconjs": "~0.7.22",
     "browserify": "~4.2.1",
     "connect": "^3.0.2",
     "envify": "~1.2.1",
+    "flowcheck": "^0.2.7",
     "gulp": "~3.6.2",
     "gulp-if": "~1.2.1",
     "gulp-plumber": "~0.6.3",
@@ -23,6 +26,7 @@
     "gulp-watch": "~0.6.6-1",
     "literalify": "~0.3.0",
     "promise": "~6.0.0",
+    "regenerator-runtime-only": "^0.8.38",
     "serve-static": "^1.3.2",
     "vinyl-source-stream": "~0.1.1",
     "watchify": "0.8.1",

@@ -473,8 +473,8 @@ var s = (function(){
        }
    }
 
-   this.copy = function(_){
-       return JSON.parse(JSON.stringify(_))
+   this.copy = function(o){
+       return ("assign" in Object) ? Object.assign({}, o) : JSON.parse(JSON.stringify(o));
    }
 
    this.clone = function(obj) {

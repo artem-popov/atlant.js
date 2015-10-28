@@ -12,12 +12,13 @@ var browserify = require('browserify')
     ,gutil = require('gulp-util')
     ,print = require('gulp-print')
     ,rename = require('gulp-rename')
-    ,flow = require('babel-plugin-typecheck')
+    ,flow = require('flowcheck')
     ,argv = require('yargs').argv // there is also minimist package
 
 var output = 'lib/';
 
 var source = 'source' in argv ? argv.source : 'atlant.js';
+var enableFlow = 'flow' in argv ? argv.flow : false;
 
 var getLocalIndex = function(req, res, next){
     return fs.createReadStream('examples/index.html', {encoding: 'utf8'})
@@ -117,8 +118,12 @@ var browserifyIt = function(isWatcher){
     var literalify = require('literalify');
     var babelify = require('babelify');
 
+    if(enableFlow )
+        b = b
+            .transform(flow)
+
     b = b
-        .transform(babelify.configure({loose: 'es6.modules', blacklist: [], ast: false, compact: false, optional: ["es7.comprehensions"], plugins: [flow] }))
+        .transform(babelify.configure({loose: 'es6.modules', blacklist: [], ast: false, compact: false, optional: ["es7.comprehensions"]}))
         .transform(literalify.configure(literalifyConfig))
         .on('log', gutil.log)
         .on('time', function (time) {console.log('the time of:', time)})
