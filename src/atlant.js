@@ -273,11 +273,11 @@ function Atlant(){
 
 
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, renderIntoView, atom){ 
-                                var data = _.extend({}, scopeFn(), atom.value);
+                                var data = _.merge({}, scopeFn(), atom.value);
                                 // console.log('atom:', viewName, atom.name, atom.ref, atom) 
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = data;
-                                    // console.log('updating view...', viewName, atom.name, atom.ref)
+                                    // console.log('atom: updating view...', viewName, atom.name, atom.ref)
                                     var rendered = renderIntoView(data, function(_){return _}); // Here we using scope updated from store!
                                     return rendered.then(function(upstream, o){
                                         atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
@@ -381,7 +381,7 @@ function Atlant(){
                     .flatMap(function(store, depName, dep, isAtom, upstream) {  // Execute the dependency
                         var scope = clientFuncs.createScope(upstream);
                         var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
-                        var atomParams = ( (scope, where, updates) => where(_.extend({}, scope, updates)) ).bind(this, scope, where);
+                        var atomParams = ( (scope, where, updates) => where(_.merge({}, scope, updates)) ).bind(this, scope, where);
                         
                         var treatDep = s.compose( clientFuncs.convertPromiseD, s.promiseTryD );
                         var atomValue = atomParams();
