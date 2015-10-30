@@ -270,14 +270,13 @@ function Atlant(){
                                     .catch( clientFuncs.catchError )
                             }.bind(void 0, viewProvider, upstream, viewName)
 
-
-
                             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, renderIntoView, atom){ 
-                                var data = _.merge({}, scopeFn(), atom.value);
+                                var data = _.extend({}, scopeFn(), atom.value);   
+
                                 // console.log('atom:', viewName, atom.name, atom.ref, atom) 
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
                                     viewData[viewName] = data;
-                                    // console.log('atom: updating view...', viewName, atom.name, atom.ref)
+                                    // console.log('atom: updating view...', viewName, atom.name, atom.ref, JSON.parse(JSON.stringify(data)))
                                     var rendered = renderIntoView(data, function(_){return _}); // Here we using scope updated from store!
                                     return rendered.then(function(upstream, o){
                                         atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
@@ -381,7 +380,7 @@ function Atlant(){
                     .flatMap(function(store, depName, dep, isAtom, upstream) {  // Execute the dependency
                         var scope = clientFuncs.createScope(upstream);
                         var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
-                        var atomParams = ( (scope, where, updates) => where(_.merge({}, scope, updates)) ).bind(this, scope, where);
+                        var atomParams = ( (scope, where, updates) => where(_.extend({}, scope, updates)) ).bind(this, scope, where);
                         
                         var treatDep = s.compose( clientFuncs.convertPromiseD, s.promiseTryD );
                         var atomValue = atomParams();
@@ -1302,7 +1301,7 @@ function Atlant(){
         stores[storeName].changes = baseStreams.bus();
         stores[storeName].staticValue = stores[storeName]._constructor();
         stores[storeName].bus = stores[storeName].changes.scan(stores[storeName].staticValue, function(storeName, state, updater){ 
-            var newState = updater(state);
+            var newState = updater(s.copy(state)); // Copying here is necessary for successfull equality checks: else this checks will return always true
             stores[storeName].staticValue = newState;
 
             if ('undefined' !== typeof window) {
