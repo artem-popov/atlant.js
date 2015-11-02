@@ -420,7 +420,7 @@ function Atlant(){
                             let params = atomParams.bind(this, u);
                             let res = dep()(params);
                             let result = { [ref]: res }  // actually used dep, which has side-effect
-                            return _.extend(u, result)
+                            return _.extend({}, u, result)
                         }.bind( void 0, upstream.ref, upstream.atomParams );
 
                         var bus = store.bus
@@ -428,7 +428,7 @@ function Atlant(){
                         if (upstream.lastAtom)
                             bus = bus
                                 .merge(upstream.lastAtom.bus) // Depending on one upper bus 
-                                .scan({}, (x, y) => _.extend(x, y) )
+                                .scan({}, (x, y) => _.extend({}, x, y) )
                                 .toEventStream();
 
                         bus = bus
@@ -663,7 +663,7 @@ function Atlant(){
         .filter( s.compose( s.empty, s.flip(matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
         .map(function(upstream) {
             var stream = Object.create(null); 
-            stream = _.extend(upstream);
+            stream = _.extend({}, upstream);
 
             // Storing here the data for actions.
             lastPath = stream.path;

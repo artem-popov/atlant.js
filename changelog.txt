@@ -1,3 +1,4 @@
+0.4.37 no circular structs in selects
 0.4.36 remove all copy operations on read, let them once on updater write
 0.4.35 use deep copy of atom values
 0.4.34 make selects faster over 12000 times by removing legacy code
