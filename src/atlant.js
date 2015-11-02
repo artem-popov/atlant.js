@@ -52,7 +52,6 @@ function Atlant(){
 
     var viewSubscriptions = {};
     var viewSubscriptionsUnsubscribe = {};
-    var savedViewScope = {};
 
     var activeStreamId = { value: void 0 }; // Used to store active stream id. If route changed again then we need something to compare with current id and cancel our current stream if it is obsolete.
     var lastFinallyStream;
@@ -153,9 +152,8 @@ function Atlant(){
 
                     try{ 
                         var viewName = s.dot('.render.viewName', upstream);
-                        savedViewScope[viewName] = clientFuncs.getScopeDataFromStream(upstream);
-
-                        var scopeFn = function(viewName) { return clientFuncs.createScope(savedViewScope[viewName]) }.bind(void 0, viewName);
+                        if (!viewName) return;
+                        var scope = clientFuncs.createScope(clientFuncs.getScopeDataFromStream(upstream));
                         var viewProvider = s.dot('.render.renderProvider', upstream);
 
                         // Choose appropriate render.
@@ -168,7 +166,7 @@ function Atlant(){
 
                         if (types.RenderOperation.redirect === upstream.render.renderOperation ){
                             if ('function' === typeof viewProvider) {
-                                utils.goTo(viewProvider(scopeFn()), void 0, true)
+                                utils.goTo(viewProvider(scope), void 0, true)
                             } else {
                                 utils.goTo(viewProvider, void 0, true)
                             }
@@ -176,7 +174,7 @@ function Atlant(){
                             return;
                         } else if (types.RenderOperation.move === upstream.render.renderOperation){
                             if ('function' === typeof viewProvider) {
-                                window.location.assign(viewProvider(scopeFn()))
+                                window.location.assign(viewProvider(scope))
                             } else {
                                 window.location.assign(viewProvider)
                             }
@@ -190,7 +188,7 @@ function Atlant(){
                             return;
                         } else if (types.RenderOperation.replace === upstream.render.renderOperation ){
 
-                            var path = s.apply(viewProvider, scopeFn());
+                            var path = s.apply(viewProvider, scope);
                             lastPath = path; 
                             utils.replace(path); // just rename url
 
@@ -198,7 +196,7 @@ function Atlant(){
 
                             return;
                         } else if (types.RenderOperation.change === upstream.render.renderOperation ){
-                            var path = s.apply(viewProvider, scopeFn());
+                            var path = s.apply(viewProvider, scope);
                             lastReferrer = lastPath;
                             lastPath = path;
                             utils.change(path); // Push url to history without atlant to react on new value.
@@ -270,13 +268,17 @@ function Atlant(){
                                     .catch( clientFuncs.catchError )
                             }.bind(void 0, viewProvider, upstream, viewName)
 
-                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scopeFn, renderIntoView, atom){ 
-                                var data = _.extend({}, scopeFn(), atom.value);   
+                            viewData[viewName] = scope;
+                            let renderResult = renderIntoView(scope, whenRenderedSignal) // Here we using scope updated from store!
 
-                                // console.log('atom:', viewName, atom.name, atom.ref, atom) 
+                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, renderIntoView, atom){ 
+                                let data = _.extend({}, scope, atom.value );   
+
+                                // console.log('atom:', viewName, s.copy(atom.value));
                                 if ( !_.isEqual(data, viewData[viewName] ) ) {
+                                    scope = data;
                                     viewData[viewName] = data;
-                                    // console.log('atom: updating view...', viewName, atom.name, atom.ref, JSON.parse(JSON.stringify(data)))
+                                    // console.log('atom: updating view...', viewName, atom.name, atom.ref, JSON.parse(JSON.stringify(data)), performance.now())
                                     var rendered = renderIntoView(data, function(_){return _}); // Here we using scope updated from store!
                                     return rendered.then(function(upstream, o){
                                         atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
@@ -286,12 +288,9 @@ function Atlant(){
                                     // console.log('canceled render due the same data', viewName, atom.name, atom.ref)
                                     atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                                 }
-                            }.bind(void 0, upstream, viewName, scopeFn, renderIntoView ));
+                            }.bind(void 0, upstream, viewName, scope, renderIntoView ));
 
-                            var data = scopeFn();
-                            viewData[viewName] = data;
-                            return renderIntoView(data, whenRenderedSignal) // Here we using scope updated from store!
-
+                            return renderResult;
                         }
 
                     } catch (e) {
@@ -419,8 +418,8 @@ function Atlant(){
                         var getValue = function( ref, atomParams, u ){
                             let params = atomParams.bind(this, u);
                             let res = dep()(params);
-                            let result = { [ref]: res }  // actually used dep, which has side-effect
-                            return _.extend({}, u, result)
+                            let result = _.extend({}, u, { [ref]: res });  
+                            return result
                         }.bind( void 0, upstream.ref, upstream.atomParams );
 
                         var bus = store.bus
@@ -460,7 +459,7 @@ function Atlant(){
          * Join 2 streams into 1
          */
         var zippersJoin = s.curry( function(prevDepName, currDepName, x, y) {
-            x.depends = s.extend( x.depends, y.depends );
+            x.depends = s.extend( {}, x.depends, y.depends );
             x.injects = x.injects.concat(y.injects);
             return x;
         });
@@ -662,8 +661,7 @@ function Atlant(){
         })
         .filter( s.compose( s.empty, s.flip(matchRoutes, 3)(Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
         .map(function(upstream) {
-            var stream = Object.create(null); 
-            stream = _.extend({}, upstream);
+            var stream = _.extend({}, upstream);
 
             // Storing here the data for actions.
             lastPath = stream.path;
