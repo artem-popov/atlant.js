@@ -211,12 +211,15 @@ function Atlant(){
                                 render = prefs.render.clear.bind(prefs.render)
                             }
 
-                            // turn off all subscriptions of atoms for this view
-                            if( viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
-                                viewData[viewName] = void 0;
-                                viewSubscriptionsUnsubscribe[viewName]();
-                                // console.log('atom: unsubscribe', viewName)
-                            } 
+                            try{
+                                // turn off all subscriptions of atoms for this view
+                                if( viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
+                                    viewSubscriptionsUnsubscribe[viewName]();
+                                    // console.log('atom: unsubscribe', viewName)
+                                } 
+                            } catch(e){
+                                console.error('unsubscribe error', e.stack)
+                            }
 
                             // if(upstream.atoms) console.log('atoms:', viewName, upstream.atoms.length, 'updates for this when:', upstream.stats);
 

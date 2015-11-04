@@ -1,3 +1,4 @@
+0.4.39 safari cannot unsubscribe to bus().onValue()
 0.4.38 base render before updaters renders
 0.4.37 no circular structs in selects
 0.4.36 remove all copy operations on read, let them once on updater write
