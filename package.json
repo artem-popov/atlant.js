@@ -1,6 +1,6 @@
 {
   "name": "atlant.js",
-  "version": "0.4.39",
+  "version": "0.4.40",
   "description": "Atlant.js is a reactive application flow/data flow/routing framework. It provides robust routing and dependency injection mechanism. It uses bacon.js streams to rule all out. It supports React.js to render views.",
   "homepage": "",
   "main": "src/atlant.js",

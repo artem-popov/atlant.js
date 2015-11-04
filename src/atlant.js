@@ -142,6 +142,80 @@ function Atlant(){
             }
         };
 
+        let renderIntoView = function(viewProvider, upstream, viewName, render, scope, whenRenderedSignal ) {
+            var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
+            // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
+            // console.log('rendering into view', viewName)
+            return renderD(viewProvider, upstream, activeStreamId, viewName, scope)
+                .then(function(_){
+                    // @TODO make it better
+                    // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
+                    var atoms = upstream.atoms;
+                    upstream.atoms = void 0;
+
+                    var stream = s.clone(upstream); 
+
+                    stream.atoms = atoms;
+                    upstream.atoms = atoms;
+
+                    if(_.code && 'notActiveStream' === _.code){
+                    } else {
+                        stream.render.component = _;  // pass rendered component. it stale hold before streams get zipped.
+                    }
+                    return stream 
+                })
+                .then( whenRenderedSignal )
+                .catch( clientFuncs.catchError )
+        }
+
+        let subscribeView = function(viewName, doRenderIntoView, scope, upstream){
+            try{
+                // turn off all subscriptions of atoms for this view
+                if( viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
+                    viewSubscriptionsUnsubscribe[viewName]();
+                    // console.log('atom: unsubscribe', viewName)
+                } 
+            } catch(e){
+                console.error('unsubscribe error', e.stack)
+            }
+            var putInfo = function(atom, atomValue){  // When data arrived, get info from static scope of atom details
+                var stream = Object.create(null);
+                stream.value = atomValue;
+                stream.name = atom.atom;
+                stream.store = atom.store;
+                stream.ref = atom.ref;
+                stream.that = atom.that;
+                return stream;
+            };
+
+            viewSubscriptions[viewName] = upstream.lastAtom ? upstream.lastAtom.bus.map(putInfo.bind(this, upstream.lastAtom)) : Bacon.never(); 
+
+            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, atom){ 
+                let data = _.extend({}, scope, atom.value );   
+
+                if ( !_.isEqual(data, viewData[viewName] ) ) {
+                    scope = data;
+                    viewData[viewName] = data;
+                    // console.log('atom: updating view...', viewName, atom.name, atom.ref, JSON.parse(JSON.stringify(data)), performance.now())
+                    var a = performance.now();
+                    console.time('render'+ viewName+a)
+                    var rendered = doRenderIntoView(data, function(_){return _}); // Here we using scope updated from store!
+                    return rendered.then(function(upstream, o){
+                        console.timeEnd('render'+ viewName+a)
+                        atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
+                        return o;
+                    }.bind(void 0, upstream));
+                } else {
+                    // console.log('canceled render due the same data', viewName)
+                    atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
+                }
+            }.bind(void 0, upstream, viewName, scope, doRenderIntoView ));
+
+
+        } 
+
+
+
         // Registering render for view.
         var assignRender = function(stream) {
             var theStream = stream
@@ -153,17 +227,27 @@ function Atlant(){
                     try{ 
                         var viewName = s.dot('.render.viewName', upstream);
                         if (!viewName) return;
-                        var scope = clientFuncs.createScope(clientFuncs.getScopeDataFromStream(upstream));
-                        var viewProvider = s.dot('.render.renderProvider', upstream);
-
                         // Choose appropriate render.
                         var render;
+
+                        // These 2 operation doesn't need a scope
                         if (types.RenderOperation.nope === upstream.render.renderOperation ){
                             whenRenderedSignal(upstream);
 
                             return;
                         }
+                        
+                        if(types.RenderOperation.refresh === upstream.render.renderOperation ){
+                            utils.goTo( window.location.pathname, void 0, true)
+                            whenRenderedSignal(upstream);
 
+                            return;
+                        }
+
+                        var scope = clientFuncs.createScope(clientFuncs.getScopeDataFromStream(upstream));
+                        var viewProvider = s.dot('.render.renderProvider', upstream);
+
+                        // These needs a scope
                         if (types.RenderOperation.redirect === upstream.render.renderOperation ){
                             if ('function' === typeof viewProvider) {
                                 utils.goTo(viewProvider(scope), void 0, true)
@@ -180,13 +264,7 @@ function Atlant(){
                             }
 
                             return;
-                        } if (types.RenderOperation.refresh === upstream.render.renderOperation ){
-                            utils.goTo( window.location.pathname, void 0, true)
-
-                            whenRenderedSignal(upstream);
-
-                            return;
-                        } else if (types.RenderOperation.replace === upstream.render.renderOperation ){
+                        }  else if (types.RenderOperation.replace === upstream.render.renderOperation ){
 
                             var path = s.apply(viewProvider, scope);
                             lastPath = path; 
@@ -205,93 +283,24 @@ function Atlant(){
 
                             return;
                         } else {
-                            if ( types.RenderOperation.render === upstream.render.renderOperation || types.RenderOperation.draw === upstream.render.renderOperation ) {
+
+                           if ( types.RenderOperation.render === upstream.render.renderOperation || types.RenderOperation.draw === upstream.render.renderOperation ) {
                                 render = prefs.render.render.bind(prefs.render)
-                            } else if ( types.RenderOperation.clear === upstream.render.renderOperation ){
+                           } else if ( types.RenderOperation.clear === upstream.render.renderOperation ){
                                 render = prefs.render.clear.bind(prefs.render)
-                            }
+                           }
 
-                            try{
-                                // turn off all subscriptions of atoms for this view
-                                if( viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
-                                    viewSubscriptionsUnsubscribe[viewName]();
-                                    // console.log('atom: unsubscribe', viewName)
-                                } 
-                            } catch(e){
-                                console.error('unsubscribe error', e.stack)
-                            }
+                           var doRenderIntoView = renderIntoView.bind(void 0, viewProvider, upstream, viewName, render)
 
-                            // if(upstream.atoms) console.log('atoms:', viewName, upstream.atoms.length, 'updates for this when:', upstream.stats);
+                           viewData[viewName] = scope;
+                           let renderResult = doRenderIntoView(scope, whenRenderedSignal) // Here we using scope updated from store!
 
-                            // console.log('atom:', viewName, ' count:', upstream.atoms)
-                            var putInfo = function(atom, atomValue){  // When data arrived, get info from static scope of atom details
-                                // console.log('atomed value:', atomValue)
-                                    var stream = Object.create(null);
-                                    stream.value = atomValue;
-                                    stream.name = atom.atom;
-                                    stream.store = atom.store;
-                                    stream.ref = atom.ref;
-                                    stream.that = atom.that;
-                                    return stream;
-                            };
+                           if (upstream.render.once)  // Subscriber only after real render - Bacon evaluates subscriber immediately
+                               subscribeView(viewName, doRenderIntoView, scope, upstream)
 
-
-                            viewSubscriptions[viewName] = upstream.lastAtom ? upstream.lastAtom.bus.map(putInfo.bind(this, upstream.lastAtom)) : Bacon.never(); 
-                            // console.log('lastAtom', upstream.lastAtom ? 'yes': 'no', viewName, upstream)
-
-                            if (upstream.masks) {
-                                statistics.whenStat({ actionId: upstream.whenId, masks: upstream.masks.slice(), view: viewName });
-                            } else {
-                                // console.log('WARNING! ACTION ON THE BOARD!')
-                            }
-
-                            var renderIntoView = function(viewProvider, upstream, viewName, scope, whenRenderedSignal ) {
-                                var renderD = s.promiseD( render ); // decorating with promise (hint: returned value can be not a promise)
-                                // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
-                                // console.log('rendering into view', viewName)
-                                return renderD(viewProvider, upstream, activeStreamId, viewName, scope)
-                                    .then(function(_){
-                                        // @TODO make it better
-                                        // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
-                                        var atoms = upstream.atoms;
-                                        upstream.atoms = void 0;
-
-                                        var stream = s.clone(upstream); 
-                                        
-                                        stream.atoms = atoms;
-                                        upstream.atoms = atoms;
-
-                                        if(_.code && 'notActiveStream' === _.code){
-                                        } else {
-                                            stream.render.component = _;  // pass rendered component. it stale hold before streams get zipped.
-                                        }
-                                        return stream 
-                                    })
-                                    .then( whenRenderedSignal )
-                                    .catch( clientFuncs.catchError )
-                            }.bind(void 0, viewProvider, upstream, viewName)
-
-                            viewData[viewName] = scope;
-                            let renderResult = renderIntoView(scope, whenRenderedSignal) // Here we using scope updated from store!
-
-                            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, renderIntoView, atom){ 
-                                let data = _.extend({}, scope, atom.value );   
-
-                                // console.log('atom:', viewName, s.copy(atom.value));
-                                if ( !_.isEqual(data, viewData[viewName] ) ) {
-                                    scope = data;
-                                    viewData[viewName] = data;
-                                    // console.log('atom: updating view...', viewName, atom.name, atom.ref, JSON.parse(JSON.stringify(data)), performance.now())
-                                    var rendered = renderIntoView(data, function(_){return _}); // Here we using scope updated from store!
-                                    return rendered.then(function(upstream, o){
-                                        atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
-                                        return o;
-                                    }.bind(void 0, upstream));
-                                } else {
-                                    // console.log('canceled render due the same data', viewName, atom.name, atom.ref)
-                                    atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
-                                }
-                            }.bind(void 0, upstream, viewName, scope, renderIntoView ));
+                           if (upstream.masks) {
+                               statistics.whenStat({ actionId: upstream.whenId, masks: upstream.masks.slice(), view: viewName });
+                           } 
 
                             return renderResult;
                         }
@@ -1024,8 +1033,9 @@ function Atlant(){
      * @param viewName - directive name which will be used to inject template
      * @returns {*}
      */
-    var _render = function(renderProvider, viewName, renderOperation){
+    var _render = function(renderProvider, viewName, once, renderOperation){
             if ( ! State.state.lastOp ) throw new Error('"render" should nest something');
+            let subscribe  = 'once' !== once ? true : false;
 
             if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider && renderOperation != types.RenderOperation.nope && renderOperation != types.RenderOperation.refresh ) {
                 throw new Error('Atlant.js: render first param should be function or URI')
@@ -1047,7 +1057,7 @@ function Atlant(){
                 // .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
                 // .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
                 .map(function(renderId, renderProvider, viewName, renderOperation, u) { 
-                    var render = { render: { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: types.RenderOperationKey[renderOperation]}};
+                    var render = { render: { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: types.RenderOperationKey[renderOperation], once: subscribe}};
                     return _.extend( {}, u, render )
                 }.bind(void 0, renderId, renderProvider, viewName, renderOperation))
 
@@ -1567,25 +1577,29 @@ function Atlant(){
     //Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
     this.log =  _log;
     /* Renders the view. first - render provider, second - view name */
-    this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, types.RenderOperation.render);}
+    this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'always', types.RenderOperation.render);}
+    /* Do not subscribe selects on view */
+    this.renderOnce = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'once', types.RenderOperation.render);}
     /* Renders the view. first - render provider, second - view name. Not waiting for anything - draws immediatelly */
-    this.draw = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, types.RenderOperation.draw);}
+    this.draw = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'always', types.RenderOperation.draw);}
+    /* Do not subscribe selects on view */
+    this.drawOnce = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'once', types.RenderOperation.draw);}
     /* clears default or provided viewName */
-    this.clear = function(viewName) {return _render.bind(this)(function(){}, viewName, types.RenderOperation.clear);}
+    this.clear = function(viewName) {return _render.bind(this)(function(){}, viewName, 'once', types.RenderOperation.clear);}
     // Soft atlant-inside redirect.
-    this.redirect = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, types.RenderOperation.redirect);}
+    this.redirect = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.redirect);}
     // Soft atlant-inside refresh.
-    this.refresh = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, types.RenderOperation.refresh);}
+    this.refresh = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.refresh);}
     //  Fake redirect. Atlant will just change URL but routes will not be restarted. Referrer stays the same.
-    this.replace = function(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, types.RenderOperation.replace);}
+    this.replace = function(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, 'once', types.RenderOperation.replace);}
     // Same as replace, but store the replaced url in html5 location history. Referrer also changed.
-    this.change = function(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, types.RenderOperation.change);}
+    this.change = function(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, 'once', types.RenderOperation.change);}
     // Force redirect event to current route
     // this.force = _.force;
     // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
-    this.move = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, types.RenderOperation.move);}
+    this.move = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.move);}
     // render which render nothing into nowhere
-    this.nope = function(){ return _render.bind(this)(void 0, void 0, types.RenderOperation.nope)}
+    this.nope = function(){ return _render.bind(this)(void 0, void 0, 'once', types.RenderOperation.nope)}
 
     /**
      * Setups
