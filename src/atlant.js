@@ -178,25 +178,29 @@ function Atlant(){
             } catch(e){
                 console.error('unsubscribe error', e.stack)
             }
+
+            if ( !('atoms' in upstream ) ) return; // It's possible. But still, subscriptions should be undone.
+
             var putInfo = function(atom, atomValue){  // When data arrived, get info from static scope of atom details
                 var stream = Object.create(null);
                 stream.value = atomValue;
                 stream.name = atom.atom;
                 stream.store = atom.store;
                 stream.ref = atom.ref;
-                stream.that = atom.that;
                 return stream;
             };
 
-            viewSubscriptions[viewName] = upstream.lastAtom ? upstream.lastAtom.bus.map(putInfo.bind(this, upstream.lastAtom)) : Bacon.never(); 
+            let lastAtom = upstream.atoms.length ? upstream.atoms[upstream.atoms.length - 1] : void 0;
+            viewSubscriptions[viewName] = lastAtom ? lastAtom.bus.map(putInfo.bind(this, lastAtom)) : Bacon.never(); 
 
             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, atom){ 
                 let data = _.extend({}, scope, atom.value );   
 
                 if ( !_.isEqual(data, viewData[viewName] ) ) {
+
                     scope = data;
                     viewData[viewName] = data;
-                    // console.log('atom: updating view...', viewName, atom.name, atom.ref, JSON.parse(JSON.stringify(data)), performance.now())
+                    // console.log('updating view...', viewName, performance.now())
                     var a = performance.now();
                     console.time('render'+ viewName+a)
                     var rendered = doRenderIntoView(data, function(_){return _}); // Here we using scope updated from store!
@@ -421,9 +425,10 @@ function Atlant(){
                 }.bind(void 0, depName, injects))
                 .mapError(function(_){ console.error('Unhandled error', _)})
 
-            stream = stream // Add atoms
+            stream = stream // Add select subscriptions
                 .map(function(depName, store, dep, upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
                     if ( !upstream.atoms ) upstream.atoms = [];
+                    if ( !upstream.lastParent ) upstream.lastParent = {};
 
                     if ( 'undefined' !== typeof upstream.ref && 'undefined' !== typeof store ) {
 
@@ -434,30 +439,33 @@ function Atlant(){
                             return result
                         }.bind( void 0, upstream.ref, upstream.atomParams );
 
-                        var bus = store.bus
+                        let lastAtom = upstream.atoms.length ? upstream.atoms[upstream.atoms.length - 1] : void 0;
 
-                        if (upstream.lastAtom)
-                            bus = bus
-                                .merge(upstream.lastAtom.bus) // Depending on one upper bus 
-                                .scan({}, (x, y) => _.extend({}, x, y) )
+                        // out root parent is store bus OR the select which already subscribed to store bus
+                        let bus = store.storeName in upstream.lastParent ? upstream.lastParent[store.storeName].bus : store.bus; 
+
+                        if(lastAtom) {
+                            bus = bus 
+                                .merge(lastAtom.bus) 
+                                .scan({}, (x, y) => s.copy(_.extend({}, x, y) ) )
                                 .toEventStream();
+                        
+                        } 
 
                         bus = bus
                                 .map( getValue )
-                                // .skipDuplicates(_.isEqual)
+                                .skipDuplicates(_.isEqual) // Real works
 
-                        var atom = { id: _.uniqueId()
+                        var atom = {
+                            id: _.uniqueId()
                             ,ref: upstream.ref
                             ,store: store.storeName
                             ,atom: store.partName
                             ,bus: bus
-                            ,prev: upstream.lastAtom
                         };
 
+                        upstream.lastParent[store.storeName] = atom;
                         upstream.atoms.push(atom);
-                        if(upstream.lastAtom) upstream.lastAtom.next = atom;
-                        atom.that = atom;
-                        upstream.lastAtom = atom;
                     }
 
                     return upstream;
@@ -1406,9 +1414,12 @@ function Atlant(){
         }.bind(void 0, arr), Depends.continue );
     }
 
-    var _select = function(isAtom, dependsBehaviour, partName, storeName) {
+    var _select = function(isAtom, dependsBehaviour, partName, storeName, dependsOn: string | Array<string>) {
         if (!(storeName in stores)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(', storeName + ')');
         if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(' + storeName + ')');
+        if ( dependsOn && (!isArray(dependsOn) && 'string' !== typeof dependsOn || isArray(dependsOn) && dependsOn.filter(_ => 'string' !== typeof _).length) ) throw new Error('atlant.js: dependsOn param should be either a string or array of strings' );
+
+        dependsOn = _.isArray(dependsOn) ? dependsOn : [dependsOn]; 
 
         statistics.whenStat({actionId: TopState.state.lastActionId, masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], atom: storeName });
 
@@ -1422,7 +1433,7 @@ function Atlant(){
                     return void 0;
                 }
             }.bind(void 0, storeName, partName)
-        }.bind(void 0, storeName, partName), dependsBehaviour, { storeName: storeName, partName: partName, bus: stores[storeName].bus, partProvider: stores[storeName].parts[partName], storeData: stores[storeName]}, isAtom );
+        }.bind(void 0, storeName, partName), dependsBehaviour, { storeName: storeName, dependsOn: dependsOn, partName: partName, bus: stores[storeName].bus, partProvider: stores[storeName].parts[partName], storeData: stores[storeName]}, isAtom );
     }
 
     // Create scope for prefixed method (currently .select(), .update(), .depends())

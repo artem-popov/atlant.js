@@ -1,3 +1,4 @@
+0.4.41 make selects dependable (less renders)
 0.4.40 introduce .drawOnce(), .renderOnce() - these renders do not subscribe
 	views for stores
 0.4.39 safari cannot unsubscribe to bus().onValue()
