@@ -15,18 +15,18 @@ var Storage = {
     persist: function(storeName, newState){
         if (!this.storage) return void 0;
 
-        console.time('persist'+ storeName)
+        // console.time('persist'+ storeName)
         this.storage.setItem(storeName, JSON.stringify(newState) );
-        console.timeEnd('persist'+ storeName)
+        // console.timeEnd('persist'+ storeName)
         return
     },
     load: function(storeName){
         if (!this.storage) return void 0;
 
-        console.time('load'+ storeName)
+        // console.time('load'+ storeName)
         var value = JSON.parse(this.storage.getItem(storeName));
-        console.timeEnd('load'+ storeName)
-        console.log(storeName, 'value:', value)
+        // console.timeEnd('load'+ storeName)
+        // console.log(storeName, 'value:', value)
         return value
     }
 }

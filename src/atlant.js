@@ -150,13 +150,13 @@ function Atlant(){
                 .then(function(_){
                     // @TODO make it better
                     // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
-                    var atoms = upstream.atoms;
-                    upstream.atoms = void 0;
+                    var selects = upstream.selects;
+                    upstream.selects = void 0;
 
                     var stream = s.clone(upstream); 
 
-                    stream.atoms = atoms;
-                    upstream.atoms = atoms;
+                    stream.selects = selects;
+                    upstream.selects = selects;
 
                     if(_.code && 'notActiveStream' === _.code){
                     } else {
@@ -170,7 +170,7 @@ function Atlant(){
 
         let subscribeView = function(viewName, doRenderIntoView, scope, upstream){
             try{
-                // turn off all subscriptions of atoms for this view
+                // turn off all subscriptions of selects for this view
                 if( viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
                     viewSubscriptionsUnsubscribe[viewName]();
                     // console.log('atom: unsubscribe', viewName)
@@ -179,22 +179,25 @@ function Atlant(){
                 console.error('unsubscribe error', e.stack)
             }
 
-            if ( !('atoms' in upstream ) ) return; // It's possible. But still, subscriptions should be undone.
+            if ( !('chains' in upstream ) || !Object.keys(upstream.chains).length) return;  // If no store is selected for this view, then we should not subscribe on anything.
 
-            var putInfo = function(atom, atomValue){  // When data arrived, get info from static scope of atom details
-                var stream = Object.create(null);
-                stream.value = atomValue;
-                stream.name = atom.atom;
-                stream.store = atom.store;
-                stream.ref = atom.ref;
-                return stream;
-            };
+            let keys = Object.keys(upstream.chains);
+            console.log('chains:', keys, viewName, upstream.chains);
 
-            let lastAtom = upstream.atoms.length ? upstream.atoms[upstream.atoms.length - 1] : void 0;
-            viewSubscriptions[viewName] = lastAtom ? lastAtom.bus.map(putInfo.bind(this, lastAtom)) : Bacon.never(); 
+            viewSubscriptions[viewName] = Bacon
+                .mergeAll( keys.map(store => stores[store].bus) );
 
-            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, atom){ 
-                let data = _.extend({}, scope, atom.value );   
+            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, value){ 
+                // console.time('score')
+                value =  Object.keys(upstream.chains)
+                    .map( _ => upstream.chains[_] )
+                    .reduce( (acc, i) => acc.concat(i), [])
+                    .map( o => Object.keys(o).map( _ => o[_] ) )
+                    .reduce( (acc, i) => acc.concat(i), [])
+                    .reduce( (acc, i) => _.extend(acc, i()), {});
+                // console.timeEnd('score')
+
+                let data = _.extend({}, scope, value );   
 
                 if ( !_.isEqual(data, viewData[viewName] ) ) {
 
@@ -427,10 +430,27 @@ function Atlant(){
 
             stream = stream // Add select subscriptions
                 .map(function(depName, store, dep, upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
-                    if ( !upstream.atoms ) upstream.atoms = [];
-                    if ( !upstream.lastParent ) upstream.lastParent = {};
+
+                    // if( !('ref' in upstream) || 'undefined' === typeof upstream.ref || '' === upstream.ref  ) { 
+                    //     console.log('log:', upstream, store, dep);
+                    //     throw new Error('Every select should have name.')
+                    // }
 
                     if ( 'undefined' !== typeof upstream.ref && 'undefined' !== typeof store ) {
+                        if ( !( 'chains' in upstream ) ) upstream.chains = {};
+                        if(!(store.storeName in upstream.chains)) upstream.chains[store.storeName] = {};
+                        if ( !( 'dependences' in upstream ) ) upstream.dependences = {};
+                        if ( !( 'select' in upstream ) ) upstream.select = {};
+
+                        if('undefined' !== typeof store.dependsOn && '' !== store.dependsOn && !(store.dependsOn in upstream.select )) throw new Error(`Select "${upstream.ref}"" cannot depend on unknown select: "${store.dependsOn}"`)
+
+                        // if(store.dependsOn && '' !== store.dependsOn )
+                        //     console.log('select depending ', upstream.ref, 'on', store.dependsOn)
+                        // if( store.dependsOn && '' === store.dependsOn )
+                        //     console.log('select', upstream.ref, 'is independent')
+                        // if( '' === store.dependsOn ) 
+                        //     console.log('select', 'no dependency')
+
 
                         var getValue = function( ref, atomParams, u ){
                             let params = atomParams.bind(this, u);
@@ -439,33 +459,21 @@ function Atlant(){
                             return result
                         }.bind( void 0, upstream.ref, upstream.atomParams );
 
-                        let lastAtom = upstream.atoms.length ? upstream.atoms[upstream.atoms.length - 1] : void 0;
+                        let dependence = 'undefined' !== typeof store.dependsOn && '' !== store.dependsOn && store.dependsOn in upstream.select ? upstream.select[store.dependsOn] : void 0; // dependence is just a function which return value
 
-                        // out root parent is store bus OR the select which already subscribed to store bus
-                        let bus = store.storeName in upstream.lastParent ? upstream.lastParent[store.storeName].bus : store.bus; 
+                        if ( !dependence && upstream.lastSelect && 'undefined' === typeof store.dependsOn && '' !== store.dependsOn ) dependence = upstream.select[upstream.lastSelect];
 
-                        if(lastAtom) {
-                            bus = bus 
-                                .merge(lastAtom.bus) 
-                                .scan({}, (x, y) => s.copy(_.extend({}, x, y) ) )
-                                .toEventStream();
-                        
-                        } 
+                        let f = dependence ?  f = _ => getValue( dependence (_) ) : getValue;
 
-                        bus = bus
-                                .map( getValue )
-                                .skipDuplicates(_.isEqual) // Real works
+                        let chainKey = dependence ? upstream.dependences[store.dependsOn] : upstream.ref;
 
-                        var atom = {
-                            id: _.uniqueId()
-                            ,ref: upstream.ref
-                            ,store: store.storeName
-                            ,atom: store.partName
-                            ,bus: bus
-                        };
+                        if ( dependence ) upstream.dependences[upstream.ref] = chainKey;
+                        else upstream.dependences[upstream.ref] = chainKey;
 
-                        upstream.lastParent[store.storeName] = atom;
-                        upstream.atoms.push(atom);
+                        upstream.lastSelect = upstream.ref;
+                        upstream.chains[store.storeName][chainKey] = f;
+                        upstream.select[upstream.ref] = f;
+
                     }
 
                     return upstream;
@@ -559,7 +567,7 @@ function Atlant(){
     var checker = function(name, isFinished, isNeedToDecrease, signalStream, counter, object){
         try{
             if ( isFinished.value ) { /*console.log('Canceled atom signal after render is completed');*/  return }
-            if ( !(object.whenId in counter.list) ) { /*console.log('no atoms here');*/ return } // no atoms here 
+            if ( !(object.whenId in counter.list) ) { /*console.log('no selects here');*/ return } // no selects here 
 
 
             if(isNeedToDecrease) counter.list[object.whenId].value--;
@@ -574,7 +582,7 @@ function Atlant(){
                 isFinished.value = true
                 signalStream.push()
                 if(-1 === name.indexOf('atom'))  {
-                    checker( 'atomAsk:', isAtomed, false, onAtomEndStream, atomCounter, object ) // In case if there are no atoms and atom cancels we can check here and it will be clear, should server end or not.
+                    checker( 'atomAsk:', isAtomed, false, onAtomEndStream, atomCounter, object ) // In case if there are no selects and select cancels we can check here and it will be clear, should server end or not.
                 }
             }   
         } catch(e){
@@ -701,10 +709,6 @@ function Atlant(){
             atomCounter.list = {};
             renderCounter.list = {};
             statistics.cleanUpRemoved();
-            // Object.keys(viewSubscriptionsUnsubscribe) // Unsubscribing of all atoms. I think we don't need it.
-            //             .map(function(viewName){
-            //                 viewSubscriptionsUnsubscribe[viewName]();
-            //             })
             isAtomed.value = false;
             isRendered.value = false;
 
@@ -1334,7 +1338,7 @@ function Atlant(){
             }
 
             return newState 
-        }.bind(void 0, storeName)).toEventStream();
+        }.bind(void 0, storeName)).skipDuplicates().toEventStream();
 
         baseStreams.onValue(stores[storeName].bus, function() {});
 
@@ -1356,6 +1360,7 @@ function Atlant(){
         baseStreams.onValue(emitStreams[updaterName], function(storeName, updater, scope){ // scope is the value of .update().with(scope) what was pushed in
             stores[storeName].changes.push( function(scope, updater, state){  // state is the value which passed through atom
                 try { 
+                    // console.log('UPDATE:', updaterName, scope, storeName);
                     return updater( state, scope );
                 } catch(e) { 
                     console.error('atlant.js: Warning: updater failed', e)
@@ -1414,12 +1419,10 @@ function Atlant(){
         }.bind(void 0, arr), Depends.continue );
     }
 
-    var _select = function(isAtom, dependsBehaviour, partName, storeName, dependsOn: string | Array<string>) {
+    var _select = function(isAtom, dependsBehaviour, partName, storeName, dependsOn) {
         if (!(storeName in stores)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(', storeName + ')');
         if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(' + storeName + ')');
-        if ( dependsOn && (!isArray(dependsOn) && 'string' !== typeof dependsOn || isArray(dependsOn) && dependsOn.filter(_ => 'string' !== typeof _).length) ) throw new Error('atlant.js: dependsOn param should be either a string or array of strings' );
-
-        dependsOn = _.isArray(dependsOn) ? dependsOn : [dependsOn]; 
+        if ( dependsOn && 'string' !== typeof dependsOn ) throw new Error('atlant.js: dependsOn param should be a string' );
 
         statistics.whenStat({actionId: TopState.state.lastActionId, masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], atom: storeName });
 
