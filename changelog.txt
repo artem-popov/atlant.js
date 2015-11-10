@@ -1,3 +1,5 @@
+0.4.42 add support of queues for selects. With third parameter for
+	.select() you can add dependency of other select by it's ref(name)
 0.4.41 make selects dependable (less renders)
 0.4.40 introduce .drawOnce(), .renderOnce() - these renders do not subscribe
 	views for stores
