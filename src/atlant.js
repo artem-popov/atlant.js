@@ -204,11 +204,10 @@ function Atlant(){
                     scope = data;
                     viewData[viewName] = data;
                     // console.log('updating view...', viewName, performance.now())
-                    var a = performance.now();
-                    console.time('render'+ viewName+a)
+                    // console.time('render'+ viewName)
                     var rendered = doRenderIntoView(data, function(_){return _}); // Here we using scope updated from store!
                     return rendered.then(function(upstream, o){
-                        console.timeEnd('render'+ viewName+a)
+                        // console.timeEnd('render'+ viewName)
                         atomEndSignal.push({id: upstream.id, whenId: upstream.whenId});
                         return o;
                     }.bind(void 0, upstream));
