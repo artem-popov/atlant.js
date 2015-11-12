@@ -168,7 +168,7 @@ function Atlant(){
                 .catch( clientFuncs.catchError )
         }
 
-        let subscribeView = function(viewName, doRenderIntoView, scope, upstream){
+        let unsubscribeView = function(viewName){
             try{
                 // turn off all subscriptions of selects for this view
                 if( viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
@@ -178,6 +178,9 @@ function Atlant(){
             } catch(e){
                 console.error('unsubscribe error', e.stack)
             }
+        }
+
+        let subscribeView = function(viewName, doRenderIntoView, scope, upstream){
 
             if ( !('chains' in upstream ) || !Object.keys(upstream.chains).length) return;  // If no store is selected for this view, then we should not subscribe on anything.
 
@@ -301,7 +304,9 @@ function Atlant(){
                            viewData[viewName] = scope;
                            let renderResult = doRenderIntoView(scope, whenRenderedSignal) // Here we using scope updated from store!
 
-                           if (upstream.render.once)  // Subscriber only after real render - Bacon evaluates subscriber immediately
+                           unsubscribeView(viewName);
+
+                           if (upstream.render.subscribe)  // Subscriber only after real render - Bacon evaluates subscriber immediately
                                subscribeView(viewName, doRenderIntoView, scope, upstream)
 
                            if (upstream.masks) {
@@ -1068,7 +1073,7 @@ function Atlant(){
                 // .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
                 // .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
                 .map(function(renderId, renderProvider, viewName, renderOperation, u) { 
-                    var render = { render: { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: types.RenderOperationKey[renderOperation], once: subscribe}};
+                    var render = { render: { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: types.RenderOperationKey[renderOperation], subscribe: subscribe}};
                     return _.extend( {}, u, render )
                 }.bind(void 0, renderId, renderProvider, viewName, renderOperation))
 
