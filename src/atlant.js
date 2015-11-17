@@ -192,25 +192,30 @@ function Atlant(){
 
             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, value){ 
                 // console.time('score')
-                let start = performance.now();
+                let start;
+                if ( 'undefined' !== typeof performance) { 
+                    start = performance.now();
+                }
                 // window.chains = upstream.chains
 
-                value =  Object.keys(upstream.chains)
-                    .map( _ => upstream.chains[_] )
-                    .reduce( (acc, i) => acc.concat(i), [])
-                    .map( o => Object.keys(o).map( _ => o[_] ) )
-                    .reduce( (acc, i) => acc.concat(i), [])
-                    .reduce( (acc, i) => acc.concat(i), [])
-                    .reduce( (acc, i) => _.extend(acc, i()), {});
+                // value =  Object.keys(upstream.chains)
+                //     .map( _ => upstream.chains[_] )
+                //     .reduce( (acc, i) => acc.concat(i), [])
+                //     .map( o => Object.keys(o).map( _ => o[_] ) )
+                //     .reduce( (acc, i) => acc.concat(i), [])
+                //     .reduce( (acc, i) => acc.concat(i), [])
+                //     .reduce( (acc, i) => _.extend(acc, i()), {});
 
-                // value = _(upstream.chains).map(o=> _(o).map(_=>_).flatten().value() ).flatten().reduce( (acc, i) => _.extend(acc, i()), {});
+                value = _(upstream.chains).map(o=> _(o).map(_=>_).flatten().value() ).flatten().reduce( (acc, i) => _.extend(acc, i()), {});
 
                 // console.timeEnd('score')
-                if('undefined' === typeof window.selectCount) window.selectCount = 0;
-                if('undefined' === typeof window.selectTime) window.selectTime = 0;
-                window.selectTime = window.selectTime + performance.now() - start;
-                window.selectCount++;
-                window.getSelectTime = _ => window.selectTime/window.selectCount;
+                if ( 'undefined' !== typeof performance) { 
+                    if('undefined' === typeof window.selectCount) window.selectCount = 0;
+                    if('undefined' === typeof window.selectTime) window.selectTime = 0;
+                    window.selectTime = window.selectTime + performance.now() - start;
+                    window.selectCount++;
+                    window.getSelectTime = _ => window.selectTime/window.selectCount;
+                }
 
                 let data = _.extend({}, scope, value );   
 
