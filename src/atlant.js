@@ -456,7 +456,7 @@ function Atlant(){
                     //     console.log('log:', upstream, store, dep);
                     //     throw new Error('Every select should have name.')
                     // }
-
+ 
                     if ( 'undefined' !== typeof upstream.ref && 'undefined' !== typeof store ) {
                         if ( !( 'chains' in upstream ) ) upstream.chains = {};
                         if(!(store.storeName in upstream.chains)) upstream.chains[store.storeName] = {};
@@ -465,12 +465,12 @@ function Atlant(){
 
                         if('undefined' !== typeof store.dependsOn && '' !== store.dependsOn && !(store.dependsOn in upstream.select )) throw new Error(`Select "${upstream.ref}"" cannot depend on unknown select: "${store.dependsOn}"`)
 
-                        if(store.dependsOn && '' !== store.dependsOn )
-                            console.log('select depending ', upstream.ref, 'on', store.dependsOn)
-                        if( store.dependsOn && '' === store.dependsOn )
-                            console.log('select', upstream.ref, 'is independent')
-                        if( '' === store.dependsOn ) 
-                            console.log('select', 'no dependency')
+                        // if(store.dependsOn && '' !== store.dependsOn )
+                        //     console.log('select depending ', upstream.ref, 'on', store.dependsOn)
+                        // if( store.dependsOn && '' === store.dependsOn )
+                        //     console.log('select', upstream.ref, 'is independent')
+                        // if( '' === store.dependsOn ) 
+                        //     console.log('select', 'no dependency')
 
 
                         var getValue = function( ref, atomParams, u ){
@@ -842,7 +842,7 @@ function Atlant(){
                     });
 
                     if (scrollToTop.value && 'undefined' !== typeof window) {
-                        setTimeout( function() { console.log('Atlant.js: scrolling 1', masks, whenMasks, name); prefs.scrollElement().scrollTop = 0}, 0);
+                        setTimeout( function() { prefs.scrollElement().scrollTop = 0}, 0);
                     } 
 
                     var stream = injectsGrabber.add(name, depData, injects, upstream);
@@ -904,7 +904,7 @@ function Atlant(){
                 // stream.id = _.uniqueId(); // Should it be so at error?
 
                 if (scrollToTop.value && 'undefined' !== typeof window) {
-                    setTimeout( function() { console.log('Atlant.js: scrolling 2'); prefs.scrollElement().scrollTop = 0}, 0);
+                    setTimeout( function() { prefs.scrollElement().scrollTop = 0}, 0);
                 } 
 
                 return stream;

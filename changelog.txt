@@ -1,3 +1,4 @@
+0.4.49 remove loggings
 0.4.48 more logging for scroll, choose better calc of select
 0.4.47 more logging for scrolling
 0.4.46 use another measurement and escape performance
