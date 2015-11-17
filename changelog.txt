@@ -1,4 +1,5 @@
-0.4.46 more logging for scrolling
+0.4.48 more logging for scroll, choose better calc of select
+0.4.47 more logging for scrolling
 0.4.46 use another measurement and escape performance
 0.4.45 add queues of chains with same parent plus measurement of select
 	evaluating

@@ -198,15 +198,15 @@ function Atlant(){
                 }
                 // window.chains = upstream.chains
 
-                // value =  Object.keys(upstream.chains)
-                //     .map( _ => upstream.chains[_] )
-                //     .reduce( (acc, i) => acc.concat(i), [])
-                //     .map( o => Object.keys(o).map( _ => o[_] ) )
-                //     .reduce( (acc, i) => acc.concat(i), [])
-                //     .reduce( (acc, i) => acc.concat(i), [])
-                //     .reduce( (acc, i) => _.extend(acc, i()), {});
+                value =  Object.keys(upstream.chains)
+                    .map( _ => upstream.chains[_] )
+                    .reduce( (acc, i) => acc.concat(i), [])
+                    .map( o => Object.keys(o).map( _ => o[_] ) )
+                    .reduce( (acc, i) => acc.concat(i), [])
+                    .reduce( (acc, i) => acc.concat(i), [])
+                    .reduce( (acc, i) => _.extend(acc, i()), {});
 
-                value = _(upstream.chains).map(o=> _(o).map(_=>_).flatten().value() ).flatten().reduce( (acc, i) => _.extend(acc, i()), {});
+                // value = _(upstream.chains).map(o=> _(o).map(_=>_).flatten().value() ).flatten().reduce( (acc, i) => _.extend(acc, i()), {}); // Actually it is slower :(
 
                 // console.timeEnd('score')
                 if ( 'undefined' !== typeof performance) { 
@@ -842,7 +842,7 @@ function Atlant(){
                     });
 
                     if (scrollToTop.value && 'undefined' !== typeof window) {
-                        setTimeout( function() { console.log('Atlant.js: scrolling 1'); prefs.scrollElement().scrollTop = 0}, 0);
+                        setTimeout( function() { console.log('Atlant.js: scrolling 1', masks, whenMasks, name); prefs.scrollElement().scrollTop = 0}, 0);
                     } 
 
                     var stream = injectsGrabber.add(name, depData, injects, upstream);
