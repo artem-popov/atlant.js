@@ -1,3 +1,4 @@
+0.4.46 more logging for scrolling
 0.4.46 use another measurement and escape performance
 0.4.45 add queues of chains with same parent plus measurement of select
 	evaluating

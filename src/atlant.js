@@ -842,7 +842,7 @@ function Atlant(){
                     });
 
                     if (scrollToTop.value && 'undefined' !== typeof window) {
-                        setTimeout( function() { prefs.scrollElement().scrollTop = 0}, 0);
+                        setTimeout( function() { console.log('Atlant.js: scrolling 1'); prefs.scrollElement().scrollTop = 0}, 0);
                     } 
 
                     var stream = injectsGrabber.add(name, depData, injects, upstream);
@@ -904,7 +904,7 @@ function Atlant(){
                 // stream.id = _.uniqueId(); // Should it be so at error?
 
                 if (scrollToTop.value && 'undefined' !== typeof window) {
-                    setTimeout( function() { prefs.scrollElement().scrollTop = 0}, 0);
+                    setTimeout( function() { console.log('Atlant.js: scrolling 2'); prefs.scrollElement().scrollTop = 0}, 0);
                 } 
 
                 return stream;
