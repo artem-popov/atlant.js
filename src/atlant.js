@@ -185,20 +185,32 @@ function Atlant(){
             if ( !('chains' in upstream ) || !Object.keys(upstream.chains).length) return;  // If no store is selected for this view, then we should not subscribe on anything.
 
             let keys = Object.keys(upstream.chains);
-            console.log('chains:', keys, viewName, upstream.chains);
+            // console.log('chains:', keys, viewName, upstream.chains);
 
             viewSubscriptions[viewName] = Bacon
                 .mergeAll( keys.map(store => stores[store].bus) );
 
             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, value){ 
                 // console.time('score')
+                let start = performance.now();
+                // window.chains = upstream.chains
+
                 value =  Object.keys(upstream.chains)
                     .map( _ => upstream.chains[_] )
                     .reduce( (acc, i) => acc.concat(i), [])
                     .map( o => Object.keys(o).map( _ => o[_] ) )
                     .reduce( (acc, i) => acc.concat(i), [])
+                    .reduce( (acc, i) => acc.concat(i), [])
                     .reduce( (acc, i) => _.extend(acc, i()), {});
+
+                // value = _(upstream.chains).map(o=> _(o).map(_=>_).flatten().value() ).flatten().reduce( (acc, i) => _.extend(acc, i()), {});
+
                 // console.timeEnd('score')
+                if('undefined' === typeof window.selectCount) window.selectCount = 0;
+                if('undefined' === typeof window.selectTime) window.selectTime = 0;
+                window.selectTime = window.selectTime + performance.now() - start;
+                window.selectCount++;
+                window.getSelectTime = _ => window.selectTime/window.selectCount;
 
                 let data = _.extend({}, scope, value );   
 
@@ -448,12 +460,12 @@ function Atlant(){
 
                         if('undefined' !== typeof store.dependsOn && '' !== store.dependsOn && !(store.dependsOn in upstream.select )) throw new Error(`Select "${upstream.ref}"" cannot depend on unknown select: "${store.dependsOn}"`)
 
-                        // if(store.dependsOn && '' !== store.dependsOn )
-                        //     console.log('select depending ', upstream.ref, 'on', store.dependsOn)
-                        // if( store.dependsOn && '' === store.dependsOn )
-                        //     console.log('select', upstream.ref, 'is independent')
-                        // if( '' === store.dependsOn ) 
-                        //     console.log('select', 'no dependency')
+                        if(store.dependsOn && '' !== store.dependsOn )
+                            console.log('select depending ', upstream.ref, 'on', store.dependsOn)
+                        if( store.dependsOn && '' === store.dependsOn )
+                            console.log('select', upstream.ref, 'is independent')
+                        if( '' === store.dependsOn ) 
+                            console.log('select', 'no dependency')
 
 
                         var getValue = function( ref, atomParams, u ){
@@ -471,11 +483,11 @@ function Atlant(){
 
                         let chainKey = dependence ? upstream.dependences[store.dependsOn] : upstream.ref;
 
-                        if ( dependence ) upstream.dependences[upstream.ref] = chainKey;
-                        else upstream.dependences[upstream.ref] = chainKey;
+                        upstream.dependences[upstream.ref] = chainKey;
 
                         upstream.lastSelect = upstream.ref;
-                        upstream.chains[store.storeName][chainKey] = f;
+                        if( !(chainKey in upstream.chains[store.storeName]) ) upstream.chains[store.storeName][chainKey] = [];
+                        upstream.chains[store.storeName][chainKey].push(f);
                         upstream.select[upstream.ref] = f;
 
                     }
