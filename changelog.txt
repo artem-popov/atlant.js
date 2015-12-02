@@ -1,3 +1,5 @@
+0.4.50 fix async was processed as select, allowed to calc several chains with
+one root
 0.4.49 remove loggings
 0.4.48 more logging for scroll, choose better calc of select
 0.4.47 more logging for scrolling

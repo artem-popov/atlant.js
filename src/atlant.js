@@ -196,12 +196,9 @@ function Atlant(){
                 if ( 'undefined' !== typeof performance) { 
                     start = performance.now();
                 }
-                // window.chains = upstream.chains
 
                 value =  Object.keys(upstream.chains)
                     .map( _ => upstream.chains[_] )
-                    .reduce( (acc, i) => acc.concat(i), [])
-                    .map( o => Object.keys(o).map( _ => o[_] ) )
                     .reduce( (acc, i) => acc.concat(i), [])
                     .reduce( (acc, i) => acc.concat(i), [])
                     .reduce( (acc, i) => _.extend(acc, i()), {});
@@ -450,17 +447,16 @@ function Atlant(){
                 .mapError(function(_){ console.error('Unhandled error', _)})
 
             stream = stream // Add select subscriptions
-                .map(function(depName, store, dep, upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
+                .map(function(depName, store, dep, isAtom, upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
 
                     // if( !('ref' in upstream) || 'undefined' === typeof upstream.ref || '' === upstream.ref  ) { 
                     //     console.log('log:', upstream, store, dep);
                     //     throw new Error('Every select should have name.')
                     // }
  
-                    if ( 'undefined' !== typeof upstream.ref && 'undefined' !== typeof store ) {
+                    if ( 'undefined' !== typeof upstream.ref && 'undefined' !== typeof store && isAtom ) {
                         if ( !( 'chains' in upstream ) ) upstream.chains = {};
-                        if(!(store.storeName in upstream.chains)) upstream.chains[store.storeName] = {};
-                        if ( !( 'dependences' in upstream ) ) upstream.dependences = {};
+                        if (!(store.storeName in upstream.chains)) upstream.chains[store.storeName] = [];
                         if ( !( 'select' in upstream ) ) upstream.select = {};
 
                         if('undefined' !== typeof store.dependsOn && '' !== store.dependsOn && !(store.dependsOn in upstream.select )) throw new Error(`Select "${upstream.ref}"" cannot depend on unknown select: "${store.dependsOn}"`)
@@ -471,6 +467,8 @@ function Atlant(){
                         //     console.log('select', upstream.ref, 'is independent')
                         // if( '' === store.dependsOn ) 
                         //     console.log('select', 'no dependency')
+                        // if (!dependence && upstream.lastSelect && 'undefined' === typeof store.dependsOn && '' !== store.dependsOn)
+                        //     console.log('select lastSelect', upstream.ref, 'on', upstream.lastSelect )
 
 
                         var getValue = function( ref, atomParams, u ){
@@ -484,21 +482,16 @@ function Atlant(){
 
                         if ( !dependence && upstream.lastSelect && 'undefined' === typeof store.dependsOn && '' !== store.dependsOn ) dependence = upstream.select[upstream.lastSelect];
 
-                        let f = dependence ?  f = _ => getValue( dependence (_) ) : getValue;
-
-                        let chainKey = dependence ? upstream.dependences[store.dependsOn] : upstream.ref;
-
-                        upstream.dependences[upstream.ref] = chainKey;
+                        let f = dependence ?  _ => getValue( dependence (_) ) : getValue;
 
                         upstream.lastSelect = upstream.ref;
-                        if( !(chainKey in upstream.chains[store.storeName]) ) upstream.chains[store.storeName][chainKey] = [];
-                        upstream.chains[store.storeName][chainKey].push(f);
+                        upstream.chains[store.storeName].push(f);
                         upstream.select[upstream.ref] = f;
 
                     }
 
                     return upstream;
-                }.bind(void 0, depName, store, dep))
+                }.bind(void 0, depName, store, dep, isAtom))
 
 
             return stream;
@@ -1541,11 +1534,11 @@ function Atlant(){
     /**
      *  Asyncroniously run the dependency. 
      */
-    this.async =  function( dependency ) { return _depends.bind(this)( dependency, Depends.async) };
+    this.async =  function( dependency ) { return _depends.bind(this)( dependency, false, Depends.async) };
     /*
      *  Continuesly run the dependency. First executed previous dependency, and only after - this one.
      * */
-    this.dep =  function( dependency ) { return _depends.bind(this)( dependency, Depends.continue) };
+    this.dep =  function( dependency ) { return _depends.bind(this)( dependency, false, Depends.continue) };
     /*
      * .data() allow catch every peace of data which where piped with .depends(), .and()
      **/
