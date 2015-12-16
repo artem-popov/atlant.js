@@ -46,6 +46,8 @@ function Atlant(){
     var stores = {}
     var emitStreams = {};
 
+    var pre;
+
     var statistics = new Stat();
 
     var activeRenderEnd;
@@ -733,6 +735,7 @@ function Atlant(){
 
     var rootStream = Bacon.fromBinder(function(sink) {
             baseStreams.onValue(routeChangedStream, function(sink, _) {
+                pre();
                 assignRenders();
                 sink(_);
             }.bind(void 0, sink));
@@ -916,6 +919,11 @@ function Atlant(){
         return this;
 
     };
+
+    var _pre = function(fn){
+        pre = fn;
+        return this;
+    }
 
     /**
         if Function
@@ -1504,6 +1512,8 @@ function Atlant(){
      * @param mask - route expression /endpoint/:param1/:param2/endpoint2
      */
     this.when = function(masks) { return _when.bind(this)( masks, Matching.continue, WhenOrMatch.when ); }
+
+    this.pre = _pre.bind(this);
 
     /**
      * Creates route stream by route expression which will prevent other matches after.

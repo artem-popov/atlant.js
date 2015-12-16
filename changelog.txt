@@ -1,3 +1,4 @@
+0.4.51 .pre directive - evaluate function before any match, when
 0.4.50 fix async was processed as select, allowed to calc several chains with
 one root
 0.4.49 remove loggings
