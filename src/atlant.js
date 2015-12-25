@@ -25,12 +25,8 @@ function Atlant(){
         ,Storage = require('./inc/storage')
     ;
 
-
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
-
-    // var lastScrollTop; 
-
 
     //    ,State = require('./state.js')
 
@@ -45,8 +41,6 @@ function Atlant(){
 
     var stores = {}
     var emitStreams = {};
-
-    var pre;
 
     var statistics = new Stat();
 
@@ -65,6 +59,7 @@ function Atlant(){
             ,on: { renderEnd: void 0 }// callback which will be called on finishing when rendering
             ,scrollElement: function(){ return 'undefined' !== typeof document ? document.querySelector('body') : void 0 }
             ,defaultScrollToTop: true
+            ,pre: void 0
     }
 
     var injectsGrabber = new interfaces.injectsGrabber();
@@ -111,6 +106,11 @@ function Atlant(){
         viewRendered: {} // Flag that this view is rendered. Stops other streams to perform render then.
         ,isLastWasMatched: false // Allow lastWhen to stop other when's execution
         ,actions: {}
+    }
+
+
+    if('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
     }
 
     /* Helpers */
@@ -639,45 +639,72 @@ function Atlant(){
                     try{
                         event.preventDefault();
                         var path;
-                        // var postponedScroll;
 
-                        var state = function(event){ return 'pushstate' === event.type ? event.detail.state : ( 'popstate' === event.type ? event.state : void 0 )  };
-                        if ( 'pushstate' === event.type ) { // On pushstate event the utils.getLocation() will give url of previous route.
-                            path = event.detail.url; 
-                        } else if ( 'popstate' === event.type ) {
-                            path = utils.getLocation(); // On popstate utils.getLocation() always return current URI.
-                        }
+                        var body = document.body,
+                            html = document.documentElement;
+
+
+                        // Using state from event. At this point the history.state is stil old.
+                        var state = event instanceof PopStateEvent ? event.state : event.detail.state; // CustomEvent has details and state inside. PopStateEvent has just state inside.
+
+                        // On pushstate event the utils.getLocation() will give url of previous route.
+                        // Otherwise on popstate utils.getLocation() return current URI.
+                        var path = event instanceof PopStateEvent ? utils.getLocation() : event.detail.url;
 
                         path = utils.rebuildURL(path);
 
-                        // lastScrollTop[path] = document.querySelector('body').scrollTop;
+                        var body = document.querySelector('body');
+                        var height = _ => Math.max( body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight );
 
-                        // if ( 0 === history.state.scrollTop ) {
-                        //     prefs.scrollElement().scrollTop = 0;
-                        //     utils.saveScroll();
-                        // } else { 
-                        //     var initial = true;
-                        //     postponedScroll = function(){
-                        //         if(initial #<{(|&& lastScrollTop[lastPath] !== history.state.scrollTop|)}>#) {  // restore scroll position for this new uri ONCE 
-                        //             prefs.scrollElement().scrollTop = history.state.scrollTop;
-                        //         } 
-                        // }} 
+                        if ( event instanceof PopStateEvent ) {
+                            if ('scrollRestoration' in history) {
+                                var bodyHeight = height();
+                                if (bodyHeight < state.scrollTop) {
+                                    body.style.minHeight = (state.scrollTop + window.innerHeight) + 'px';
+                                }
+
+                                window.scrollTo(0, state.scrollTop);
+
+                                setTimeout(_ => body.querySelector('body').style.height = 'auto', 300) // @TODO once render complete we can remove height from body.
+                                // let postponedCleanup = function(){
+                                //     body.querySelector('body').style.height = 'auto'
+                                // }
+
+
+                            } else {
+                                var handler = function(){
+                                    // document.removeEventListener('scroll', handler); 
+                                    body.style.overflow = 'initial';
+                                    body.classList.remove('progress');
+                                    window.scrollTo(0, state.scrollTop);
+                                };
+
+                                body.classList.add('progress');
+                                body.style.overflow = 'hidden';
+                                // document.addEventListener('scroll', handler);
+                                setTimeout(handler, 0)
+                                // setTimeout( _ => document.querySelector('body').style.removeProperty('overflow'), 0); // It is possible that scroll event will not occur.
+                            }
+                        } else if ( 0 === state.scrollTop ) {
+                            window.scrollTo(0, 0)
+                            utils.saveScroll();
+                        }
 
                         l.log('the route is changed!')
                         if (path !== lastPath || (event && event.detail && event.detail.state && event.detail.state.forceRouteChange)) {
                             sink({
                                 path: path
                                 ,referrer: lastPath
-                                // ,postponed: postponedScroll
+                                // ,postponed: postponedCleanup
                             });
                         }
                     }catch(e){console.error(e.stack)}
                 }.bind(void 0, sink);
                 window.addEventListener( 'popstate', routeChanged );
                 window.addEventListener( 'pushstate', routeChanged );
-                // window.addEventListener( 'scroll', utils.saveScroll );
+                window.addEventListener( 'scroll', utils.saveScroll );
 
-                // utils.saveScroll();
+                utils.saveScroll();
             }
         }))
         .scan(void 0, function(previous, current){
@@ -735,7 +762,7 @@ function Atlant(){
 
     var rootStream = Bacon.fromBinder(function(sink) {
             baseStreams.onValue(routeChangedStream, function(sink, _) {
-                pre();
+                if(prefs.pre) prefs.pre();
                 assignRenders();
                 sink(_);
             }.bind(void 0, sink));
@@ -838,7 +865,7 @@ function Atlant(){
                     });
 
                     if (scrollToTop.value && 'undefined' !== typeof window) {
-                        setTimeout( function() { prefs.scrollElement().scrollTop = 0}, 0);
+                        window.scrollTo(0, 0);
                     } 
 
                     var stream = injectsGrabber.add(name, depData, injects, upstream);
@@ -871,9 +898,6 @@ function Atlant(){
         var nameContainer = dependsName.init(depName, State.state);
         var stats = TopState.state.stats;
 
-        var scrollToTop = { value: false };
-        State.state.scrollToTop = scrollToTop;
-
 
         State.state.lastWhen = action
             .map( function(depName, injects, nameContainer, stats, whenId, isAction, depValue) {
@@ -899,10 +923,6 @@ function Atlant(){
                 stream.id = activeStreamId.value;
                 // stream.id = _.uniqueId(); // Should it be so at error?
 
-                if (scrollToTop.value && 'undefined' !== typeof window) {
-                    setTimeout( function() { prefs.scrollElement().scrollTop = 0}, 0);
-                } 
-
                 return stream;
             }.bind(void 0, depName, injects, nameContainer, stats, whenId, isAction ))
 
@@ -921,7 +941,7 @@ function Atlant(){
     };
 
     var _pre = function(fn){
-        pre = fn;
+        prefs.pre = fn;
         return this;
     }
 

@@ -30,7 +30,7 @@ var wrapPushState = function(window){
            console.error("Can't push state:", e);
            return void 0;
         }
-    };
+    }
 
     window.history.pushState = function(state, title, url) {
         var eventless = state && state.eventless;

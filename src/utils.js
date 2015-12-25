@@ -121,9 +121,10 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO 
         }
     }
 
+    var state = { url: url, scrollTop: 0, referrer: window.location.href, forceRouteChange: redirectForce };
     utils.saveScroll();
 
-    setTimeout( history.pushState.bind(history, { url: url, scrollTop: 0, referrer: window.location.href, forceRouteChange: redirectForce }, null, url), 0);
+    setTimeout( history.pushState.bind(history, state, null, url), 0);
 }
 
 
@@ -131,11 +132,12 @@ utils.newPage = true;
 
 utils.saveScroll = _.debounce(function(event){
     var stateData = {
-        scrollTop: document.querySelector('body').scrollTop
+        scrollTop: window.pageYOffset
     };
          
     window.history.replaceState(stateData, null);
 }, 50)
+
 
 /**
  * Redirect to the other path using $location
