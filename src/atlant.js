@@ -656,37 +656,44 @@ function Atlant(){
                         var body = document.querySelector('body');
                         var height = _ => Math.max( body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight );
 
-                        if ( event instanceof PopStateEvent ) {
-                            if ('scrollRestoration' in history) {
+                        var trySetScroll = function(scrollTop){
+                                if ('number' !== typeof scrollTop) return;
+
                                 var bodyHeight = height();
-                                if (bodyHeight < state.scrollTop) {
-                                    body.style.minHeight = (state.scrollTop + window.innerHeight) + 'px';
+                                if (bodyHeight < scrollTop) {
+                                    body.style.minHeight = (scrollTop + window.innerHeight) + 'px';
                                 }
 
-                                window.scrollTo(0, state.scrollTop);
+                                window.scrollTo(0, scrollTop);
 
-                                setTimeout(_ => body.querySelector('body').style.height = 'auto', 300) // @TODO once render complete we can remove height from body.
-                                // let postponedCleanup = function(){
-                                //     body.querySelector('body').style.height = 'auto'
-                                // }
+                                var finishHeight = _ => body.style.height = 'auto';
+                                setTimeout(finishHeight, 300) // @TODO once render complete we can remove height from body.
 
+                                // thisRenderEnd.then( finishHeight );
+                        }
 
+                        if ( event instanceof PopStateEvent ) {
+                            if ('scrollRestoration' in history) {
+                                // console.log('chrome set scrollTop to ', state, state.scrollTop)
+                                trySetScroll(state.scrollTop)
                             } else {
                                 var handler = function(){
                                     // document.removeEventListener('scroll', handler); 
-                                    body.style.overflow = 'initial';
+                                    // body.style.overflow = 'initial';
                                     body.classList.remove('progress');
-                                    window.scrollTo(0, state.scrollTop);
+                                    trySetScroll(state.scrollTop);
+                                    // console.log('handler set scrollTop to ', state.scrollTop)
                                 };
 
                                 body.classList.add('progress');
-                                body.style.overflow = 'hidden';
+                                // body.style.overflow = 'hidden';
                                 // document.addEventListener('scroll', handler);
                                 setTimeout(handler, 0)
-                                // setTimeout( _ => document.querySelector('body').style.removeProperty('overflow'), 0); // It is possible that scroll event will not occur.
+                                // setTimeout( _ => document.querySelector('body').style.removeProperty('overflow'), 0); 
                             }
                         } else if ( 0 === state.scrollTop ) {
                             window.scrollTo(0, 0)
+                            // console.log('set scrollTop to ', state.scrollTop)
                             utils.saveScroll();
                         }
 
