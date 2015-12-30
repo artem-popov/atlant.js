@@ -1,3 +1,4 @@
+0.4.54 better back button recovering 2
 0.4.53 better back button recovering
 0.4.52 implement working back button. For Safari time between popstate and
 scroll restoration merked with class "progress" on body. In Chrome (where
