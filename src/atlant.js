@@ -672,9 +672,12 @@ function Atlant(){
 
                             if (!('scrollRestoration' in history)) utils.body.classList.add('progress');
 
-                            console.log('before:', utils.body.scrollTop)
-                            window.scrollTo(0, scrollTop);  // Safari actually do this!
-                            console.log('after:', utils.body.scrollTop)
+                            var setScroll = _ => {
+                                console.log('before:', utils.body.scrollTop)
+                                window.scrollTo(0, scrollTop);  // Safari actually do this!
+                                console.log('after:', utils.body.scrollTop)
+                            };
+                            requestAnimationFrame(setScroll);
 
                             finishScroll = (scrollTop => {
                                 window.scrollTo(0, scrollTop);
