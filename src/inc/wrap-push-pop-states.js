@@ -1,7 +1,7 @@
 "use strict";
 //https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent
 // Polyfill for "new CustomEvent"
-(function () {
+if('undefined' !== typeof window && 'CustonEvent' in window) (function () {
   function CustomEvent ( event, params ) {
     params = params || { bubbles: false, cancelable: false, detail: undefined };
     var evt = document.createEvent( 'CustomEvent' );
@@ -35,7 +35,7 @@ var wrapPushState = function(window){
     window.history.pushState = function(state, title, url) {
         var eventless = state && state.eventless;
         if ( !eventless ) {
-            var onpushstate = new CustomEvent('pushstate', { detail: { state: {url: url, referrer: window.location.pathname, scrollTop: state.scrollTop, forceRouteChange: state.forceRouteChange}, title: title, url: url } } );
+            var onpushstate = new CustomEvent('pushstate', { detail: { state: {url: url, referrer: window.location.pathname, scrollTop: state.scrollTop, forceRouteChange: state.forceRouteChange}, title: title, url: url} } );
             window.dispatchEvent(onpushstate);
         }
 

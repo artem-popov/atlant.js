@@ -8,6 +8,8 @@
  */
 
 function Atlant(){
+    var atlant = this;
+
     var s = require('./lib')
         ,l = require('./inc/log')()
         ,simpleRender = require('./renders/simple')
@@ -57,7 +59,7 @@ function Atlant(){
             ,skipRoutes: []  // This routes will be skipped in StreamRoutes
             ,viewState: ['root']
             ,on: { renderEnd: void 0 }// callback which will be called on finishing when rendering
-            ,scrollElement: function(){ return 'undefined' !== typeof document ? document.querySelector('body') : void 0 }
+            ,scrollElement: function(){ return 'undefined' !== typeof document ? utils.body : void 0 }
             ,defaultScrollToTop: true
             ,pre: void 0
     }
@@ -70,6 +72,7 @@ function Atlant(){
     var lastPath // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
         ,lastMask = []
         ,lastReferrer
+        ,lastHistory
 
 
     var titleStore = { value: "" };
@@ -112,6 +115,7 @@ function Atlant(){
     if('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
     }
+    utils.clearState();
 
     /* Helpers */
     var assignRenders = function(){
@@ -546,7 +550,6 @@ function Atlant(){
     if ('undefined' !== typeof window) {
         var states = require( './inc/wrap-push-pop-states.js');
         states.wrapPushState(window);
-        // states.wrapPopState(window);
 
         // Subscribe to clicks and keyboard immediatelly. Document already exists.
         utils.attachGuardToLinks();
@@ -634,85 +637,78 @@ function Atlant(){
 
     var routeChangedStream =  publishStream
         .merge( Bacon.fromBinder(function(sink) {
-            if ( 'undefined' !== typeof window) {
-                var routeChanged = function(sink, event) {
-                    try{
-                        event.preventDefault();
-                        var path;
+            if ( 'undefined' === typeof window) return;
+            var routeChanged = function(sink, event) {
 
-                        var body = document.body,
-                            html = document.documentElement;
+                console.log( event instanceof PopStateEvent  ? "popstate" : "pushstate" );
+                try{
+                    var path;
 
+                    // Using state from event. At this point the history.state is stil old.
+                    var state = event instanceof PopStateEvent ? event.state : event.detail.state; // CustomEvent has details and state inside. PopStateEvent has just state inside.
 
-                        // Using state from event. At this point the history.state is stil old.
-                        var state = event instanceof PopStateEvent ? event.state : event.detail.state; // CustomEvent has details and state inside. PopStateEvent has just state inside.
+                    // On pushstate event the utils.getLocation() will give url of previous route.
+                    // Otherwise on popstate utils.getLocation() return current URI.
+                    var path = event instanceof PopStateEvent ? utils.getLocation() : event.detail.url;
 
-                        // On pushstate event the utils.getLocation() will give url of previous route.
-                        // Otherwise on popstate utils.getLocation() return current URI.
-                        var path = event instanceof PopStateEvent ? utils.getLocation() : event.detail.url;
+                    path = utils.rebuildURL(path);
 
-                        path = utils.rebuildURL(path);
+                    var finishScroll; 
+                    var trySetScroll = function(scrollTop){
+                            if ('number' !== typeof scrollTop) return;
+                            atlant.state.scrollRestoration = true;
 
-                        var body = document.querySelector('body');
-                        var height = _ => Math.max( body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight );
+                            var bodyHeight = utils.getPageHeight() + window.innerHeight;
 
-                        var trySetScroll = function(scrollTop){
-                                if ('number' !== typeof scrollTop) return;
+                            console.log('will scroll to ', scrollTop, 'but height is:', bodyHeight)
 
-                                var bodyHeight = height();
-                                if (bodyHeight < scrollTop) {
-                                    body.style.minHeight = (scrollTop + window.innerHeight) + 'px';
-                                }
+                            console.log('scrollRestoration?:', 'scrollRestoration' in history)
+                            if (window.hey) debugger;
 
-                                window.scrollTo(0, scrollTop);
-
-                                var finishHeight = _ => body.style.height = 'auto';
-                                setTimeout(finishHeight, 300) // @TODO once render complete we can remove height from body.
-
-                                // thisRenderEnd.then( finishHeight );
-                        }
-
-                        if ( event instanceof PopStateEvent ) {
-                            if ('scrollRestoration' in history) {
-                                // console.log('chrome set scrollTop to ', state, state.scrollTop)
-                                trySetScroll(state.scrollTop)
-                            } else {
-                                var handler = function(){
-                                    // document.removeEventListener('scroll', handler); 
-                                    // body.style.overflow = 'initial';
-                                    body.classList.remove('progress');
-                                    trySetScroll(state.scrollTop);
-                                    // console.log('handler set scrollTop to ', state.scrollTop)
-                                };
-
-                                body.classList.add('progress');
-                                // body.style.overflow = 'hidden';
-                                // document.addEventListener('scroll', handler);
-                                setTimeout(handler, 0)
-                                // setTimeout( _ => document.querySelector('body').style.removeProperty('overflow'), 0); 
+                            if (bodyHeight < scrollTop) {
+                                utils.body.style.minHeight = (scrollTop + window.innerHeight) + 'px';
+                                console.log('set min height to ', utils.body.style.minHeight)
                             }
-                        } else if ( 0 === state.scrollTop ) {
-                            window.scrollTo(0, 0)
-                            // console.log('set scrollTop to ', state.scrollTop)
-                            utils.saveScroll();
-                        }
 
-                        l.log('the route is changed!')
-                        if (path !== lastPath || (event && event.detail && event.detail.state && event.detail.state.forceRouteChange)) {
-                            sink({
-                                path: path
-                                ,referrer: lastPath
-                                // ,postponed: postponedCleanup
-                            });
-                        }
-                    }catch(e){console.error(e.stack)}
-                }.bind(void 0, sink);
-                window.addEventListener( 'popstate', routeChanged );
-                window.addEventListener( 'pushstate', routeChanged );
-                window.addEventListener( 'scroll', utils.saveScroll );
+                            if (!('scrollRestoration' in history)) utils.body.classList.add('progress');
 
-                utils.saveScroll();
-            }
+                            console.log('before:', utils.body.scrollTop)
+                            window.scrollTo(0, scrollTop);  // Safari actually do this!
+                            console.log('after:', utils.body.scrollTop)
+
+                            finishScroll = (scrollTop => {
+                                window.scrollTo(0, scrollTop);
+                                utils.body.style.minHeight = null;
+                                atlant.state.scrollRestoration = false;
+                                if (!('scrollRestoration' in history)) utils.body.classList.remove('progress');
+                            }).bind(void 0, scrollTop);
+
+                    }
+
+                    if ( event instanceof PopStateEvent ) {
+                        trySetScroll(state.scrollTop)
+                    } else if ( 0 === state.scrollTop ) {
+                        window.scrollTo(0, 0); // pushstate has zero if .scrollToTop(true)
+                        console.log('just set scrollTop to ', state.scrollTop, 'for ', path)
+                    }
+
+                    l.log('the route is changed!')
+                    if (path !== lastPath || (event && event.detail && event.detail.state && event.detail.state.forceRouteChange)) {
+                        sink({
+                            path: path
+                            ,referrer: lastPath
+                            ,history: event 
+                            // ,postponed: postponedCleanup
+                        });
+                        if(finishScroll) finishScroll();
+                    }
+                }catch(e){console.error(e.stack)}
+            }.bind(void 0, sink);
+            window.addEventListener( 'popstate', routeChanged );
+            window.addEventListener( 'pushstate', routeChanged );
+            window.addEventListener( 'scroll', utils.saveScroll );
+
+            utils.saveScroll();
         }))
         .scan(void 0, function(previous, current){
             if ((previous && previous.hasOwnProperty('published')) || current.hasOwnProperty('published')) {
@@ -732,6 +728,7 @@ function Atlant(){
                 stream = {
                     path: path
                     ,referrer: referrer
+                    ,history: upstream.history
                 }
             }
 
@@ -744,6 +741,7 @@ function Atlant(){
             // Storing here the data for actions.
             lastPath = stream.path;
             lastReferrer = stream.referrer;
+            lastHistory = stream.history;
             lastMask = [];
 
             stream.id = _.uniqueId();
@@ -869,6 +867,7 @@ function Atlant(){
                                             ,masks: lastMask
                                             ,pattern: utils.getPattern(lastMask)
                                             ,referrer: upstream.referrer
+                                            ,history: upstream.history
                     });
 
                     if (scrollToTop.value && 'undefined' !== typeof window) {
@@ -917,6 +916,7 @@ function Atlant(){
                     depValue.mask = void 0;
                     depValue.location = lastPath;
                     depValue.referrer = lastReferrer;
+                    depValue.history = lastHistory;
                 }
 
                 var stream = injectsGrabber.add(depName, depValue, injects, {});
@@ -1171,6 +1171,7 @@ function Atlant(){
                 depValue.mask = void 0;
                 depValue.location = lastPath;
                 depValue.referrer = lastReferrer;
+                depValue.history = lastHistory;
 
                 var stream = injectsGrabber.add(depName, depValue, injects, {});
                 stream.stats = stats;
@@ -1758,6 +1759,8 @@ function Atlant(){
     this.utils = require('./inc/tools'); // @TODO: rename to 'tools'
     this.utils.setTitle = this.utils.setTitle.bind(void 0, titleStore);
     this.utils.getTitle = this.utils.getTitle.bind(void 0, titleStore);
+
+    this.state = {}
 
     this.data = {
         get routes() { return _(routes) 

@@ -122,21 +122,39 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO 
     }
 
     var state = { url: url, scrollTop: 0, referrer: window.location.href, forceRouteChange: redirectForce };
-    utils.saveScroll();
 
-    setTimeout( history.pushState.bind(history, state, null, url), 0);
+    history.pushState(state, null, url)
 }
 
 
 utils.newPage = true;
 
+utils.saveType = function(field){
+    window.history.replaceState({[field]: true, ...window.history.state}, null);
+}
+
+utils.clearState = function(){
+    var state = { ...window.history.state };
+    delete state.scrollTop;
+    delete state.forceRouteChange;
+    delete state.referrer;
+    delete state.url;
+    window.history.replaceState(state, null);
+}
+
 utils.saveScroll = _.debounce(function(event){
-    var stateData = {
-        scrollTop: window.pageYOffset
-    };
-         
-    window.history.replaceState(stateData, null);
+    console.log('event:', event)
+    var state = { ...history.state, scrollTop: window.pageYOffset};
+
+    window.history.replaceState(state, null);
 }, 50)
+
+utils.body = document.querySelector('body');
+utils.html = document.documentElement;
+
+utils.getPageHeight = function height(_) {
+    return Math.max(utils.body.scrollHeight, utils.body.offsetHeight, utils.html.clientHeight, utils.html.scrollHeight, utils.html.offsetHeight);
+}
 
 
 /**
