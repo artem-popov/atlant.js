@@ -702,6 +702,7 @@ function Atlant(){
 
                     l.log('the route is changed!')
                     if (path !== lastPath || (event && event.detail && event.detail.state && event.detail.state.forceRouteChange)) {
+                        if (!('scrollRestoration' in history)) { utils.body.style.position = null; utils.body.style.width = null; utils.body.style.marginTop = null; } // removing fixed just before rendering
                         sink({
                             path: path
                             ,referrer: lastPath
@@ -717,6 +718,7 @@ function Atlant(){
             window.addEventListener( 'scroll', utils.saveScroll );
             var loader = document.querySelector('.root-loader');
             if(loader) loader.style.visibility = null;
+            if (!('scrollRestoration' in history)) { utils.body.style.position = null; utils.body.style.width = null; utils.body.style.marginTop = null; }
             // utils.body.classList.remove('progress');
 
 

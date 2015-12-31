@@ -125,9 +125,12 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO 
 
     if (!('scrollRestoration' in history)) { 
         console.log('setting progress');
-        utils.body.style.position = 'auto'; // freezing view;
-        requestAnimationFrame( _ => history.pushState(state, null, url) )
+        utils.body.style.position = 'fixed'; // freezing view;
+        utils.body.style.width = '100%'; // freezing view;
+        utils.body.style.marginTop = - window.scrollY;
     }
+
+    history.pushState(state, null, url)
 
     
 }
