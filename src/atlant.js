@@ -692,8 +692,6 @@ function Atlant(){
                     if ( event instanceof PopStateEvent ) {
                         trySetScroll(state.scrollTop)
                     } else if ( 0 === state.scrollTop ) {
-                        window.scrollTo(0, 0); // pushstate has zero if .scrollToTop(true)
-                        console.log('just set scrollTop to ', state.scrollTop, 'for ', path)
                         finishScroll = (scrollTop => {
                             if (!('scrollRestoration' in history)) loader.style.visibility = null;
                             // if (!('scrollRestoration' in history)) utils.body.classList.remove('progress');
