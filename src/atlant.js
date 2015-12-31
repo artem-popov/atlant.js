@@ -653,7 +653,7 @@ function Atlant(){
 
                     path = utils.rebuildURL(path);
 
-                    var finishScroll; 
+                    let finishScroll; 
                     var trySetScroll = function(scrollTop){
                             if ('number' !== typeof scrollTop) return;
                             atlant.state.scrollRestoration = true;
@@ -663,26 +663,25 @@ function Atlant(){
                             console.log('will scroll to ', scrollTop, 'but height is:', bodyHeight)
 
                             console.log('scrollRestoration?:', 'scrollRestoration' in history)
-                            if (window.hey) debugger;
+                            if (window.hey) 
+                                debugger;
 
                             if (bodyHeight < scrollTop) {
                                 utils.body.style.minHeight = (scrollTop + window.innerHeight) + 'px';
                                 console.log('set min height to ', utils.body.style.minHeight)
                             }
 
-                            if (!('scrollRestoration' in history)) utils.body.classList.add('progress');
+                            window.scrollTo(0, scrollTop)
+                            // requestAnimationFrame( _ => window.scrollTo(0, scrollTop) );
 
-                            var setScroll = _ => {
-                                console.log('before:', utils.body.scrollTop)
-                                window.scrollTo(0, scrollTop);  // Safari actually do this!
-                                console.log('after:', utils.body.scrollTop)
-                            };
-                            requestAnimationFrame(setScroll);
+                            if (!('scrollRestoration' in history)) utils.body.classList.add('progress');
+                            if (!('scrollRestoration' in history)) utils.body.style.position = 'auto';
 
                             finishScroll = (scrollTop => {
-                                window.scrollTo(0, scrollTop);
+                                if (!('scrollRestoration' in history)) window.scrollTo(0, scrollTop);
                                 utils.body.style.minHeight = null;
                                 atlant.state.scrollRestoration = false;
+                                if (!('scrollRestoration' in history)) utils.body.style.position = null;
                                 if (!('scrollRestoration' in history)) utils.body.classList.remove('progress');
                             }).bind(void 0, scrollTop);
 
@@ -691,8 +690,12 @@ function Atlant(){
                     if ( event instanceof PopStateEvent ) {
                         trySetScroll(state.scrollTop)
                     } else if ( 0 === state.scrollTop ) {
+                        if (!('scrollRestoration' in history)) utils.body.style.position = null;
                         window.scrollTo(0, 0); // pushstate has zero if .scrollToTop(true)
                         console.log('just set scrollTop to ', state.scrollTop, 'for ', path)
+                        finishScroll = (scrollTop => {
+                            if (!('scrollRestoration' in history)) utils.body.classList.remove('progress');
+                        })
                     }
 
                     l.log('the route is changed!')
@@ -703,13 +706,15 @@ function Atlant(){
                             ,history: event 
                             // ,postponed: postponedCleanup
                         });
-                        if(finishScroll) finishScroll();
+                        if(finishScroll) { requestAnimationFrame(finishScroll) }
                     }
                 }catch(e){console.error(e.stack)}
             }.bind(void 0, sink);
             window.addEventListener( 'popstate', routeChanged );
             window.addEventListener( 'pushstate', routeChanged );
             window.addEventListener( 'scroll', utils.saveScroll );
+            utils.body.classList.remove('progress');
+
 
             utils.saveScroll();
         }))

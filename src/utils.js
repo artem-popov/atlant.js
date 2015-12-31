@@ -123,7 +123,13 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO 
 
     var state = { url: url, scrollTop: 0, referrer: window.location.href, forceRouteChange: redirectForce };
 
-    history.pushState(state, null, url)
+    if (!('scrollRestoration' in history)) { 
+        console.log('setting progress');
+        utils.body.style.position = 'auto'; // freezing view;
+        requestAnimationFrame( _ => history.pushState(state, null, url) )
+    }
+
+    
 }
 
 
@@ -231,6 +237,7 @@ utils.attachGuardToLinks = function() {
 
         if ( loc && element.host === location.host ) {
             event.preventDefault();
+            event.stopPropagation();
             utils.goTo( loc, awaitLoad);
         }
     }
