@@ -1,7 +1,8 @@
 "use strict";
 
-var s = require('./lib');
-var _ = require('lodash')
+var s = require('./lib')
+    ,_ = require('lodash')
+;
 
 var utils = function() {
     return {
@@ -123,15 +124,7 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO 
 
     var state = { url: url, scrollTop: 0, referrer: window.location.href, forceRouteChange: redirectForce };
 
-    if (!('scrollRestoration' in history)) { 
-        console.log('setting progress');
-        utils.body.style.position = 'fixed'; // freezing view;
-        utils.body.style.width = '100%'; // freezing view;
-        utils.body.style.marginTop = - window.scrollY;
-    }
-
-    history.pushState(state, null, url)
-
+    setTimeout( _ => history.pushState(state, null, url), 0 ) // setTimeout turns on safari optimizations and we didn't see the crazy jumps.
     
 }
 
@@ -331,5 +324,26 @@ utils.sanitizeUrl = function(url){
     return escapedRoute;
 }
 
+utils.blockScroll = function(titleStore, title){// freezing view;
+    var scrollPosition = window.scrollY;
+    console.log('scrollPosition:', scrollPosition)
+    if (utils.body && !('scrollRestoration' in history)) { 
+        utils.body.style.position = 'fixed'; 
+        utils.body.style.width = '100%'; 
+        utils.body.style.marginTop = - scrollPosition + 'px';
+        return true;
+    }
+    return false
+}
+
+utils.unblockScroll = function(titleStore, title){
+    if (utils.body && !('scrollRestoration' in history)) { 
+        utils.body.style.position = null; 
+        utils.body.style.width = null;
+        utils.body.style.marginTop = null; 
+        return true
+    }
+    return false
+}
 
 module.exports = utils;

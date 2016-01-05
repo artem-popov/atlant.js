@@ -661,11 +661,6 @@ function Atlant(){
 
                             var bodyHeight = utils.getPageHeight() + window.innerHeight;
 
-                            console.log('will scroll to ', scrollTop, 'but height is:', bodyHeight)
-
-                            console.log('scrollRestoration?:', 'scrollRestoration' in history)
-
-                            // if (!('scrollRestoration' in history)) utils.body.classList.add('progress');
                             if (!('scrollRestoration' in history)) loader.style.visibility = 'visible';
 
                             if (bodyHeight < scrollTop) {
@@ -673,17 +668,18 @@ function Atlant(){
                                 console.log('set min height to ', utils.body.style.minHeight)
                             }
 
+                            console.log('scrolling to1:', scrollTop)
 
                             window.scrollTo(0, scrollTop)
-
 
                             finishScroll = (scrollTop => {
                                 if(window.debug)debugger;
                                 utils.body.style.minHeight = null;
+                                // utils.unblockScroll();
                                 atlant.state.scrollRestoration = false;
                                 window.scrollTo(0, scrollTop);
+                                console.log('scrolling to2:', scrollTop)
                                 if (!('scrollRestoration' in history)) loader.style.visibility = null;
-                                // if (!('scrollRestoration' in history)) utils.body.classList.remove('progress');
                             }).bind(void 0, scrollTop);
 
                     }
@@ -693,13 +689,12 @@ function Atlant(){
                     } else if ( 0 === state.scrollTop ) {
                         finishScroll = (scrollTop => {
                             if (!('scrollRestoration' in history)) loader.style.visibility = null;
-                            // if (!('scrollRestoration' in history)) utils.body.classList.remove('progress');
                         })
                     }
 
                     l.log('the route is changed!')
                     if (path !== lastPath || (event && event.detail && event.detail.state && event.detail.state.forceRouteChange)) {
-                        if (!('scrollRestoration' in history)) { utils.body.style.position = null; utils.body.style.width = null; utils.body.style.marginTop = null; } // removing fixed just before rendering
+                        // if (!('scrollRestoration' in history)) { utils.unblockScroll();  } // removing fixed just before rendering
                         sink({
                             path: path
                             ,referrer: lastPath
@@ -710,17 +705,23 @@ function Atlant(){
                     }
                 }catch(e){
                     atlant.state.scrollRestoration = false;
+                    if (!('scrollRestoration' in history)) loader.style.visibility = null;
+                    utils.body.style.minHeight = null;
+                    // utils.unblockScroll();
                     console.error(e.stack)
                 }
             }.bind(void 0, sink);
             window.addEventListener( 'popstate', routeChanged );
             window.addEventListener( 'pushstate', routeChanged );
             window.addEventListener( 'scroll', utils.saveScroll );
-            var loader = document.querySelector('.root-loader');
-            if(loader) loader.style.visibility = null;
-            if (!('scrollRestoration' in history)) { utils.body.style.position = null; utils.body.style.width = null; utils.body.style.marginTop = null; }
-            // utils.body.classList.remove('progress');
 
+            if (!('scrollRestoration' in history)) {
+                var loader = document.querySelector('.root-loader');
+                if(loader) loader.style.visibility = null;
+                utils.body.style.minHeight = null; 
+
+                // utils.unblockScroll();
+            }
 
             utils.saveScroll();
         }))
@@ -884,9 +885,12 @@ function Atlant(){
                                             ,history: upstream.history
                     });
 
-                    if (scrollToTop.value && 'undefined' !== typeof window) {
+                    if (whenType === WhenOrMatch.when && scrollToTop.value && 'undefined' !== typeof window) {
+                        console.log('scrolling to top on when activation!')
                         window.scrollTo(0, 0);
-                    } 
+                    } else {
+                        console.log('Cancel scrolling ')
+                    }
 
                     var stream = injectsGrabber.add(name, depData, injects, upstream);
                     return stream;
@@ -1773,6 +1777,9 @@ function Atlant(){
     this.utils = require('./inc/tools'); // @TODO: rename to 'tools'
     this.utils.setTitle = this.utils.setTitle.bind(void 0, titleStore);
     this.utils.getTitle = this.utils.getTitle.bind(void 0, titleStore);
+    // Needed only for browsers not supporting canceling history.scrollRestoration
+    this.utils.blockScroll = this.utils.blockScroll;
+    this.utils.unblockScroll = this.utils.unblockScroll;
 
     this.state = {}
 

@@ -1,8 +1,9 @@
 "use strict";
 
-var utils = require('../utils');
-var _ = require('lodash');
-var s = require('./../lib');
+var utils = require('../utils')
+    ,_ = require('lodash')
+    ,s = require('./../lib')
+;
 
 var _test = function(path, mask){
     if ( !path || !mask ) return false;
@@ -66,6 +67,14 @@ var _getTitle = function(titleStore, title){
     return titleStore.value
 }
 
+var _blockScroll = function(){
+    return utils.blockScroll()
+}
+
+var _unblockScroll = function(){
+    return utils.unblockScroll()
+}
+
 module.exports = {
     // test :: path -> mask -> Bool
     test: _test
@@ -79,5 +88,7 @@ module.exports = {
     ,parseAll: _parseAll
     ,setTitle: _setTitle
     ,getTitle: _getTitle
+    ,unblockScroll: _unblockScroll
+    ,blockScroll: _blockScroll
 };
 
