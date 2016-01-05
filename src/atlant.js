@@ -664,8 +664,6 @@ function Atlant(){
                             console.log('will scroll to ', scrollTop, 'but height is:', bodyHeight)
 
                             console.log('scrollRestoration?:', 'scrollRestoration' in history)
-                            if (window.hey) 
-                                debugger;
 
                             // if (!('scrollRestoration' in history)) utils.body.classList.add('progress');
                             if (!('scrollRestoration' in history)) loader.style.visibility = 'visible';
@@ -680,9 +678,10 @@ function Atlant(){
 
 
                             finishScroll = (scrollTop => {
-                                if (!('scrollRestoration' in history)) window.scrollTo(0, scrollTop);
+                                if(window.debug)debugger;
                                 utils.body.style.minHeight = null;
                                 atlant.state.scrollRestoration = false;
+                                window.scrollTo(0, scrollTop);
                                 if (!('scrollRestoration' in history)) loader.style.visibility = null;
                                 // if (!('scrollRestoration' in history)) utils.body.classList.remove('progress');
                             }).bind(void 0, scrollTop);
@@ -709,7 +708,10 @@ function Atlant(){
                         });
                         if(finishScroll) { requestAnimationFrame(finishScroll) }
                     }
-                }catch(e){console.error(e.stack)}
+                }catch(e){
+                    atlant.state.scrollRestoration = false;
+                    console.error(e.stack)
+                }
             }.bind(void 0, sink);
             window.addEventListener( 'popstate', routeChanged );
             window.addEventListener( 'pushstate', routeChanged );
