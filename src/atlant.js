@@ -987,10 +987,10 @@ function Atlant(){
         var injects = injectsGrabber.init(depName, State.state);
 
         var thisCommonIf = State.state.lastOp
-            .map( function(u){ return _.extend( {}, u) } )
-            .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
-            .filter( function(_) { return _ } ) // Checking, should we continue or this stream already obsolete.
-            .map( function(_){ if ( activeStreamId.value !== _.id ) { console.log('NONSTOP')} return _ } ) // stayed here for debuggind purposes
+            .map( function(u){ return _.extend( {}, u) } ) // Copy
+            // .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
+            // .filter( function(_) { if(!_) console.log('checking active stream', _); return _ } ) // Checking, should we continue or this stream already obsolete.
+            // .map( function(_){ if ( activeStreamId.value !== _.id ) { console.log('NONSTOP')} return _ } ) // stayed here for debuggind purposes
 
 
         var thisIf = thisCommonIf
