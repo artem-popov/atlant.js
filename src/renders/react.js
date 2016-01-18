@@ -15,17 +15,17 @@ var State = function(React){
         this.getOrCreate = function(name) {
             if ( !wrappers[name] ) {
                 wrappers[name] = React.createClass({
-                    render: function(){ // name in this function is passed by value 
+                    render: function(){ // name in this function is passed by value
                         thises[name] = this;
                         if ( !views[name] ) views[name] = React.createElement('div');
 
                         if ( _.isArray( views[name] ) )
                             return  views[name][0]( _.extend( {}, this.props, views[name][1] ) )
-                        else 
+                        else
                             return views[name];
                     }
-            })}    
-            if ( !instances[name] ) {  // First time
+            })}
+            if ( !instances[name] ) {
                 instances[name] = React.createFactory(wrappers[name])();
             }
         }
@@ -84,7 +84,6 @@ var Render = function(React) {
         console.timeEnd('rendering view ' + name);
 
         return state.getInstance(name);  
-
     }
 
     this.clear = function(viewProvider, upstream, activeStreamId, name, scope ) {
@@ -110,13 +109,13 @@ var Render = function(React) {
         }
     }
 
-    /* Return ready string representation 
+    /* Return ready string representation
      * options parameter can be used to control what you will get.
      * */
     this.stringify = function(name, options) {
         if ( options && options.static)
             return React.renderToStaticMarkup(state.getInstance(name));
-        else 
+        else
             return React.renderToString(state.getInstance(name));
     }
 
@@ -127,13 +126,13 @@ var Render = function(React) {
     }
 
     this.list = function(){
-        return state.list(); 
+        return state.list();
     }
 
     this.put = function(name, component){
-        state.set(name, component);  
-        state.getOrCreate(name);
-        return component;
+        state.set(name, component);
+        state.getOrCreate(name);        
+        return state.getThis(name);
     }
 
     /**
