@@ -14,17 +14,17 @@ var State = function(React){
         this.getOrCreate = function(name) {
             if ( !wrappers[name] ) {
                 wrappers[name] = React.createClass({
-                    render: function(){ // name in this function is passed by value 
+                    render: function(){ // name in this function is passed by value
                         thises[name] = this;
                         if ( !views[name] ) views[name] = React.createElement('div');
 
                         if ( _.isArray( views[name] ) )
                             return  views[name][0]( _.extend( {}, this.props, views[name][1] ) )
-                        else 
+                        else
                             return views[name];
                     }
-            })}    
-            if ( !instances[name] ) 
+            })}
+            if ( !instances[name] )
                 instances[name] = React.createFactory(wrappers[name])();
         }
 
@@ -64,16 +64,16 @@ var Render = function(React) {
     var state = new State(React);
 
     this.name = 'React';
-    var rootName = void 0; // @TODO should be another way to recognize rootName, because there are can be more then 1 of attaches 
+    var rootName = void 0; // @TODO should be another way to recognize rootName, because there are can be more then 1 of attaches
 
     this.render = function(viewProvider, upstream, activeStreamId, name, scope ) {
         var rendered = new Promise( function( name, upstream, activeStreamId, viewProvider, scope, resolve, reject ){
             l.log('%cbegin rendering view ' + name, 'color: #0000ff');
             l.logTime('rendered view ' + name);
 
-            if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.  
+            if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.
                 // get new component somehow.
-                state.set(name, [viewProvider, scope]);  
+                state.set(name, [viewProvider, scope]);
             }
             // console.time('renering ' + name);
             state.getOrCreate(name);
@@ -82,7 +82,7 @@ var Render = function(React) {
             if( rootName !== name && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate(/* console.timeEnd.bind(console, 'renering ' + name) */);
 
             // console.log('Atlant.js: rendered the view.', name)
-            return resolve(state.getInstance(name));  
+            return resolve(state.getInstance(name));
         }.bind(void 0, name, upstream, activeStreamId, viewProvider, scope));
 
         return rendered;
@@ -120,13 +120,13 @@ var Render = function(React) {
         return attached;
     }
 
-    /* Return ready string representation 
+    /* Return ready string representation
      * options parameter can be used to control what you will get.
      * */
     this.stringify = function(name, options) {
         if ( options && options.static)
             return React.renderToStaticMarkup(state.getInstance(name));
-        else 
+        else
             return React.renderToString(state.getInstance(name));
     }
 
@@ -137,14 +137,14 @@ var Render = function(React) {
     }
 
     this.list = function(){
-        return state.list(); 
+        return state.list();
     }
 
     this.put = function(name, component){
         // console.log('Atlant.js: put the view.')
-        state.set(name, component);  
-        state.getOrCreate(name);
-        return component;
+        state.set(name, component);
+        state.getOrCreate(name);        
+        return state.getThis(name);
     }
 
     /**

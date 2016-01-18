@@ -1,3 +1,4 @@
+0.4.59 render view put returns instance of component
 0.4.58 fix jumps before pushstate in safe, plus implements useful functions to
 block the scroll (no used)
 0.4.57 remove canceling of obsolete if's
@@ -49,14 +50,14 @@ for atlant.
 0.4.24 fixes for server render. rewrited render end event. no more data
 returned in render end. atlant.utils.setTitle.
 atlant.when(something).scrollTop(true). instant redirects.
-0.4.23 fix '/' was "" for route matcher 
+0.4.23 fix '/' was "" for route matcher
 0.4.22 recognize "/story//moment", "/story/moment/" and
 "/story/moment/?some=weird&stuff" as "/story/moment" . cleanup, internally
 always think that above url is "/story/moment", not "/story/moment/"
 0.4.21 fix red color on whens without atoms, fix errors on old atoms counter
 (overweights)
-0.4.20 fix mistake 
-0.4.19 cut / from end of route 
+0.4.20 fix mistake
+0.4.19 cut / from end of route
 0.4.18 invisible server render compatibility improvements.
 	atlant.onServerEnd(callback) added
 0.4.17 server render compatibility fixes(api change)
@@ -87,7 +88,7 @@ saving the scrollHeight
 	- compatibility with server render
 	- atlant version another way + remove revision
 	- npmjs compat: lowercase package name
-0.4.0 
+0.4.0
 	- first of "adult" features: atlant.interceptor(), which provides scope
 	with { name: interceptedDependsName, value, interceptedValue }
 0.3.28
@@ -104,9 +105,9 @@ saving the scrollHeight
 	- fix .transfer().to()
 0.3.23
 	- nothing can stop .replace(), change(), move(), redirect()
-0.3.22 
+0.3.22
 	- fix .change() and .replace() wasn't provide .referrer information and
-	correct .location		
+	correct .location
 0.3.21
 	- better interface of utils.parse/test
 0.3.20
@@ -115,23 +116,23 @@ saving the scrollHeight
 	- redirect refreshed
 0.3.19
 	- actions now not increase/decrease render counter.
-	- fix actions not lowered whenCount 
+	- fix actions not lowered whenCount
 0.3.18
-	- implement .onDrawEnd() 
+	- implement .onDrawEnd()
 0.3.17
 	- .draw() bugfixes
 0.3.16
-	- introduce .draw() which is unblocked .render(). 
+	- introduce .draw() which is unblocked .render().
 	- remove .unblock()
 0.3.15
 	- introduce .change(url) which changes location to url and saves the
 	previous location in history
 	(.replace() doesn't save previous location in history)
-0.3.14 
+0.3.14
 	- fixes stoppable
 0.3.13
 	- only forceUpdate for mounted components (fixes non-drawed inner views)
-0.3.12 
+0.3.12
 	- begin update
 	- add .unblock() to convert when/lastWhen/etc to non-blocking stream of
 	rendering
@@ -140,9 +141,9 @@ saving the scrollHeight
 0.3.11
 	- move matchRoute to utils, and provide atlant.utils.parse('location',
 			'mask' ) and atlant.utils.parseAll('location', ['mask']) for user.
-0.3.10 
+0.3.10
 	-  fix .match() behaviour was like .lastWhen but should like .when()
-0.3.9 
+0.3.9
 	- data providers provides 'pattern' - most specific mask of this route.
 	'mask' now undefined in action
 0.3.8
@@ -158,29 +159,29 @@ saving the scrollHeight
 	Ignore all click on links with "target" attribute
 0.3.4
 	IE-10 fixes
-0.3.3 
+0.3.3
 	add data-atlant="await" to link for not canceling current downloads
-0.3.2 
+0.3.2
 	fix - clear counters if route changed and last route not finished
 	fix after task the task view was not forced to update
 	(temporary workaround) do not track rejected depends
-0.3.1 
+0.3.1
 	massive changes: syntax changes, refer to doc for last version.
-	server render not yet included but possible 
+	server render not yet included but possible
 0.3.0
 	massive change: improvements for server render to be reality
 0.2.12 use "decodeURIComponent" instead of deprecated "unescape"
 0.2.11 fix rendering same view several times - now first will stop this.
 0.2.10 all route change events will work only after publish(). publish() now
 accept "/route/:routeParam" argument
-0.2.9 
-	- fix internal error piping of render errors 
-	- (bug) 'view' can be rendered several times 
+0.2.9
+	- fix internal error piping of render errors
+	- (bug) 'view' can be rendered several times
 0.2.8 fix crash on "bad" json
 0.2.7 verbose promises errors, fix counter when render stopped, set common.js
 main point.
 0.2.6 verbose errors
-0.2.5 
+0.2.5
 	- fix that catched links which has inner elements
 	- fix links with no href
 	- implement .do() and .log()
@@ -188,13 +189,12 @@ main point.
 	do()/render()/depends()/if scopes
 	- more fine error catching
 0.2.4 fixed double render at page load in Safari
-0.2.3 
+0.2.3
 	- new method .onRenderEnd(callback) - called when everything is rendered
 	after route(state) change.
-0.2.2 
+0.2.2
 	- 'when' now accepts a string (not an array) and it is possible to use conditionals inside like "/faq || /about" ('&&' currently not supported )
 	- fixed "finally" worked even if condition not "finally"
 	- code cleanup (remove 'name' param of if, remove defaultView, defaultRender - use .set instead)
 0.2.1 current page hash links now just jump to element (past behaviour: route reloads)
 0.2.0 introduce the .finally for declaring "destructing" tree and begin changelog.
-
