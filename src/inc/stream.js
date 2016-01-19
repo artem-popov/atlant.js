@@ -77,10 +77,7 @@ var Stream = function(atlantState, prefs){
             // if (upstream.render.subscribe) streamState.subscribersCount++;
 
             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, value){ 
-                let start;
-                if ( 'undefined' !== typeof performance) { 
-                    start = performance.now();
-                }
+                let start = performanceNow();
 
                 value =  Object.keys(upstream.chains)
                     .map( _ => upstream.chains[_] )
@@ -90,13 +87,11 @@ var Stream = function(atlantState, prefs){
 
                 // value = _(upstream.chains).map(o=> _(o).map(_=>_).flatten().value() ).flatten().reduce( (acc, i) => _.extend(acc, i()), {}); // Actually it is slower :(
 
-                if ( 'undefined' !== typeof performance) { 
-                    if('undefined' === typeof window.selectCount) window.selectCount = 0;
-                    if('undefined' === typeof window.selectTime) window.selectTime = 0;
-                    window.selectTime = window.selectTime + performance.now() - start;
-                    window.selectCount++;
-                    window.getSelectTime = _ => window.selectTime/window.selectCount;
-                }
+                if('undefined' === typeof window.selectCount) window.selectCount = 0;
+                if('undefined' === typeof window.selectTime) window.selectTime = 0;
+                window.selectTime = window.selectTime + performance.now() - start;
+                window.selectCount++;
+                window.getSelectTime = _ => window.selectTime/window.selectCount;
 
                 let data = _.extend({}, scope, value );   
 

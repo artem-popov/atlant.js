@@ -22,6 +22,7 @@ function Atlant(){
         ,clientFuncs = require('./inc/clientFuncs')
         ,Storage = require('./inc/storage')
         ,types = require('./inc/types')
+        ,performanceNow = require('./inc/performanceNow')
     ;
 
     import console from './utils/log';
@@ -116,7 +117,7 @@ function Atlant(){
 
                     path = utils.rebuildURL(path);
 
-                    let finishScroll; 
+                    let finishScroll;
                     var loader = document.querySelector('.root-loader');
                     var trySetScroll = function(scrollTop){
                             if ('number' !== typeof scrollTop) return;
@@ -176,7 +177,7 @@ function Atlant(){
             if (!('scrollRestoration' in history)) {
                 var loader = document.querySelector('.root-loader');
                 if(loader) loader.style.visibility = null;
-                utils.body.style.minHeight = null; 
+                utils.body.style.minHeight = null;
 
                 // utils.unblockScroll();
             }
@@ -195,8 +196,8 @@ function Atlant(){
             if ( upstream.path ) { // get from sink
                 stream = upstream;
             } else { // get from published
-                var path = utils.rebuildURL( utils.getLocation() ); 
-                var referrer = utils.rebuildURL( utils.getReferrer() ); 
+                var path = utils.rebuildURL( utils.getLocation() );
+                var referrer = utils.rebuildURL( utils.getReferrer() );
 
                 stream = {
                     path: path
@@ -405,7 +406,6 @@ function Atlant(){
 
 
 
-
     var _check = function(isCheck) {
         if ( 'undefined' === typeof isCheck)
             throw new Error('Atlant.js: check require boolean parameter.')
@@ -583,7 +583,7 @@ function Atlant(){
     };
 
     var _serialize = function(serializeProvider){
-        var storeName = TopState.state.lastStoreName; 
+        var storeName = TopState.state.lastStoreName;
         if (!storeName) { throw new Error('.serialize() should be after .store()') }
         if ( 'function' === typeof atlantState.stores[storeName]._serialize ) { throw new Error("Serialize already implemented in store ", storeName)}
         if( 'function' !== typeof serializeProvider ) { throw new Error("Serialize should be a function for ", storeName)}
@@ -594,7 +594,7 @@ function Atlant(){
     }
 
     var _constructor = function(constructorProvider){
-        var storeName = TopState.state.lastStoreName; 
+        var storeName = TopState.state.lastStoreName;
         if (!storeName) { throw new Error('.constructor() should be after .store()') }
         if ( 'function' === typeof atlantState.stores[storeName]._constructor ) { throw new Error("Constructor already implemented in store ", storeName)}
         if( 'function' !== typeof constructorProvider ) { throw new Error("Constructor should be a function for ", storeName)}
@@ -613,7 +613,7 @@ function Atlant(){
                 if(serialize) setTimeout( function(){Storage.persist(storeName, serialize(newState))}, 1000);
             }
 
-            return newState 
+            return newState
         }.bind(void 0, storeName)).skipDuplicates().toEventStream();
 
         baseStreams.onValue(atlantState.stores[storeName].bus, function() {});
@@ -725,7 +725,7 @@ function Atlant(){
     this.push = _push;
 
     /**
-     * Stores! 
+     * Stores!
      */
     // Store registration
     this.store = _store;
@@ -785,7 +785,7 @@ function Atlant(){
 
     // Return view with viewName
     // this.view :: viewName
-    this.views.get = function(name) { 
+    this.views.get = function(name) {
         return prefs.render.get(name);
     }
 
@@ -803,7 +803,7 @@ function Atlant(){
     /**
      * Events!
      */
-    // Called everytime when route/action is rendered. 
+    // Called everytime when route/action is rendered.
     this.onRenderEnd =  _onRenderEnd;
     // Called when destroy initiated.
     this.onDestroy =  _onDestroy;
