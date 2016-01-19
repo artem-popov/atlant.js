@@ -1,3 +1,4 @@
+0.4.60 add performanceNow polyfill
 0.4.59 render view put returns instance of component
 0.4.58 fix jumps before pushstate in safe, plus implements useful functions to
 block the scroll (no used)
