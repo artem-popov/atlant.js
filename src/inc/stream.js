@@ -19,8 +19,9 @@ var Stream = function(atlantState, prefs){
     var withGrabber = new interfaces.withGrabber();
     var id = _.uniqueId();
     var root = baseStreams.bus();
-    var viewSubscriptionsUnsubscribe = {};
-    var viewSubscriptions = {};
+
+    import views from "../views/views";
+    let unsubscribeView = views(atlantState);
 
     var lastWhen;
 
@@ -54,29 +55,18 @@ var Stream = function(atlantState, prefs){
                 .catch( clientFuncs.catchError )
         }
 
-        let unsubscribeView = function(viewName){
-            try{
-                // turn off all subscriptions of selects for this view
-                if( viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
-                    viewSubscriptionsUnsubscribe[viewName]();
-                } 
-            } catch(e){
-                console.error('unsubscribe error', e.stack)
-            }
-        }
-
         let subscribeView = function(viewName, doRenderIntoView, scope, upstream){
 
             if ( !('chains' in upstream ) || !Object.keys(upstream.chains).length) return;  // If no store is selected for this view, then we should not subscribe on anything.
 
             let keys = Object.keys(upstream.chains);
 
-            viewSubscriptions[viewName] = Bacon
+            atlantState.viewSubscriptions[viewName] = Bacon
                 .mergeAll( keys.map(store => atlantState.stores[store].bus) );
 
             // if (upstream.render.subscribe) streamState.subscribersCount++;
 
-            viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, value){ 
+            atlantState.viewSubscriptionsUnsubscribe[viewName] = atlantState.viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, value){ 
                 let start = performanceNow();
 
                 value =  Object.keys(upstream.chains)

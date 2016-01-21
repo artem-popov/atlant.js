@@ -68,8 +68,12 @@ function Atlant(){
         }
         ,whens: {} // storing whens
         ,titleStore: { value: '' }
+        ,viewSubscriptionsUnsubscribe: {}
+        ,viewSubscriptions: {}
     }
 
+    import views from "./views/views";
+    let unsubscribeView = views(atlantState);
 
     // Patching goTo for further use
     var safeGoToCopy = utils.goTo;
@@ -783,6 +787,10 @@ function Atlant(){
         return prefs.render.put(viewName, component);
     }
 
+    this.views.break = function( viewName ){
+        unsubscribeView(viewName);
+    }
+
     // Return view with viewName
     // this.view :: viewName
     this.views.get = function(name) {
@@ -864,4 +872,3 @@ function Atlant(){
 
 if ('undefined' !== typeof window) window.Atlant = Atlant;
 module.exports = Atlant;
-
