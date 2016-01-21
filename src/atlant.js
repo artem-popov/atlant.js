@@ -118,6 +118,19 @@ function Atlant(){
     }
     utils.clearState();
 
+    var unsubscribeView = function (viewName) {
+        try {
+            // turn off all subscriptions of selects for this view
+            if (viewSubscriptionsUnsubscribe[viewName]) {
+                // finish Bus if it exists;
+                viewSubscriptionsUnsubscribe[viewName]();
+                // console.log('atom: unsubscribe', viewName)
+            }
+        } catch (e) {
+            console.error('unsubscribe error', e.stack);
+        }
+    };
+
     /* Helpers */
     var assignRenders = function(){
 
@@ -173,18 +186,6 @@ function Atlant(){
                 })
                 .then( whenRenderedSignal )
                 .catch( clientFuncs.catchError )
-        }
-
-        let unsubscribeView = function(viewName){
-            try{
-                // turn off all subscriptions of selects for this view
-                if( viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
-                    viewSubscriptionsUnsubscribe[viewName]();
-                    // console.log('atom: unsubscribe', viewName)
-                }
-            } catch(e){
-                console.error('unsubscribe error', e.stack)
-            }
         }
 
         let subscribeView = function(viewName, doRenderIntoView, scope, upstream){
@@ -1722,6 +1723,10 @@ function Atlant(){
         return prefs.render.put(viewName, component);
     }
 
+    this.views.break = function( viewName ){
+        unsubscribeView(viewName);
+    }
+
     // Return view with viewName
     // this.view :: viewName
     this.views.get = function(name) {
@@ -1806,4 +1811,3 @@ function Atlant(){
 
 if ('undefined' !== typeof window) window.Atlant = Atlant;
 module.exports = Atlant;
-
