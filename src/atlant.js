@@ -1484,7 +1484,7 @@ function Atlant(){
         }.bind(void 0, arr), Depends.continue );
     }
 
-    var _select = function(isAtom, dependsBehaviour, partName, storeName, dependsOn) {
+    var _select = function(dependsBehaviour, isAtom, partName, storeName, dependsOn) {
         if (!(storeName in stores)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(', storeName + ')');
         if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(' + storeName + ')');
         if ( dependsOn && 'string' !== typeof dependsOn ) throw new Error('atlant.js: dependsOn param should be a string' );
