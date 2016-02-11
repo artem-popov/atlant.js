@@ -24,8 +24,28 @@ RenderOperationKey[RenderOperation.refresh] = 'refresh';
 RenderOperationKey[RenderOperation.move] = 'move'; 
 RenderOperationKey[RenderOperation.nope] = 'nope'; 
 
+// Matching enum for when.
+var Matching = {
+    stop: _.uniqueId()
+        ,continue: _.uniqueId()
+}
+
+var WhenOrMatch = {
+    when: _.uniqueId()
+        ,match: _.uniqueId()
+}
+
+// Depends enum
+var Depends = {
+    async: _.uniqueId()
+        ,continue: _.uniqueId()
+}
+
 
 module.exports = {
-    RenderOperation: RenderOperation,
-    RenderOperationKey: RenderOperationKey  
+    RenderOperation,
+    RenderOperationKey,
+    Depends,
+    WhenOrMatch,
+    Matching
 }

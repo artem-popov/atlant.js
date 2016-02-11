@@ -95,8 +95,7 @@ var Stat = function(){
     // asked by canceled ifs to pipe into removeUpdates and removeRenders
     var getTokenByUrl = function(token, actionId, url, ifId){
 
-        return tools
-            .returnAll(url, this.whens() )
+        return (tools.returnAll(url, this.whens() ) || [])
             .filter(function(_){ 
                 return actionId in statObject[_] 
             })
