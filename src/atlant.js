@@ -637,7 +637,6 @@ function Atlant(){
             if ( 'undefined' === typeof window) return;
             var routeChanged = function(sink, event) {
 
-                console.log( event instanceof PopStateEvent  ? "popstate" : "pushstate" );
                 try{
                     var path;
 
@@ -662,10 +661,10 @@ function Atlant(){
 
                             if (bodyHeight < scrollTop) {
                                 utils.body.style.minHeight = (scrollTop + window.innerHeight) + 'px';
-                                console.log('set min height to ', utils.body.style.minHeight)
+                                // console.log('set min height to ', utils.body.style.minHeight)
                             }
 
-                            console.log('scrolling to1:', scrollTop)
+                            // console.log('scrolling to1:', scrollTop)
 
                             window.scrollTo(0, scrollTop)
 
@@ -675,7 +674,7 @@ function Atlant(){
                                 // utils.unblockScroll();
                                 atlant.state.scrollRestoration = false;
                                 window.scrollTo(0, scrollTop);
-                                console.log('scrolling to2:', scrollTop)
+                                // console.log('scrolling to2:', scrollTop)
                                 if (!('scrollRestoration' in history)) loader.style.visibility = null;
                             }).bind(void 0, scrollTop);
 
@@ -883,11 +882,8 @@ function Atlant(){
                     });
 
                     if (whenType === WhenOrMatch.when && scrollToTop.value && 'undefined' !== typeof window) {
-                        console.log('scrolling to top on when activation!')
                         window.scrollTo(0, 0);
-                    } else {
-                        console.log('Cancel scrolling ')
-                    }
+                    } 
 
                     var stream = injectsGrabber.add(name, depData, injects, upstream);
                     return stream;

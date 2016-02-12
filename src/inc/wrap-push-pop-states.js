@@ -1,17 +1,25 @@
 "use strict";
 //https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent
 // Polyfill for "new CustomEvent"
-if('undefined' !== typeof window && 'CustonEvent' in window) (function () {
-  function CustomEvent ( event, params ) {
-    params = params || { bubbles: false, cancelable: false, detail: undefined };
-    var evt = document.createEvent( 'CustomEvent' );
-    evt.initCustomEvent( event, params.bubbles, params.cancelable, params.detail );
-    return evt;
-   };
+if( 'undefined' !== typeof window ) (function () {
 
-  CustomEvent.prototype = window.Event.prototype;
+    try {
+        new CustomEvent('test');
+        return;
+    } catch(e) {
+        // ignore this error and continue below
+    }
 
-  window.CustomEvent = CustomEvent;
+    function CustomEvent ( event, params ) {
+        params = params || { bubbles: false, cancelable: false, detail: undefined };
+        var evt = document.createEvent( 'CustomEvent' );
+        evt.initCustomEvent( event, params.bubbles, params.cancelable, params.detail );
+        return evt;
+    };
+
+    CustomEvent.prototype = window.Event.prototype;
+
+    window.CustomEvent = CustomEvent;
 })();
 
 /**

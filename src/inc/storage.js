@@ -7,7 +7,7 @@ var Storage = {
         window.removeEventListener('storage', this.onChange)
     },
     onChange: function(key, newValue, oldValue, storageArea, url){
-        console.log('storage changed',key, newValue, oldValue, storageArea, url)
+        // console.log('storage changed',key, newValue, oldValue, storageArea, url)
     },
     setStorage: function(storage){
         this.storage = storage
