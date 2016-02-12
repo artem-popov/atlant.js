@@ -1,14 +1,11 @@
 "use strict";
+
 //https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent
 // Polyfill for "new CustomEvent"
-if( 'undefined' !== typeof window ) (function () {
+(function () {
 
-    try {
-        new CustomEvent('test');
-        return;
-    } catch(e) {
-        // ignore this error and continue below
-    }
+    if( 'undefined' === typeof window ) return;
+    if ( typeof window.CustomEvent === "function" ) return;
 
     function CustomEvent ( event, params ) {
         params = params || { bubbles: false, cancelable: false, detail: undefined };
