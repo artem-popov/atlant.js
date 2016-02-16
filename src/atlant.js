@@ -26,7 +26,7 @@ function Atlant(){
         ,Stat = require('./inc/statistics')
         ,Storage = require('./inc/storage')
         ,performanceNow = require('./inc/performanceNow')
-    ;
+        ,wrapPushState = require( './inc/wrap-push-pop-states.js').wrapPushState 
 
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
@@ -545,8 +545,7 @@ function Atlant(){
 
     // Browser specific actions.
     if ('undefined' !== typeof window) {
-        var states = require( './inc/wrap-push-pop-states.js');
-        states.wrapPushState(window);
+        wrapPushState(window);
 
         // Subscribe to clicks and keyboard immediatelly. Document already exists.
         utils.attachGuardToLinks();
@@ -661,10 +660,8 @@ function Atlant(){
 
                             if (bodyHeight < scrollTop) {
                                 utils.body.style.minHeight = (scrollTop + window.innerHeight) + 'px';
-                                // console.log('set min height to ', utils.body.style.minHeight)
                             }
 
-                            // console.log('scrolling to1:', scrollTop)
 
                             window.scrollTo(0, scrollTop)
 
@@ -674,9 +671,11 @@ function Atlant(){
                                 // utils.unblockScroll();
                                 atlant.state.scrollRestoration = false;
                                 window.scrollTo(0, scrollTop);
-                                // console.log('scrolling to2:', scrollTop)
                                 if (!('scrollRestoration' in history)) loader.style.visibility = null;
                             }).bind(void 0, scrollTop);
+
+                            if(!window.history.pushState.overloaded)wrapPushState(window);
+
 
                     }
 
@@ -688,6 +687,7 @@ function Atlant(){
                         })
                     }
 
+
                     l.log('the route is changed!')
                     if (path !== lastPath || (event && event.detail && event.detail.state && event.detail.state.forceRouteChange)) {
                         // if (!('scrollRestoration' in history)) { utils.unblockScroll();  } // removing fixed just before rendering
@@ -697,8 +697,8 @@ function Atlant(){
                             ,history: event
                             // ,postponed: postponedCleanup
                         });
-                        if(finishScroll) { requestAnimationFrame(finishScroll) }
                     }
+                    if(finishScroll) { requestAnimationFrame(finishScroll) }
                 }catch(e){
                     atlant.state.scrollRestoration = false;
                     if (!('scrollRestoration' in history)) loader.style.visibility = null;
@@ -985,9 +985,6 @@ function Atlant(){
 
         var thisCommonIf = State.state.lastOp
             .map( function(u){ return _.extend( {}, u) } ) // Copy
-            // .map( function(_){ if ( activeStreamId.value !== _.id ) { return void 0 } else { return _ } } )
-            // .filter( function(_) { if(!_) console.log('checking active stream', _); return _ } ) // Checking, should we continue or this stream already obsolete.
-            // .map( function(_){ if ( activeStreamId.value !== _.id ) { console.log('NONSTOP')} return _ } ) // stayed here for debuggind purposes
 
 
         var thisIf = thisCommonIf
@@ -1019,13 +1016,11 @@ function Atlant(){
         thisIfNegate.onValue(function(ifId, actionId, condition, u){
             var renders = statistics.getRendersByUrl(actionId, lastPath, ifId);
             if(renders.length) {
-                // console.log('negating renders...:', renders)
                 statistics.removeRenders(u.whenId, u.masks, renders);
                 renderRecalculateSignal.push({id: u.id, whenId: u.whenId, itemIds: renders});
             }
             var updates = statistics.getUpdatesByUrl(actionId, lastPath, ifId);
             if(updates.length) {
-                // console.log("negating UPDATES:", updates )
                 statistics.removeUpdates(u.whenId, u.masks, updates);
                 atomRecalculateSignal.push({id: u.id, whenId: u.whenId});
             }

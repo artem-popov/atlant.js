@@ -46,6 +46,7 @@ var wrapPushState = function(window){
 
         return tryState(arguments);
     };
+    window.history.pushState.overloaded = true;
 
 };
 

@@ -1,3 +1,5 @@
+0.4.65 fix safari when switching from site to site by pushstate/popstate
+buttons, set default native implementation of pushstate event
 0.4.64 raise version
 0.4.63 fix CustomEvent polyfill
 0.4.62 fix atlant.query()
