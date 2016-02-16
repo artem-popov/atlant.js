@@ -23,7 +23,7 @@ function Atlant(){
         ,Storage = require('./inc/storage')
         ,types = require('./inc/types')
         ,performanceNow = require('./inc/performanceNow')
-    ;
+        ,wrapPushState = require( './inc/wrap-push-state.js').wrapPushState 
 
     import console from './utils/log';
     import Stream from './inc/stream';
@@ -91,8 +91,7 @@ function Atlant(){
     // Browser specific actions.
     // registering wrapPushState, attaching atlant events to links
     if ('undefined' !== typeof window) {
-        var states = require( './inc/wrap-push-state.js');
-        states.wrapPushState(window);
+        wrapPushState(window);
 
         // Subscribe to clicks and keyboard immediatelly. Document already exists.
         utils.attachGuardToLinks();
@@ -146,6 +145,9 @@ function Atlant(){
                                 if (!('scrollRestoration' in history)) loader.style.visibility = null;
                             }).bind(void 0, scrollTop);
 
+                            if(window && !window.history.pushState.overloaded) wrapPushState(window);
+
+
                     }
 
                     if ( event instanceof PopStateEvent ) {
@@ -164,8 +166,8 @@ function Atlant(){
                             ,history: event 
                             // ,postponed: postponedCleanup
                         });
-                        if(finishScroll) { requestAnimationFrame(finishScroll) }
                     }
+                    if(finishScroll) { requestAnimationFrame(finishScroll) }
                 }catch(e){
                     atlant.state.scrollRestoration = false;
                     if (!('scrollRestoration' in history)) loader.style.visibility = null;
