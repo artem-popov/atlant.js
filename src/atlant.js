@@ -1413,17 +1413,17 @@ function Atlant(){
 
         if( !(updaterName in emitStreams ) ) emitStreams[updaterName] = baseStreams.bus();
 
-        baseStreams.onValue(emitStreams[updaterName], function(storeName, updater, scope){ // scope is the value of .update().with(scope) what was pushed in
-            stores[storeName].changes.push( function(scope, updater, state){  // state is the value which passed through atom
+        baseStreams.onValue(emitStreams[updaterName], function(storeName, updater, updaterName, scope){ // scope is the value of .update().with(scope) what was pushed in
+            stores[storeName].changes.push( function(scope, updater, storeName, updaterName, state){  // state is the value which passed through atom
                 try {
                     // console.log('UPDATE:', updaterName, scope, storeName);
                     return updater( state, scope );
                 } catch(e) {
-                    console.error('atlant.js: Warning: updater failed', e)
+                    console.error('atlant.js: Warning: updater "' + updaterName + '" failed on store "' + storeName + '"', e)
                     return state
                 }
-            }.bind(void 0, scope, updater))
-        }.bind(void 0, storeName, updater));
+            }.bind(void 0, scope, updater, storeName, updaterName))
+        }.bind(void 0, storeName, updater, updaterName));
 
         return this;
     }
@@ -1476,8 +1476,8 @@ function Atlant(){
     }
 
     var _select = function(dependsBehaviour, isAtom, partName, storeName, dependsOn) {
-        if (!(storeName in stores)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(', storeName + ')');
-        if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(' + storeName + ')');
+        if (!(storeName in stores)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store("', storeName + '")');
+        if (!(partName in stores[storeName].parts)) throw new Error('atlant.js: part "' + partName + '" not defined in store "' + storeName + '" . Use atlant.store("' + storeName + '").part(...)');
         if ( dependsOn && 'string' !== typeof dependsOn ) throw new Error('atlant.js: dependsOn param should be a string' );
 
         statistics.whenStat({actionId: TopState.state.lastActionId, masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], atom: storeName });
