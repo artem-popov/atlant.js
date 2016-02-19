@@ -638,16 +638,16 @@ function Atlant(){
 
         if( !(updaterName in atlantState.emitStreams ) ) atlantState.emitStreams[updaterName] = baseStreams.bus();
         
-        baseStreams.onValue(atlantState.emitStreams[updaterName], function(storeName, updater, scope){ // scope is the value of .update().with(scope) what was pushed in
-            atlantState.stores[storeName].changes.push( function(scope, updater, state){  // state is the value which passed through atom
-                try { 
+        baseStreams.onValue(atlantState.emitStreams[updaterName], function(storeName, updater, updaterName, scope){ // scope is the value of .update().with(scope) what was pushed in
+            stores[storeName].changes.push( function(scope, updater, storeName, updaterName, state){  // state is the value which passed through atom
+                try {
                     return updater( state, scope );
-                } catch(e) { 
-                    console.warn('Warning: updater failed', e)
+                } catch(e) {
+                    console.error('Warning: updater "' + updaterName + '" failed on store "' + storeName + '"', e)
                     return state
                 }
-            }.bind(void 0, scope, updater))
-        }.bind(void 0, storeName, updater));
+            }.bind(void 0, scope, updater, storeName, updaterName))
+        }.bind(void 0, storeName, updater, updaterName));
 
         return this;
     }
