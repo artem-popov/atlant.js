@@ -303,10 +303,12 @@ function Atlant(){
                             return;
                         } else if (RenderOperation.move === upstream.render.renderOperation){
 
-                            if ('function' === typeof viewProvider)
-                                window.location.assign(viewProvider(scope))
-                            else
-                                window.location.assign(viewProvider)
+                            if( 'undefined' !== typeof winfow) {
+                                if ('function' === typeof viewProvider)
+                                    window.location.assign(viewProvider(scope))
+                                else
+                                    window.location.assign(viewProvider)
+                            }
 
                             return;
                         } else {
