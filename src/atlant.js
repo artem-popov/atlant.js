@@ -871,7 +871,7 @@ function Atlant(){
                     // Storing here the data for actions.
                     lastMask.push(upstream.route.mask);
 
-                    var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
+                    var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params));
                     var depData = s.merge( params, {
                                             location: upstream.path
                                             ,mask: upstream.route.mask
@@ -881,15 +881,15 @@ function Atlant(){
                                             ,history: upstream.history
                     });
 
-                    if (whenType === WhenOrMatch.when && scrollToTop.value && 'undefined' !== typeof window) {
+                    if (whenType === WhenOrMatch.when && ( 'function' === typeof scrollToTop.value ? scrollToTop.value(params) :scrollToTop.value ) && 'undefined' !== typeof window) {
                         window.scrollTo(0, 0);
-                    } 
+                    }
 
                     var stream = injectsGrabber.add(name, depData, injects, upstream);
                     return stream;
-                }.bind(void 0, whenId, whenType, stats, name, injects, masks, whenMasks, scrollToTop))
+                }.bind(void 0, whenId, whenType, stats, name, injects, masks, whenMasks, scrollToTop));
 
-            State.state.lastWhen = State.state.lastWhen.map( function(whenId, stream) { stream.conditionId = whenId; return stream; }.bind(void 0, whenId))
+            State.state.lastWhen = State.state.lastWhen.map( function(whenId, stream) { stream.conditionId = whenId; return stream; }.bind(void 0, whenId));
 
             State.state.lastIf = void 0;
             State.state.lastDep = void 0;
