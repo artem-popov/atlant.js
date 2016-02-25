@@ -297,7 +297,7 @@ function Atlant(){
                 };
                 atlantState.whenData = depData;
 
-                if (whenData.when.type === types.WhenOrMatch.when && whenData.scrollToTop.value && 'undefined' !== typeof window) {
+                if (whenData.when.type === types.WhenOrMatch.when && ('function' === typeof whenData.scrollToTop.value ? whenData.scrollToTop.value(depData.params) : whenData.scrollToTop.value) && 'undefined' !== typeof window) {
                     window.scrollTo(0, 0);
                 } 
 

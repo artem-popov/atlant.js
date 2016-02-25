@@ -1,3 +1,4 @@
+0.4.66 method .scrollToTop() now can take function as parameter
 0.4.65 fix safari when switching from site to site by pushstate/popstate
 buttons, set default native implementation of pushstate event
 0.4.64 raise version
