@@ -14,14 +14,6 @@ The slides folder have slides of April 10 of 2014.
 The talk was about previous version of atlant.js named routeStreams.js.
 DSL is a little obsolete.
 
-##Where is the angular.js version?
-
-```js
-src/angular/ng-s-atlant-route.js // main service, which accepts routes declarations.
-src/angular/ng-s-atlant-params.js // service, which publish route params info
-src/angular/ng-s-atlant-utils.js // internal utilities (do not use :)
-```
-
 ##Which renders available?
 
 - react render
