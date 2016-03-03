@@ -79,10 +79,12 @@ var Render = function(React) {
             state.getOrCreate(name);
             var instance = state.getThis(name);
 
-            if( rootName !== name && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate(/* console.timeEnd.bind(console, 'renering ' + name) */);
+            if( rootName !== name && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate( _ => {
+                    /* console.timeEnd.bind(console, 'renering ' + name) */
+                    return resolve(state.getInstance(name));  
+            });
 
             // console.log('Atlant.js: rendered the view.', name)
-            return resolve(state.getInstance(name));  
         }.bind(void 0, name, upstream, activeStreamId, viewProvider, scope));
 
         return rendered;

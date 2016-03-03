@@ -20,12 +20,12 @@ function Atlant(){
         ,interfaces = require('./inc/interfaces')
         ,StateClass = require('./inc/state')
         ,clientFuncs = require('./inc/clientFuncs')
-        ,baseStreams = require('./inc/base-streams')
         ,Stat = require('./inc/statistics')
         ,Storage = require('./inc/storage')
     ;
 
-    import _stream from './inc/stream';
+    import _stream from './inc/stream'
+    import baseStreams from "./inc/base-streams"
 
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
@@ -44,7 +44,6 @@ function Atlant(){
 
     var activeRenderEnd;
 
-    var viewSubscriptions = {};
 
     var lastFinallyStream;
     var prefs = {
@@ -58,6 +57,10 @@ function Atlant(){
             ,pre: void 0
             ,attachedViews: []
             ,onDrawEndCallbacks:[]
+    }
+
+    if ('undefined' !== typeof window) {  // Should be defined for debuggins reasons
+        if (!window.stores) window.stores = {};
     }
 
     var injectsGrabber = new interfaces.injectsGrabber();
@@ -416,6 +419,7 @@ function Atlant(){
                     ,referrer: upstream.referrer
                     ,history: upstream.history
                 };
+                atlantState.whenData = depData;
 
                 if (whenData.when.type === types.WhenOrMatch.when && whenData.scrollToTop.value && 'undefined' !== typeof window) {
                     console.log('scrolling to top on when activation!')
@@ -441,6 +445,7 @@ function Atlant(){
     var _when = function(){
 
         return function(masks, fn, matchingBehaviour, whenType) {
+            TopState.first();
 
             if ( -1 !== masks.indexOf('&&')) throw new Error('&& declarations not yet supported.')
             masks = masks
@@ -493,8 +498,24 @@ function Atlant(){
         };
     }();
 
-    var _action = function(action, isAction, depCode){
+    var _action = function(action, fn, isAction, depCode){
         TopState.first();
+
+        if (!action) throw new Error('Atlant.js: action stream is not provided!');
+        if (!fn) throw new Error('Atlant.js: follow stream function is not provided!');
+
+        action.onValue(function(depValue){
+            if ('undefined' === typeof depValue) {
+                depValue = {};
+            }
+            if ('object' === typeof depValue) {
+                depValue = Object.assign(depValue, atlantState.whenData);
+            }
+
+            var stream = fn( depValue ); 
+            stream.push( depValue )
+
+        })
 
 
         return this;
@@ -736,10 +757,7 @@ function Atlant(){
             var newState = updater(s.copy(state)); // Copying here is necessary for successfull equality checks: else this checks will return always true
             atlantState.stores[storeName].staticValue = newState;
 
-            if ('undefined' !== typeof window) {
-                if (!window.stores) window.stores = {};
-                window.stores[storeName] = newState;
-            }
+            window.stores[storeName] = newState;
 
             {
                 let serialize = atlantState.stores[storeName]._serialize;
@@ -810,9 +828,8 @@ function Atlant(){
         prefs.render.destroy(); // Destroying view cache
 
         baseStreams.destroy(); 
-        baseStreams = null;
 
-        s = l = simpleRender = reactRender = utils = Bacon = _ = interfaces = StateClass = clientFuncs =  baseStreams = safeGoToCopy = null;// @TODO more
+        s = l = simpleRender = reactRender = utils = Bacon = _ = interfaces = StateClass = clientFuncs =  safeGoToCopy = null;// @TODO more
 
         onDestroyStream.push();
     }
@@ -840,17 +857,17 @@ function Atlant(){
     this.match = function(masks, fn) { return _when.bind(this)( masks, fn, types.Matching.continue, types.WhenOrMatch.match ); }
 
     // declare branch that will work if no routes declared by .when() are matched. Routes declared by .match() will be ignored even if they matched.
-    this.otherwise = function() { return _action.call(this, otherwiseStream, false, 'otherwise'); }
+    this.otherwise = function(fn) { return _action.call(this, otherwiseStream, fn, false, 'otherwise'); }
 
     // Creates stream which will be called when render error is happend
-    this.error = function() { return _action.call(this, errorStream, false, 'error'); }
+    this.error = function(fn) { return _action.call(this, errorStream, fn, false, 'error'); }
 
 
     // Creates stream which will be called when status!= undefined is happend @TODO change this to : when reject is happend
     // this.catch = _catch;
 
     // Creates custom stream which accepts Bacon stream
-    this.action = function(action) { return _action.call(this, action, true, 'action'); }
+    this.action = function(action, fn) { return _action.call(this, action, fn, true, 'action'); }
 
     // creates branch which can destruct all what declared by .when() or .match()
     // this.finally =  _finally; // was removed, not reimplemented yet 

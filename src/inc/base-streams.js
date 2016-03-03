@@ -33,6 +33,6 @@ baseStreams.destroy = function() {
     unsubs.length = 0;
 }
 
-module.exports = baseStreams;
+export default baseStreams;
 
 
