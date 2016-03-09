@@ -52,7 +52,6 @@ var Stream = function(atlantState, prefs){
                     stream.selects = selects;
                     upstream.selects = selects;
 
-                    console.log('rendered!')
                     if(_.code && 'notActiveStream' === _.code){
                     } else {
                         stream.render.component = _;  // pass rendered component. it stale hold before streams get zipped.
@@ -67,7 +66,6 @@ var Stream = function(atlantState, prefs){
                 // turn off all subscriptions of selects for this view
                 if( viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
                     viewSubscriptionsUnsubscribe[viewName]();
-                    // console.log('atom: unsubscribe', viewName)
                 } 
             } catch(e){
                 console.error('unsubscribe error', e.stack)
@@ -79,7 +77,6 @@ var Stream = function(atlantState, prefs){
             if ( !('chains' in upstream ) || !Object.keys(upstream.chains).length) return;  // If no store is selected for this view, then we should not subscribe on anything.
 
             let keys = Object.keys(upstream.chains);
-            // console.log('chains:', keys, viewName, upstream.chains);
 
             viewSubscriptions[viewName] = Bacon
                 .mergeAll( keys.map(store => atlantState.stores[store].bus) );
@@ -206,22 +203,24 @@ var Stream = function(atlantState, prefs){
                                 render = prefs.render.clear.bind(prefs.render)
                             }
 
-                            var doRenderIntoView = renderIntoView.bind(void 0, viewProvider, upstream, viewName, render)
-
+                            var doRenderIntoView = renderIntoView.bind(void 0, viewProvider, upstream, viewName, render);
                             atlantState.viewData[viewName] = scope;
-                            let renderResult = doRenderIntoView(scope) // Here we using scope updated from store!
-                            console.log('command to renderx')
 
                             unsubscribeView(viewName);
+
+                            var renderResult = doRenderIntoView(scope); // sync operation 
+
 
                             if (upstream.render.subscribe && types.RenderOperation.clear !== upstream.render.renderOperation )  // Subscriber only after real render - Bacon evaluates subscriber immediately
                                 subscribeView(viewName, doRenderIntoView, scope, upstream)
 
-                            if (upstream.masks) {
-                                statistics.whenStat({ actionId: upstream.whenId, masks: upstream.masks.slice(), view: viewName });
-                            } 
+                            // if (upstream.masks) {
+                            //     statistics.whenStat({ actionId: upstream.whenId, masks: upstream.masks.slice(), view: viewName });
+                            // } 
 
-                            return renderResult;
+                            upstream.render.component = renderResult;
+                            return upstream;
+ 
                         }
 
                     } catch (e) {
@@ -251,7 +250,6 @@ var Stream = function(atlantState, prefs){
 
         lastWhen = root
             .map( function(depName, injects, nameContainer, stats, whenId, depValue) {
-                console.log('imhere!!!!!!!!!!!!!!!!!!!!', depName, injects, stats, nameContainer, depValue);
                 if ( 'undefined' === typeof depValue ) {
                     depValue = {}
                 }
@@ -351,7 +349,6 @@ var Stream = function(atlantState, prefs){
                 .map(function(depName, store, dep, isAtom, upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
 
                     // if( !('ref' in upstream) || 'undefined' === typeof upstream.ref || '' === upstream.ref  ) { 
-                    //     console.log('log:', upstream, store, dep);
                     //     throw new Error('Every select should have name.')
                     // }
  
@@ -550,22 +547,6 @@ var Stream = function(atlantState, prefs){
                 State.rollback(); 
             }
         }
-        var attachIfNeed = (renderOperation, viewName, _) => {
-            if (( renderOperation === types.RenderOperation.render || renderOperation === types.RenderOperation.draw ) && viewName in prefs.attachedViews)  { // @TODO check it doesnt attach too much
-                return prefs
-                    .render.attach(viewName, prefs.attachedViews[viewName])
-                    .catch(function(e) {
-                        console.error(e.message, e.stack);
-                        errorStream.push(e);
-                    })
-                    .then( _ => { 
-                        s.logIt(viewName, "attached to ", prefs.attachedViews[viewName]) 
-
-                    })
-            } else { 
-                return _
-            }
-        };
         return function(renderProvider, viewName, once, renderOperation){
             // /check
             if ( ! State.state.lastOp ) throw new Error('"render" should nest something');
@@ -576,7 +557,7 @@ var Stream = function(atlantState, prefs){
             s.type(viewName, 'string');
             s.type(renderOperation, 'number')
             closeBlock = closeBlock.bind(this, renderProvider, viewName );
-            if(renderOperation === types.RenderOperation.nope) { closeBlock(); return this; } // Do nothing if "nope"
+            if(renderOperation === types.RenderOperation.nope) { State.state.lastOp.onValue(_=>_); closeBlock(); return this; } // Do nothing if "nope"
             viewName = viewName || s.last(prefs.viewState);
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             // ------end of check/
@@ -586,21 +567,23 @@ var Stream = function(atlantState, prefs){
 
             
             var renderStream = State.state.lastOp.map( function(upstream){
-                if (!upstream.isAction && upstream.id !== atlantState.activeStreamId.value) return; // Obsolete streams invoked on previous route.
+                if (!upstream.isAction && upstream.id !== atlantState.activeStreamId.value) return Bacon.never(); // Obsolete streams invoked on previous route.
 
 
                 upstream.render = { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: types.RenderOperationKey[renderOperation], subscribe: subscribe, parent: State.state.lastOpId };
             
-                console.log('preparing to render:', upstream.render)
-                return Bacon.fromPromise( renderView(upstream).then( attachIfNeed.bind(void 0, renderOperation, viewName) ).then( _ => upstream) );
-            });
+                return renderView(upstream)
+            })
 
             State.state.lastOp = renderStream;
+            State.state.lastOpId = renderId;
+
+
 
             renderStream.onValue( _ => {
-                if ( renderOperation === types.RenderOperation.draw )  { 
-                    prefs.onDrawEndCallbacks.forEach( _ => _() ) // process user onDrawEnd signal
-                }
+             // if ( renderOperation === types.RenderOperation.draw )  { 
+                //     prefs.onDrawEndCallbacks.forEach( _ => _() ) // process user onDrawEnd signal
+                // }
             })
 
             closeBlock();
@@ -625,8 +608,6 @@ var Stream = function(atlantState, prefs){
         streamState.updates.swap(_ => _ + 1);
 
         return _depends.bind(this)( function(key, id){
-            if ( key in atlantState.emitStreams ) console.log('hoho!--:', atlantState.emitStreams, key, id)
-
             if ( key in atlantState.emitStreams ) atlantState.emitStreams[key].push(id);
             else console.log("\nAtlant.js: Warning: event key" + key + " is not defined");
         }.bind(void 0, key), dependsBehaviour);
@@ -765,7 +746,7 @@ var Stream = function(atlantState, prefs){
     this.nope = function(){ return _render.bind(this)(void 0, void 0, 'once', types.RenderOperation.nope)}
 
     this.push = _ => {
-        root.onValue( _ =>( console.log("stream Oresult:", _ ) , console.log('stream updates:', streamState.updates.unwrap())));
+        root.onValue( _ => streamState.updates.unwrap() );
         root.push(_)
     }
     this.onValue = _ => {

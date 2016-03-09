@@ -113,7 +113,7 @@ var catchError = function(e) {
     if (e && e.stack) {
         console.error(e.message, e.stack);
     } else {
-        console.error(e);
+        console.error('Unknown error');
     }
     return e;
 }

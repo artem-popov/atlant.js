@@ -145,7 +145,6 @@ utils.clearState = function(){
 }
 
 utils.saveScroll = _.debounce(function(event){
-    console.log('event:', event)
     var state = { ...history.state, scrollTop: window.pageYOffset};
 
     window.history.replaceState(state, null);
@@ -326,7 +325,6 @@ utils.sanitizeUrl = function(url){
 
 utils.blockScroll = function(titleStore, title){// freezing view;
     var scrollPosition = window.scrollY;
-    console.log('scrollPosition:', scrollPosition)
     if (utils.body && !('scrollRestoration' in history)) { 
         utils.body.style.position = 'fixed'; 
         utils.body.style.width = '100%'; 

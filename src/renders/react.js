@@ -24,8 +24,9 @@ var State = function(React){
                             return views[name];
                     }
             })}    
-            if ( !instances[name] ) 
+            if ( !instances[name] ) {  // First time
                 instances[name] = React.createFactory(wrappers[name])();
+            }
         }
 
         this.getState = function(name) {
@@ -64,30 +65,22 @@ var Render = function(React) {
     var state = new State(React);
 
     this.name = 'React';
-    var rootName = void 0; // @TODO should be another way to recognize rootName, because there are can be more then 1 of attaches 
+    var attachedViews = []; 
 
     this.render = function(viewProvider, upstream, activeStreamId, name, scope ) {
-        var rendered = new Promise( function( name, upstream, activeStreamId, viewProvider, scope, resolve, reject ){
-            l.log('%cbegin rendering view ' + name, 'color: #0000ff');
-            l.logTime('rendered view ' + name);
+        console.log('%cbegin rendering view ' + name, 'color: #0000ff');
 
-            if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.  
-                // get new component somehow.
-                state.set(name, [viewProvider, scope]);  
-            }
-            // console.time('renering ' + name);
-            state.getOrCreate(name);
-            var instance = state.getThis(name);
+        state.getOrCreate(name); // Always should be first to ensure that it is a simple div to lower influence of React.renderToStaticMarkup
 
-            if( rootName !== name && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate( _ => {
-                    /* console.timeEnd.bind(console, 'renering ' + name) */
-                    return resolve(state.getInstance(name));  
-            });
+        if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.  
+            state.set(name, [viewProvider, scope]);  
+        }
 
-            // console.log('Atlant.js: rendered the view.', name)
-        }.bind(void 0, name, upstream, activeStreamId, viewProvider, scope));
+        var instance = state.getThis(name);
 
-        return rendered;
+        if(instance) instance.forceUpdate(); // If root component contained this view is not yet rendered, then it's not a big deal. When it will be rendered, it will catch all rendered instances of it's children and draw them. 
+        return state.getInstance(name);  
+
     }
 
     this.clear = function(viewProvider, upstream, activeStreamId, name, scope ) {
@@ -96,30 +89,21 @@ var Render = function(React) {
 
 
     this.attach = function(name, selector) {
-        var attached = new Promise( function( name, selector, resolve, reject ){
-            if ( typeof window === 'undefined') throw Error('AtlantJs, React render: attach not possible in browser.')
+        if ( typeof window === 'undefined') throw Error('AtlantJs, React render: attach not possible in browser.')
 
-            var element = document.querySelector(selector);
-            if ( !element )   throw Error("AtlantJs, React render: can\'t find the selector" + selector )
+        var element = document.querySelector(selector);
+        if ( !element )   throw Error("AtlantJs, React render: can\'t find the selector" + selector )
 
-            var root = state.getInstance(name);
+        state.getOrCreate(name);
+        var root = state.getInstance(name);
 
-            if ( !root ) { throw new Error('AtlantJs: Please use .render(component, "' + name + '") to render something') }
-
-            try{
-                React.render(root, element, function(){ rootName = name; /* console.log("React said it's attached!"); */ resolve() } );
-            } catch(e) {
-                console.error(e.message, e.stack)
-
-                var element = document.querySelector('#rootView');
-                React.unmountComponentAtNode(element);
-
-                reject(e);
-            }
-
-        }.bind(void 0, name, selector));
-
-        return attached;
+        try{
+            React.render(root, element)
+            attachedViews.push(name); 
+        } catch(e) {
+            console.error(e.message, e.stack)
+            React.unmountComponentAtNode(element);
+        }
     }
 
     /* Return ready string representation 
@@ -159,7 +143,7 @@ var Render = function(React) {
     })
 
     this.destroy = function(){
-        rootName = void 0;
+        attachedViews = [];
         state.destroy()
     }
 }

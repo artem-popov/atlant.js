@@ -55,7 +55,6 @@ function Atlant(){
             ,scrollElement: function(){ return 'undefined' !== typeof document ? utils.body : void 0 }
             ,defaultScrollToTop: true
             ,pre: void 0
-            ,attachedViews: []
             ,onDrawEndCallbacks:[]
     }
 
@@ -237,7 +236,6 @@ function Atlant(){
             if ( 'undefined' === typeof window) return;
             var routeChanged = function(sink, event) {
 
-                console.log( event instanceof PopStateEvent  ? "popstate" : "pushstate" );
                 try{
                     var path;
 
@@ -262,10 +260,7 @@ function Atlant(){
 
                             if (bodyHeight < scrollTop) {
                                 utils.body.style.minHeight = (scrollTop + window.innerHeight) + 'px';
-                                console.log('set min height to ', utils.body.style.minHeight)
                             }
-
-                            console.log('scrolling to1:', scrollTop)
 
                             window.scrollTo(0, scrollTop)
 
@@ -275,7 +270,6 @@ function Atlant(){
                                 // utils.unblockScroll();
                                 atlant.state.scrollRestoration = false;
                                 window.scrollTo(0, scrollTop);
-                                console.log('scrolling to2:', scrollTop)
                                 if (!('scrollRestoration' in history)) loader.style.visibility = null;
                             }).bind(void 0, scrollTop);
 
@@ -422,14 +416,12 @@ function Atlant(){
                 atlantState.whenData = depData;
 
                 if (whenData.when.type === types.WhenOrMatch.when && whenData.scrollToTop.value && 'undefined' !== typeof window) {
-                    console.log('scrolling to top on when activation!')
                     window.scrollTo(0, 0);
                 } else {
-                    console.log('Cancel scrolling ')
                 }
 
                 var stream = whenData.route.fn( depData ) // @TODO should be a Stream.
-                stream.onValue( _ => console.log("what?", _ ) );
+                stream.onValue( _ => _ );
                 stream.push( depData )
             });
 
@@ -677,17 +669,17 @@ function Atlant(){
     }
 
 
-    var _attach = function(rootView, selector) {
-        s.type(rootView, 'string');
+    var _attach = function(viewName, selector) {
+        s.type(viewName, 'string');
         s.type(selector, 'string');
 
-        prefs.attachedViews[rootView] = selector;
+        prefs.render.attach(viewName, selector); 
 
         return this;
     }
 
-    var _stringify = function(rootView, options) {
-        return prefs.render.stringify(rootView, options );
+    var _stringify = function(viewName, options) {
+        return prefs.render.stringify(viewName, options );
     }
 
     var _await = function(shouldAWait) {
@@ -787,7 +779,6 @@ function Atlant(){
         baseStreams.onValue(atlantState.emitStreams[updaterName], function(storeName, updater, scope){ // scope is the value of .update().with(scope) what was pushed in
             atlantState.stores[storeName].changes.push( function(scope, updater, state){  // state is the value which passed through atom
                 try { 
-                    // console.log('UPDATE:', updaterName, scope, storeName);
                     return updater( state, scope );
                 } catch(e) { 
                     console.error('atlant.js: Warning: updater failed', e)
@@ -963,7 +954,7 @@ function Atlant(){
     // Called everytime when draw renders.
     this.onDrawEnd =  _onDrawEnd;
     // Accepts element. After publish and first render the contents will be attached to this element.
-    this.attach =  _attach;
+    this.attach =  s.tryD(_attach);
     // After publish and first render the contents will be transferet to callback (first parameter).
     this.stringify =  _stringify;
     this.setTimeout =  _setTimeout;
