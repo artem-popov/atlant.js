@@ -1,15 +1,17 @@
 import baseStreams from "../inc/base-streams"
 
-export function Property(value){
+export function Property(initialValue){
     var stream = baseStreams.bus(); 
-    var value;
-    var property = stream.scan(0, (state, _) => value = _(state), value)
+    var value = initialValue();
+    var name = void 0;
+    var property = stream.scan(value, (state, _) => (value = _(state), value))
     property.onValue(_=>_);
     return {
-        swap: _ => stream.push(_),
-        then: _ => property.onValue(_),
+        swap: _ => (stream.push(_), this),
+        then: _ => (property.onValue(_), this),
+        name(_){ if(_) name = _; return _ ? this : name },
         unwrap: _ => value,
-        stream: property
+        stream: property,
     };
 }
 

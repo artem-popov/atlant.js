@@ -20,7 +20,6 @@ function Atlant(){
         ,interfaces = require('./inc/interfaces')
         ,StateClass = require('./inc/state')
         ,clientFuncs = require('./inc/clientFuncs')
-        ,Stat = require('./inc/statistics')
         ,Storage = require('./inc/storage')
     ;
 
@@ -33,19 +32,11 @@ function Atlant(){
     // Initialization specific vars
     var isRenderApplyed  // Is Render already set OnValue for renders
         ,params = [] // Route mask params parsed
-        ,routes = []  // Routes collected
         ,renderNames = []
         ,viewNames = [];
 
     var whens = {}; // storing whens
 
-
-    var statistics = new Stat();
-
-    var activeRenderEnd;
-
-
-    var lastFinallyStream;
     var prefs = {
             parentOf: {}
             ,checkInjectsEquality: true
@@ -88,11 +79,16 @@ function Atlant(){
         ,stores: {}
         ,renders: {} // Each view has it's own item in "renders" ender which is a merge of renders into this view. OnValue will catch once for lastRender.view
         ,activeStreamId: { value: void 0 } // Used to store active stream id. If route changed again then we need something to compare with current id and cancel our current stream if it is obsolete.
-        ,interceptorBus: baseStreams.bus()
         ,emitStreams: {}
         ,viewData: {} // To check if the rendered data is the as data to be rendered.
+        ,routes: []  // Routes collected
+        ,streams: {
+            renderEndStream: baseStreams.bus()
+            ,interceptorBus: baseStreams.bus()
+        }
     }
 
+    baseStreams.onValue(atlantState.streams.renderEndStream, s.baconTryD(_ => console.log('render end:', _)));
 
     if('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
@@ -101,44 +97,6 @@ function Atlant(){
 
     var TopState = new StateClass(); // State which up to when
 
-
-    /* Helpers */
-
-
-    /* matchRouteLast */
-    var matchRouteLast = function(){
-        var matchRouteWrapper = function(path, route){
-            var match = utils.matchRoute(path, route.mask);
-
-            return match ? { params:match, route:route } : null;
-        }
-
-
-        return s.curry( function(path, matchingBehaviour, route) {
-            if ('string' === typeof route) route = {mask:route};
-            var match = matchRouteWrapper(path, route);
-            if (match && types.Matching.stop === matchingBehaviour) {
-                atlantState.isLastWasMatched = true;
-            }
-            return match;
-        });
-    }();
-
-    /**
-     * Main function for parse new path
-     * @param path
-     * @returns {bool} false | {*}
-     */
-    var matchRoutes = function(path, routes, matchingBehaviour){
-        matchingBehaviour = matchingBehaviour || types.Matching.continue;
-        var tempRoutes =  routes
-            .map(function(route) {
-                return matchRouteLast( path, matchingBehaviour, route );
-            })
-            .filter(s.notEmpty)
-
-        return s.head(tempRoutes);
-    }
 
     /* Base and helper streams*/
     l.log('registering base streams...');
@@ -156,80 +114,8 @@ function Atlant(){
     }
 
 
-    var defValue = function(){ return { value: 0 } };
     var onDestroyStream = baseStreams.bus();
-    var onRenderEndStream = baseStreams.bus();
-    var onDrawEndStream = baseStreams.bus();
-    var onAtomEndStream = baseStreams.bus(); 
-    var onBothEndStreams = onAtomEndStream.zip(onRenderEndStream, function(x,y){return y});
 
-    var atomCounter = { list: {} };
-    var isAtomed = { value: false };
-    var atomEndSignal = baseStreams.bus();
-    var atomRecalculateSignal = baseStreams.bus();
-
-    var renderCounter = { list: {} };
-    var isRendered = { value: false };
-    var renderEndSignal = baseStreams.bus();
-    var renderRecalculateSignal = baseStreams.bus();
-
-    var sumCounter = function(counter){
-        return Object.keys(counter.list)
-                            .map( function(id){ return counter.list[id].value })
-                            .reduce(function(acc, i){ return acc + i }, 0) 
-    }
-
-    var checker = function(name, isFinished, isNeedToDecrease, signalStream, counter, object){
-        try{
-            if ( isFinished.value ) { /*console.log('Canceled atom signal after render is completed');*/  return }
-            if ( !(object.whenId in counter.list) ) { /*console.log('no selects here');*/ return } // no selects here 
-
-
-            if(isNeedToDecrease) counter.list[object.whenId].value--;
-            var signalled = sumCounter(counter);
-            var calculated = ( -1 !== name.indexOf('atom') ) ? statistics.getSum(atlantState.lastPath) : statistics.getRenderSum(atlantState.lastPath);
-
-            // if(-1!==name.indexOf('atom')) 
-                // console.log(name, signalled, calculated, 'whenId:', object.whenId, 'itemIds:', object.itemIds, counter, object.item ? object.item.type : "", object.item ? object.item.viewName : '')
-
-            if (0 === signalled + calculated) {
-                // console.log('GOTTCHA!', name, 'is completed')
-                isFinished.value = true
-                signalStream.push()
-                if(-1 === name.indexOf('atom'))  {
-                    checker( 'atomAsk:', isAtomed, false, onAtomEndStream, atomCounter, object ) // In case if there are no selects and select cancels we can check here and it will be clear, should server end or not.
-                }
-            }   
-        } catch(e){
-            console.error(e.stack)
-        }
-
-    }
-
-
-    atomEndSignal.onValue(checker.bind(void 0, 'atom', isAtomed, true, onAtomEndStream, atomCounter ))
-    atomRecalculateSignal.onValue(checker.bind(void 0, 'atomCancel:', isAtomed, false, onAtomEndStream, atomCounter ))
-
-    renderEndSignal.onValue(checker.bind(void 0, 'render:', isRendered, true, onRenderEndStream, renderCounter));
-    renderRecalculateSignal.onValue(checker.bind(void 0, 'renderCanceled:', isRendered, false, onRenderEndStream, renderCounter));
-
-    // onAtomEndStream.onValue(function(value){console.log('ATOM END STREAM!')})
-    // onRenderEndStream.onValue(function(value){console.log('RENDER END STREAM!')})
-
-    var performCallback = function(upstreams, callbackStream, postponedActions) {
-            try {
-
-                callbackStream.push();
-
-                postponedActions.forEach(function(action){
-                    action();
-                });
-
-            } catch (e) {
-                console.error('Atlant Error:', e)
-                errorStream.push(e);
-            }
-    }
 
     var routeChangedStream =  publishStream
         .merge( Bacon.fromBinder(function(sink) {
@@ -340,7 +226,6 @@ function Atlant(){
 
             return stream;
         })
-        .filter( s.compose( s.empty, s.flip(matchRoutes, 3)(types.Matching.continue, prefs.skipRoutes), s.dot('path') )) // If route marked as 'skip', then we should not treat it at all.
         .map(function(upstream) {
             var stream = _.extend({}, upstream);
 
@@ -352,14 +237,6 @@ function Atlant(){
 
             stream.id = _.uniqueId();
             atlantState.activeStreamId.value = stream.id;
-
-
-            // New system of nil values
-            atomCounter.list = {};
-            renderCounter.list = {};
-            statistics.cleanUpRemoved();
-            isAtomed.value = false;
-            isRendered.value = false;
 
             atlantState.viewRendered = {};
             atlantState.isLastWasMatched = false;
@@ -378,38 +255,64 @@ function Atlant(){
 
     atlantState.rootStream
         .onValue( function(upstream) {
-            var _whens = Object.keys(whens)
-                .map( _ => whens[_] )
-                .map( _ => { _.params = _.route.check(_.route.when, upstream.path); return _ })
-                .filter( _ => !!_.params );
 
-            if ( !_whens.length ) { 
+            const skipRoutes = prefs.skipRoutes.map( _ => utils.matchRoute(upstream.path, _) || utils.matchRoute(utils.getPossiblePath(upstream.path), _) ).filter( _ => !!_ );
+            if(skipRoutes.length) {
+                atlantState.streams.renderEndStream.push({ httpStatus: 404, httpMessage: 'Resource is forbidden' });
+                return
+            }
+
+            const _whens = Object.keys(whens)
+                .map( _ => whens[_] )
+                .map( when => {
+                    let route = when.route.masks // masks
+                        .map( _ => ({ mask: _, params: utils.matchRoute(upstream.path, _) }) )
+                        .filter(_ => _.params);
+
+                    route = s.head(route);
+                    if (route) {
+                        when.params = route.params;
+                        when.mask = route.mask;
+                    } else {
+                        when.params = void 0;
+                        when.mask = void 0;
+                    }
+                    console.log('when:', when)
+
+                    return when 
+                })
+                .filter( _ => _.params )
+                .reduce( (acc, i) => {  // filtering all when's after matched one
+                    if (i.isMatch) {
+                        acc.items.push(i) 
+                    } else if(!acc.found) { 
+                        if(!acc.found) { 
+                            acc.found = true;
+                            acc.items.push(i)
+                        }
+                    }
+
+                    return acc 
+                }, {found: false, items: []})
+
+            if ( !_whens.items.length || !_whens.found ) {  // Only matches or nothing at all
                 console.log('Otherwise is in work. Code: 3');
                 otherwiseStream.push(upstream);
                 return
             } 
 
-            _whens.forEach( whenData => { 
-                var data = {};
-                data = _.extend(upstream, whenData);
-                data.route.params = whenData.params.params;
-                data.route.route = whenData.params.route;
-                data.masks = whenData.route.whenMasks;
-
+            console.log('whens:', _whens.items)
+            _whens.items.forEach( whenData => { 
                 // Storing here the data for actions.
-                atlantState.lastMask = whenData.route.whenMasks;
+                atlantState.lastMask = whenData.route.masks;
 
-                atomCounter.list[whenData.when.id] = defValue();
-                renderCounter.list[whenData.when.id] = defValue();
-
-                var params = s.reduce(function(result, item) { result[item] = data.route.params[item]; return result;}, {} , _.keys(data.route.params))
-
+                console.log('whenData:', whenData)
                 var depData = {
                     location: upstream.path
-                    ,mask: whenData.params.route.mask 
-                    ,pattern: whenData.params.route.mask 
-                    ,masks: whenData.route.whenMasks
-                    ,params: whenData.params.params
+                    ,mask: whenData.mask 
+                    ,pattern: whenData.mask 
+                    ,masks: whenData.route.masks
+                    ,params: whenData.params
                     ,referrer: upstream.referrer
                     ,history: upstream.history
                 };
@@ -417,13 +320,15 @@ function Atlant(){
 
                 if (whenData.when.type === types.WhenOrMatch.when && whenData.scrollToTop.value && 'undefined' !== typeof window) {
                     window.scrollTo(0, 0);
-                } else {
-                }
+                } 
 
                 var stream = whenData.route.fn( depData ) // @TODO should be a Stream.
-                stream.onValue( _ => _ );
+                if(whenData.when.type === types.WhenOrMatch.when) stream.onValue( _ => atlantState.streams.renderEndStream.push(_) )
+
                 stream.push( depData )
             });
+
+
 
         })
 
@@ -461,26 +366,12 @@ function Atlant(){
             var scrollToTop = { value: whenType === types.WhenOrMatch.match ? false : true };
             TopState.state.scrollToTop = scrollToTop;
 
-            var whenMasks = masks;
-            if( types.WhenOrMatch.when === whenType )
-                masks.forEach(function(mask) {  // @TODO: old thing
-                    s.push({mask: utils.stripLastSlash(mask)}, routes);
-                });
-
-            masks = _(masks).map(function(mask){return [mask, utils.getPossiblePath(mask)]}).flatten().value();
-
-            var check = (masks, path) => {
-                return _(masks)
-                    .filter(function(whenType) { if(types.WhenOrMatch.match === whenType) return true; else return ! atlantState.isLastWasMatched; }.bind(void 0, whenType)) // do not let stream go further if other is already matched. .match() streams are immune.
-                    .map( matchRouteLast( path, matchingBehaviour ) )
-                    .filter( s.notEmpty )                              // empty params means fails of route identity.
-                    // .map(s.logIt('---matched routes!!!'))
-                    .head()
-            };
+            if( types.WhenOrMatch.when === whenType ) // Imformational thing
+                masks.forEach( _ => atlantState.routes.push( utils.stripLastSlash(_) ) ) 
 
             whens[name] = { 
                 when: { id: whenId, type: whenType},
-                route: { when: masks, whenMasks: whenMasks, fn: fn, check: check },
+                route: { masks: masks, fn: fn},
                 isFinally: false,
                 isMatch: types.WhenOrMatch.match === whenType,
                 scrollToTop: scrollToTop
@@ -552,7 +443,7 @@ function Atlant(){
         var depName = 'interceptor' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
 
-        State.state.lastWhen = atlantState.interceptorBus
+        State.state.lastWhen = atlantState.streams.interceptorBus
             .map( function(depName, injects, whenId, obj) {
 
                 var depValue = {};  // @TODO RETHINK
@@ -587,7 +478,6 @@ function Atlant(){
         State.state.lastConditionId = whenId;
         TopState.state.lastActionId = whenId;
         TopState.state.lastAction = 'interceptor';
-        statistics.whenStat({ actionId: TopState.state.lastActionId, masks: [TopState.state.lastAction] });
 
         return this;
 
@@ -602,21 +492,10 @@ function Atlant(){
      * @returns atlant
      * @private
      */
-    var _skip = function(){
-        var pushSkipVariants = function(path) {
-            prefs.skipRoutes.push( {mask: path} );
-            prefs.skipRoutes.push( {mask: utils.getPossiblePath(path)} );
-        };
-
-        return function (path){
-            if (1 < arguments.length) {
-                s.map( pushSkipVariants, s.a2a(arguments) );
-            } else {
-                pushSkipVariants(path);
-            }
-            return this;
-        }
-    }();
+    var _skip = function (...paths){
+        s.map( _ => prefs.skipRoutes.push(_), paths);
+        return this
+    }
 
     /**
      *  Use this method to publish routes when
@@ -643,8 +522,9 @@ function Atlant(){
         return this;
     }
 
+
     var _onRenderEnd = function(callback) { // Use this to get early callback for server render
-        baseStreams.onValue(onBothEndStreams , s.baconTryD(callback));
+        baseStreams.onValue(atlantState.streams.renderEndStream, s.baconTryD(callback));
         return this;
     }
 
@@ -772,7 +652,6 @@ function Atlant(){
         if ( updaterName in atlantState.stores[storeName].updaters ) { throw new Error("Cannot reimplement updater ", updaterName, " in store ", storeName)}
 
         atlantState.stores[storeName].updaters[updaterName] = updater;
-        statistics.putLink(storeName, updaterName);
 
         if( !(updaterName in atlantState.emitStreams ) ) atlantState.emitStreams[updaterName] = baseStreams.bus();
         
@@ -848,7 +727,7 @@ function Atlant(){
     this.match = function(masks, fn) { return _when.bind(this)( masks, fn, types.Matching.continue, types.WhenOrMatch.match ); }
 
     // declare branch that will work if no routes declared by .when() are matched. Routes declared by .match() will be ignored even if they matched.
-    this.otherwise = function(fn) { return _action.call(this, otherwiseStream, fn, false, 'otherwise'); }
+    this.otherwise = function(fn) { return _when.bind(this)( '/otherwise', fn, types.Matching.continue, types.WhenOrMatch.otherwise ); }
 
     // Creates stream which will be called when render error is happend
     this.error = function(fn) { return _action.call(this, errorStream, fn, false, 'error'); }
@@ -985,14 +864,7 @@ function Atlant(){
     this.state = {}
 
     this.data = {
-        get routes() { return _(routes) 
-            .map( function(route){ return route.mask } )
-            .map(function(route){ 
-                if ('/' === route[route.length-1]) 
-                    return route.substring(0, route.length -1) 
-                else 
-                    return route;
-            })
+        get routes() { return _(atlantState.routes) 
             .uniq() // @TODO better not to double it for info :)  
             .value() 
         }    

@@ -27,18 +27,19 @@ RenderOperationKey[RenderOperation.nope] = 'nope';
 // Matching enum for when.
 var Matching = {
     stop: _.uniqueId()
-        ,continue: _.uniqueId()
+    ,continue: _.uniqueId()
 }
 
 var WhenOrMatch = {
     when: _.uniqueId()
-        ,match: _.uniqueId()
+    ,match: _.uniqueId()
+    ,otherwise: _.uniqueId()
 }
 
 // Depends enum
 var Depends = {
     async: _.uniqueId()
-        ,continue: _.uniqueId()
+    ,continue: _.uniqueId()
 }
 
 

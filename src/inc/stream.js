@@ -5,7 +5,6 @@ var baseStreams = require('./base-streams')
         ,StateClass = require('./state')
         ,types = require('./types')
         ,interfaces = require('./interfaces')
-        ,Stat = require('./statistics')
         ,clientFuncs = require('./clientFuncs')
         ,property = require('../reactive/property')
     ;
@@ -20,7 +19,6 @@ var Stream = function(atlantState, prefs){
     var injectsGrabber = new interfaces.injectsGrabber();
     var dependsName = new interfaces.dependsName();
     var withGrabber = new interfaces.withGrabber();
-    var statistics = new Stat();
     var id = _.uniqueId();
     var root = baseStreams.bus();
     var viewSubscriptionsUnsubscribe = {};
@@ -29,10 +27,9 @@ var Stream = function(atlantState, prefs){
     var lastWhen;
 
     var streamState = {
-        updates: Property( _ => 0 ),
-        renders: 0,
-        value: Property( _ => void 0 )
     }
+
+    var streamCallbacks = [];
 
     var renderView = function(){
 
@@ -81,10 +78,9 @@ var Stream = function(atlantState, prefs){
             viewSubscriptions[viewName] = Bacon
                 .mergeAll( keys.map(store => atlantState.stores[store].bus) );
 
-            if (upstream.render.subscribe) streamState.subscribersCount++;
+            // if (upstream.render.subscribe) streamState.subscribersCount++;
 
             viewSubscriptionsUnsubscribe[viewName] = viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, value){ 
-                // console.time('score')
                 let start;
                 if ( 'undefined' !== typeof performance) { 
                     start = performance.now();
@@ -98,7 +94,6 @@ var Stream = function(atlantState, prefs){
 
                 // value = _(upstream.chains).map(o=> _(o).map(_=>_).flatten().value() ).flatten().reduce( (acc, i) => _.extend(acc, i()), {}); // Actually it is slower :(
 
-                // console.timeEnd('score')
                 if ( 'undefined' !== typeof performance) { 
                     if('undefined' === typeof window.selectCount) window.selectCount = 0;
                     if('undefined' === typeof window.selectTime) window.selectTime = 0;
@@ -109,22 +104,21 @@ var Stream = function(atlantState, prefs){
 
                 let data = _.extend({}, scope, value );   
 
-                var result = Promise.resolve();
                 if ( !_.isEqual(data, atlantState.viewData[viewName] ) ) {
-
                     scope = data;
                     atlantState.viewData[viewName] = data;
-                    var rendered = doRenderIntoView(data); // Here we using scope updated from store!
-                    result = rendered;
+                    doRenderIntoView(data); // Here we using scope updated from store!
+
+                    if(streamState.resolveWhen && streamState.resolveWhen(data) && streamCallbacks.length){
+                        streamCallbacks.forEach( _ => _(data) )
+                    }
                 } 
 
-                return result.then(function(upstream, o){
-                    streamState.updates.swap(_ => _ - 1 / streamState.subscribersCount); // if there is an subscription, then always do this
-                    return o;
-                }.bind(void 0, upstream));
+                // streamState.updates.swap(_ => _ - 1 / streamState.subscribersCount); // if there is an subscription, then always do this
+                // console.log('swapping:', streamState.updates.unwrap())
+                return upstream;
 
             }.bind(void 0, upstream, viewName, scope, doRenderIntoView ));
-
 
         } 
 
@@ -214,10 +208,6 @@ var Stream = function(atlantState, prefs){
                             if (upstream.render.subscribe && types.RenderOperation.clear !== upstream.render.renderOperation )  // Subscriber only after real render - Bacon evaluates subscriber immediately
                                 subscribeView(viewName, doRenderIntoView, scope, upstream)
 
-                            // if (upstream.masks) {
-                            //     statistics.whenStat({ actionId: upstream.whenId, masks: upstream.masks.slice(), view: viewName });
-                            // } 
-
                             upstream.render.component = renderResult;
                             return upstream;
  
@@ -244,8 +234,7 @@ var Stream = function(atlantState, prefs){
         var nameContainer = dependsName.init(depName, State.state);
         var stats = TopState.state.stats;
 
-        streamState.updates.swap( _ => 0 );
-        streamState.subscribersCount = 0;
+        // streamState.subscribersCount = 0;
 
 
         lastWhen = root
@@ -283,10 +272,6 @@ var Stream = function(atlantState, prefs){
         State.state.lastConditionId = whenId;
         TopState.state.lastActionId = whenId;
         TopState.state.lastAction = depName
-        statistics.whenStat({ actionId: TopState.state.lastActionId, masks: [TopState.state.lastAction] });
-
-
-
     
     }())
 
@@ -323,7 +308,7 @@ var Stream = function(atlantState, prefs){
                             .mapError(function(_){ console.error('Network error: status === ', _.status); return _})
                             .map(function(upstream, atomParams, store, depName, isAtom, atomValue, results){
                                 if ( 'function' === typeof results ) results = results.bind(void 0, atomParams);
-                                if ( !upstream.isInterceptor ) atlantState.interceptorBus.push({upstream: upstream, scope: results}); // pushing into global depends .interceptor() 
+                                if ( !upstream.isInterceptor ) atlantState.streams.interceptorBus.push({upstream: upstream, scope: results}); // pushing into global depends .interceptor() 
                                 if (!upstream.depends) upstream.depends = {};
                                 upstream.depends[depName] = results;
 
@@ -480,21 +465,8 @@ var Stream = function(atlantState, prefs){
             }.bind(void 0, ifId, fnNegate, condition))
             .filter( s.id )
 
-        thisIfNegate.onValue(function(ifId, actionId, condition, u){
-            var renders = statistics.getRendersByUrl(actionId, atlantState.lastPath, ifId);
-            if(renders.length) {
-                // console.log('negating renders...:', renders)
-                statistics.removeRenders(u.whenId, u.masks, renders);
-                renderRecalculateSignal.push({id: u.id, whenId: u.whenId, itemIds: renders}); 
-            }
-            var updates = statistics.getUpdatesByUrl(actionId, atlantState.lastPath, ifId);
-            if(updates.length) {
-                // console.log("negating UPDATES:", updates )
-                statistics.removeUpdates(u.whenId, u.masks, updates);
-                atomRecalculateSignal.push({id: u.id, whenId: u.whenId}); 
-            }
-
-        }.bind(void 0, ifId, TopState.state.lastActionId, condition))
+        // thisIfNegate.onValue(function(ifId, actionId, condition, u){
+        // }.bind(void 0, ifId, TopState.state.lastActionId, condition))
 
         State.state.lastIf = thisIf;
         State.state.lastOp = State.state.lastIf;
@@ -503,12 +475,6 @@ var Stream = function(atlantState, prefs){
         State.state.lastIfId = ifId;
         State.state.lastIfIds.push(ifId) // Stores upper stack of if ids
 
-
-        statistics.whenStat({
-            actionId: TopState.state.lastActionId
-            ,ifId: ifId
-            ,masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction] // @TODO Can't do this in case of action. We shouldn't look here for actions, except if they fired from when statement.
-        });  
         return this;
     }
 
@@ -605,7 +571,7 @@ var Stream = function(atlantState, prefs){
         if ( ! State.state.lastOp ) throw new Error('"update" should nest something');
         s.type(key, 'string');
 
-        streamState.updates.swap(_ => _ + 1);
+        // streamState.updates.swap(_ => _ + 1);
 
         return _depends.bind(this)( function(key, id){
             if ( key in atlantState.emitStreams ) atlantState.emitStreams[key].push(id);
@@ -634,8 +600,6 @@ var Stream = function(atlantState, prefs){
         if (!(storeName in atlantState.stores)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(', storeName + ')');
         if (!(partName in atlantState.stores[storeName].parts)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(' + storeName + ')');
         if ( dependsOn && 'string' !== typeof dependsOn ) throw new Error('atlant.js: dependsOn param should be a string' );
-
-        statistics.whenStat({actionId: TopState.state.lastActionId, masks: TopState.state.lastMasks ? TopState.state.lastMasks : [TopState.state.lastAction], atom: storeName });
 
         return _depends.bind(this)( function(storeName, partName){
             return function(storeName, partName, id){
@@ -667,6 +631,10 @@ var Stream = function(atlantState, prefs){
         return this
     }
 
+    var _resolveWhen = function( truthfulFn ){
+        streamState.resolveWhen = truthfulFn;
+        return this
+    }
 
     /**
      *  Asyncroniously run the dependency. 
@@ -714,7 +682,7 @@ var Stream = function(atlantState, prefs){
     this.if = _if.bind(this, s.id);
     this.unless =  _if.bind(this, s.negate);
     this.end = _end;
-
+    this.resolveWhen = _resolveWhen; 
     /**
      * Renders declaratins
      */
@@ -746,11 +714,11 @@ var Stream = function(atlantState, prefs){
     this.nope = function(){ return _render.bind(this)(void 0, void 0, 'once', types.RenderOperation.nope)}
 
     this.push = _ => {
-        root.onValue( _ => streamState.updates.unwrap() );
         root.push(_)
     }
+
     this.onValue = _ => {
-        lastWhen.onValue(_)
+       streamCallbacks.push(_); 
     }
 
 }
