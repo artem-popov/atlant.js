@@ -6,6 +6,7 @@ var baseStreams = require('./base-streams')
         ,types = require('./types')
         ,interfaces = require('./interfaces')
         ,clientFuncs = require('./clientFuncs')
+        ,utils = require('../utils')
     ;
 
 var Stream = function(atlantState, prefs){
@@ -238,9 +239,9 @@ var Stream = function(atlantState, prefs){
                     depValue = {}
                 }
                 if ('object' === typeof depValue) {
-                    if(!('mask' in depValue)) depValue.mask = atlantState.lastReadlMask;
+                    if(!('mask' in depValue)) depValue.mask = atlantState.lastMask;
                     if(!('masks' in depValue)) depValue.masks = atlantState.lastMask;
-                    if(!('pattern' in depValue)) depValue.pattern = utils.getPattern(atlantState.lastMask);
+                    if(!('pattern' in depValue)) depValue.pattern = atlantState.lastMask;
                     depValue.location = atlantState.lastPath;
                     depValue.referrer = atlantState.lastReferrer;
                     depValue.history = atlantState.lastHistory;

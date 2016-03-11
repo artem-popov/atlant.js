@@ -68,7 +68,7 @@ var Render = function(React) {
     var attachedViews = []; 
 
     this.render = function(viewProvider, upstream, activeStreamId, name, scope ) {
-        console.time('begin rendering view ' + name);
+        console.time('rendering view ' + name);
 
         state.getOrCreate(name); // Always should be first to ensure that it is a simple div to lower influence of React.renderToStaticMarkup
 
@@ -80,7 +80,7 @@ var Render = function(React) {
 
         if(instance) instance.forceUpdate(); // If root component contained this view is not yet rendered, then it's not a big deal. When it will be rendered, it will catch all rendered instances of it's children and draw them. 
 
-        console.timeEnd('begin rendering view ' + name);
+        console.timeEnd('rendering view ' + name);
 
         return state.getInstance(name);  
 

@@ -85,6 +85,9 @@ function Atlant(){
         ,streams: {
             renderEndStream: baseStreams.bus()
             ,interceptorBus: baseStreams.bus()
+            ,otherwiseStream: baseStreams.bus() 
+            ,publishStream: baseStreams.bus()  // Here we can put init things.
+            ,errorStream: baseStreams.bus()
         }
     }
 
@@ -97,11 +100,6 @@ function Atlant(){
 
     var TopState = new StateClass(); // State which up to when
 
-
-    /* Base and helper streams*/
-
-    var publishStream = baseStreams.bus();  // Here we can put init things.
-    var errorStream = baseStreams.bus();
 
     // Browser specific actions.
     if ('undefined' !== typeof window) {
@@ -116,7 +114,7 @@ function Atlant(){
     var onDestroyStream = baseStreams.bus();
 
 
-    var routeChangedStream =  publishStream
+    var routeChangedStream =  atlantState.streams.publishStream
         .merge( Bacon.fromBinder(function(sink) {
             if ( 'undefined' === typeof window) return;
             var routeChanged = function(sink, event) {
@@ -249,7 +247,6 @@ function Atlant(){
         })
         .takeUntil(baseStreams.destructorStream)
 
-    var otherwiseStream = baseStreams.bus(); 
 
     atlantState.rootStream
         .onValue( function(upstream) {
@@ -292,12 +289,6 @@ function Atlant(){
                     return acc 
                 }, {found: false, items: []})
 
-            if ( !_whens.items.length || !_whens.found ) {  // Only matches or nothing at all
-                console.log('Otherwise is in work. Code: 3');
-                otherwiseStream.push(upstream);
-                return
-            } 
-
             _whens.items.forEach( whenData => { 
                 // Storing here the data for actions.
                 atlantState.lastMask = whenData.route.masks;
@@ -323,7 +314,10 @@ function Atlant(){
                 stream.push( depData )
             });
 
-
+            if ( !_whens.items.length || !_whens.found ) {  // Only matches or nothing at all
+                atlantState.streams.otherwiseStream.push(upstream);
+                return
+            } 
 
         })
 
@@ -495,7 +489,7 @@ function Atlant(){
      */
     var _publish = function(path){
         if (path) s.type(path, 'string');
-        publishStream.push({published:true, path:path});
+        atlantState.streams.publishStream.push({published:true, path:path});
     }
 
     var _set = function( view ) {
@@ -720,10 +714,10 @@ function Atlant(){
     this.match = function(masks, fn) { return _when.bind(this)( masks, fn, types.Matching.continue, types.WhenOrMatch.match ); }
 
     // declare branch that will work if no routes declared by .when() are matched. Routes declared by .match() will be ignored even if they matched.
-    this.otherwise = function() { return _action.call(this, otherwiseStream, false, 'otherwise'); }
+    this.otherwise = function(fn) { return _action.call(this, atlantState.streams.otherwiseStream, fn, false, 'otherwise'); }
 
     // Creates stream which will be called when render error is happend
-    this.error = function(fn) { return _action.call(this, errorStream, fn, false, 'error'); }
+    this.error = function(fn) { return _action.call(this, atlantState.streams.errorStream, fn, false, 'error'); }
 
 
     // Creates stream which will be called when status!= undefined is happend @TODO change this to : when reject is happend
