@@ -1,9 +1,8 @@
 "use strict";
-/**
-   Utils library.
- */
+
 var container = Object.create(null);
-var console = require('utils/log')()
+
+import console from "./log";
 
 var s = (function(){
 

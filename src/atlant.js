@@ -10,11 +10,10 @@
 function Atlant(){
     var atlant = this;
 
-    var s = require('./lib')
-        ,console = require('./utils/log')()
+    var s = require('utils/lib')
+        ,utils = require('utils/utils')
         ,simpleRender = require('./renders/simple')
         ,reactRender = require('./renders/react')
-        ,utils = require('./utils')
         ,Bacon = require('baconjs')
         ,_ = require('lodash')
         ,interfaces = require('./inc/interfaces')
@@ -23,8 +22,9 @@ function Atlant(){
         ,Storage = require('./inc/storage')
     ;
 
-    import _stream from './inc/stream'
-    import baseStreams from "./inc/base-streams"
+    import console from './utils/log';
+    import _stream from './inc/stream';
+    import baseStreams from "./inc/base-streams";
 
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
@@ -103,7 +103,7 @@ function Atlant(){
 
     // Browser specific actions.
     if ('undefined' !== typeof window) {
-        var states = require( './inc/wrap-push-pop-states.js');
+        var states = require( './inc/wrap-push-state.js');
         states.wrapPushState(window);
 
         // Subscribe to clicks and keyboard immediatelly. Document already exists.

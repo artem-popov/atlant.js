@@ -1,10 +1,11 @@
 "use strict";
 
-var s = require('../lib')
+var s = require('../utils/lib')
         ,_ = require('lodash')
-        ,console = require('../utils/log')()
         ,Promise = require('promise')
         ,Bacon = require('baconjs')
+
+import console from '../utils/log';
 
 var catchError;
 

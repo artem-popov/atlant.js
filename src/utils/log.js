@@ -1,6 +1,6 @@
 "use strict";
 
-var s = require('../lib');
+var s = require('./lib');
 
 var Log = function Log(){
     var on = false;
@@ -39,9 +39,6 @@ var Log = function Log(){
     return this;
 }
 
-var instance;
-module.exports = function() {
-    if(instance) return instance;
-    instance = new Log();
-    return instance;
-}
+var instance = new Log();
+
+export default instance;

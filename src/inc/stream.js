@@ -1,12 +1,12 @@
 "use strict";
 
 var baseStreams = require('./base-streams')
-        ,s = require('./../lib')
+        ,s = require('../utils/lib')
         ,StateClass = require('./state')
         ,types = require('./types')
         ,interfaces = require('./interfaces')
         ,clientFuncs = require('./clientFuncs')
-        ,utils = require('../utils')
+        ,utils = require('../utils/utils')
     ;
 
 var Stream = function(atlantState, prefs){

@@ -1,9 +1,10 @@
 "use strict";
-var s = require('./../lib')
+var s = require('../utils/lib')
+     ,u = require('../utils/utils')
      ,_ = require('lodash')
-     ,u = require('../utils')
      ,Promise = require('promise')
-     ,console = require('../utils/log')();
+
+import console from '../utils/log';
 
 var State = function(React){
     var wrappers = {}
