@@ -10,6 +10,7 @@
 function Atlant(){
     var atlant = this;
 
+    // Imports
     var s = require('utils/lib')
         ,utils = require('utils/utils')
         ,simpleRender = require('./renders/simple')
@@ -20,23 +21,14 @@ function Atlant(){
         ,StateClass = require('./inc/state')
         ,clientFuncs = require('./inc/clientFuncs')
         ,Storage = require('./inc/storage')
+        ,types = require('./inc/types')
     ;
 
     import console from './utils/log';
     import _stream from './inc/stream';
     import baseStreams from "./inc/base-streams";
 
-    var safeGoToCopy = utils.goTo;
-    utils.goTo = safeGoToCopy.bind(utils, false);
-
-    // Initialization specific vars
-    var isRenderApplyed  // Is Render already set OnValue for renders
-        ,params = [] // Route mask params parsed
-        ,renderNames = []
-        ,viewNames = [];
-
-    var whens = {}; // storing whens
-
+    // Preferences set by user
     var prefs = {
             parentOf: {}
             ,checkInjectsEquality: true
@@ -49,24 +41,7 @@ function Atlant(){
             ,onDrawEndCallbacks:[]
     }
 
-    if ('undefined' !== typeof window) {  // Should be defined for debuggins reasons
-        if (!window.stores) window.stores = {};
-    }
-
-    var injectsGrabber = new interfaces.injectsGrabber();
-    var dependsName = new interfaces.dependsName();
-    var withGrabber = new interfaces.withGrabber();
-
-    var titleStore = { value: "" };
-
-    // Streams specific vars
-        var dependViews = {}  // Set the views hirearchy. Both for streams and for render.
-        ,viewReady = {}
-
-
-    var types = require('./inc/types');
-
-
+    // Contains state shared across atlant
     var atlantState = {
         viewRendered: {} // Flag that this view is rendered. Stops other streams to perform render then.
         ,isLastWasMatched: false // Allow lastWhen to stop other when's execution
@@ -88,20 +63,28 @@ function Atlant(){
             ,otherwiseStream: baseStreams.bus() 
             ,publishStream: baseStreams.bus()  // Here we can put init things.
             ,errorStream: baseStreams.bus()
+            ,onDestroyStream: baseStreams.bus()
         }
+        ,whens: {} // storing whens
+        ,titleStore: { value: '' }
     }
 
-    baseStreams.onValue(atlantState.streams.renderEndStream, s.baconTryD(_ => console.log('render end:', _)));
 
+    // Patching goTo for further use
+    var safeGoToCopy = utils.goTo;
+    utils.goTo = safeGoToCopy.bind(utils, false);
+    if ('undefined' !== typeof window) {  // Should be defined for debuggins reasons
+        if (!window.stores) window.stores = {};
+    }
+
+    //Clearing current history state
     if('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
     }
     utils.clearState();
 
-    var TopState = new StateClass(); // State which up to when
-
-
     // Browser specific actions.
+    // registering wrapPushState, attaching atlant events to links
     if ('undefined' !== typeof window) {
         var states = require( './inc/wrap-push-state.js');
         states.wrapPushState(window);
@@ -110,9 +93,11 @@ function Atlant(){
         utils.attachGuardToLinks();
     }
 
+    // can be removed, just imformational
+    baseStreams.onValue(atlantState.streams.renderEndStream, s.baconTryD(_ => console.log('render end:', _)));
 
-    var onDestroyStream = baseStreams.bus();
-
+    var injectsGrabber = new interfaces.injectsGrabber();
+    var TopState = new StateClass(); // State which up to when
 
     var routeChangedStream =  atlantState.streams.publishStream
         .merge( Bacon.fromBinder(function(sink) {
@@ -239,7 +224,7 @@ function Atlant(){
             return stream;
         });
 
-    atlantState.rootStream = Bacon.fromBinder(function(sink) {
+        atlantState.rootStream = Bacon.fromBinder(function(sink) {
             baseStreams.onValue(routeChangedStream, function(sink, _) {
                 if(prefs.pre) prefs.pre();
                 sink(_);
@@ -248,8 +233,8 @@ function Atlant(){
         .takeUntil(baseStreams.destructorStream)
 
 
-    atlantState.rootStream
-        .onValue( function(upstream) {
+        atlantState.rootStream
+            .onValue( function(upstream) {
 
             const skipRoutes = prefs.skipRoutes.map( _ => utils.matchRoute(upstream.path, _) || utils.matchRoute(utils.getPossiblePath(upstream.path), _) ).filter( _ => !!_ );
             if(skipRoutes.length) {
@@ -257,8 +242,8 @@ function Atlant(){
                 return
             }
 
-            const _whens = Object.keys(whens)
-                .map( _ => whens[_] )
+            const _whens = Object.keys(atlantState.whens)
+                .map( _ => atlantState.whens[_] )
                 .map( when => {
                     let route = when.route.masks // masks
                         .map( _ => ({ mask: _, params: utils.matchRoute(upstream.path, _) }) )
@@ -358,7 +343,7 @@ function Atlant(){
             if( types.WhenOrMatch.when === whenType ) // Imformational thing
                 masks.forEach( _ => atlantState.routes.push( utils.stripLastSlash(_) ) ) 
 
-            whens[name] = { 
+            atlantState.whens[name] = { 
                 when: { id: whenId, type: whenType},
                 route: { masks: masks, fn: fn},
                 isFinally: false,
@@ -516,7 +501,7 @@ function Atlant(){
     }
 
     var _onDestroy = function(callback) { // Use this to get early callback for server render
-        baseStreams.onValue(onDestroyStream, s.baconTryD(callback));
+        baseStreams.onValue(atlantState.streams.onDestroyStream, s.baconTryD(callback));
         return this;
     }
 
@@ -688,7 +673,7 @@ function Atlant(){
 
         s = l = simpleRender = reactRender = utils = Bacon = _ = interfaces = StateClass = clientFuncs =  safeGoToCopy = null;// @TODO more
 
-        onDestroyStream.push();
+        atlantState.streams.onDestroyStream.push();
     }
 
     /**
@@ -842,8 +827,8 @@ function Atlant(){
     this.isBrowser = function(){ return 'undefined' !== typeof window }
 
     this.utils = require('./inc/tools'); // @TODO: rename to 'tools'
-    this.utils.setTitle = this.utils.setTitle.bind(void 0, titleStore);
-    this.utils.getTitle = this.utils.getTitle.bind(void 0, titleStore);
+    this.utils.setTitle = this.utils.setTitle.bind(void 0, atlantState.titleStore);
+    this.utils.getTitle = this.utils.getTitle.bind(void 0, atlantState.titleStore);
     // Needed only for browsers not supporting canceling history.scrollRestoration
     this.utils.blockScroll = this.utils.blockScroll;
     this.utils.unblockScroll = this.utils.unblockScroll;
