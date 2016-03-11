@@ -33,7 +33,6 @@ var Matching = {
 var WhenOrMatch = {
     when: _.uniqueId()
     ,match: _.uniqueId()
-    ,otherwise: _.uniqueId()
 }
 
 // Depends enum

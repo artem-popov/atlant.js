@@ -3,6 +3,8 @@
    Utils library.
  */
 var container = Object.create(null);
+var console = require('utils/log')()
+
 var s = (function(){
 
     var _ = require('lodash')

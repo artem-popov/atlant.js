@@ -6,10 +6,7 @@ var baseStreams = require('./base-streams')
         ,types = require('./types')
         ,interfaces = require('./interfaces')
         ,clientFuncs = require('./clientFuncs')
-        ,property = require('../reactive/property')
     ;
-
-import {Property} from "../reactive/property"
 
 var Stream = function(atlantState, prefs){
 
@@ -35,8 +32,6 @@ var Stream = function(atlantState, prefs){
 
         let renderIntoView = function(viewProvider, upstream, viewName, render, scope) {
             var renderD = s.promiseD( render ); // decorating with promise 
-            // l.log('---rendering with ', viewProvider, ' to ', viewName, ' with data ', scope)
-            // console.log('rendering into view', viewName)
             return renderD(viewProvider, upstream, atlantState.activeStreamId, viewName, scope)
                 .then(function(_){
                     // @TODO make it better

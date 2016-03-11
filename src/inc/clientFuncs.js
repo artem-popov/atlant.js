@@ -2,7 +2,7 @@
 
 var s = require('../lib')
         ,_ = require('lodash')
-        ,l = require('./log')()
+        ,console = require('../utils/log')()
         ,Promise = require('promise')
         ,Bacon = require('baconjs')
 
@@ -64,7 +64,7 @@ var getScopeDataFromStream = function( upstream ){
 var createScope = function ( upstream ) {
     var refsData = getRefsData( upstream ); 
 
-    var warning = function(inject) { l.log('Atlant warning: inject accessor return nothing:' + inject) }
+    var warning = function(inject) { console.log('inject accessor return nothing:' + inject) }
     var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
     var joins = s.filter( function(inject){ return inject.hasOwnProperty('injects') }, injects);
     injects = s.filter( function(inject){ return !inject.hasOwnProperty('injects') }, injects);

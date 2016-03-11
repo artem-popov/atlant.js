@@ -3,7 +3,7 @@ var s = require('./../lib')
      ,_ = require('lodash')
      ,u = require('../utils')
      ,Promise = require('promise')
-     ,l = require('../inc/log')();
+     ,console = require('../utils/log')();
 
 var State = function(React){
     var wrappers = {}
@@ -68,7 +68,7 @@ var Render = function(React) {
     var attachedViews = []; 
 
     this.render = function(viewProvider, upstream, activeStreamId, name, scope ) {
-        console.log('%cbegin rendering view ' + name, 'color: #0000ff');
+        console.time('begin rendering view ' + name);
 
         state.getOrCreate(name); // Always should be first to ensure that it is a simple div to lower influence of React.renderToStaticMarkup
 
@@ -79,6 +79,9 @@ var Render = function(React) {
         var instance = state.getThis(name);
 
         if(instance) instance.forceUpdate(); // If root component contained this view is not yet rendered, then it's not a big deal. When it will be rendered, it will catch all rendered instances of it's children and draw them. 
+
+        console.timeEnd('begin rendering view ' + name);
+
         return state.getInstance(name);  
 
     }
@@ -127,7 +130,6 @@ var Render = function(React) {
     }
 
     this.put = function(name, component){
-        // console.log('Atlant.js: put the view.')
         state.set(name, component);  
         state.getOrCreate(name);
         return component;

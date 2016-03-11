@@ -11,7 +11,7 @@ function Atlant(){
     var atlant = this;
 
     var s = require('./lib')
-        ,l = require('./inc/log')()
+        ,console = require('./utils/log')()
         ,simpleRender = require('./renders/simple')
         ,reactRender = require('./renders/react')
         ,utils = require('./utils')
@@ -99,7 +99,6 @@ function Atlant(){
 
 
     /* Base and helper streams*/
-    l.log('registering base streams...');
 
     var publishStream = baseStreams.bus();  // Here we can put init things.
     var errorStream = baseStreams.bus();
@@ -169,7 +168,6 @@ function Atlant(){
                         })
                     }
 
-                    l.log('the route is changed!')
                     if (path !== atlantState.lastPath || (event && event.detail && event.detail.state && event.detail.state.forceRouteChange)) {
                         // if (!('scrollRestoration' in history)) { utils.unblockScroll();  } // removing fixed just before rendering
                         sink({
@@ -277,7 +275,6 @@ function Atlant(){
                         when.params = void 0;
                         when.mask = void 0;
                     }
-                    console.log('when:', when)
 
                     return when 
                 })
@@ -301,12 +298,10 @@ function Atlant(){
                 return
             } 
 
-            console.log('whens:', _whens.items)
             _whens.items.forEach( whenData => { 
                 // Storing here the data for actions.
                 atlantState.lastMask = whenData.route.masks;
 
-                console.log('whenData:', whenData)
                 var depData = {
                     location: upstream.path
                     ,mask: whenData.mask 
@@ -464,8 +459,6 @@ function Atlant(){
                 stream.whenId = whenId;
                 stream.id = atlantState.activeStreamId.value;
 
-                l.log('---Matched interceptor!!!', depValue)
-
                 return stream;
             }.bind(void 0, depName, injects, whenId))
 
@@ -568,7 +561,7 @@ function Atlant(){
     }
 
     var _verbose = function(on) {
-        l.verbose(on);
+        console.verbose = on;
         return this
     }
 
@@ -581,7 +574,7 @@ function Atlant(){
         if( 'undefined' !== typeof window)
             return window.location.assign(url)
         else
-            console.error('Atlant.js: no window object...')
+            console.error('no window object...')
     }
 
     var _push = function(actionName) {
@@ -660,7 +653,7 @@ function Atlant(){
                 try { 
                     return updater( state, scope );
                 } catch(e) { 
-                    console.error('atlant.js: Warning: updater failed', e)
+                    console.warn('Warning: updater failed', e)
                     return state
                 }
             }.bind(void 0, scope, updater))
@@ -727,7 +720,7 @@ function Atlant(){
     this.match = function(masks, fn) { return _when.bind(this)( masks, fn, types.Matching.continue, types.WhenOrMatch.match ); }
 
     // declare branch that will work if no routes declared by .when() are matched. Routes declared by .match() will be ignored even if they matched.
-    this.otherwise = function(fn) { return _when.bind(this)( '/otherwise', fn, types.Matching.continue, types.WhenOrMatch.otherwise ); }
+    this.otherwise = function() { return _action.call(this, otherwiseStream, false, 'otherwise'); }
 
     // Creates stream which will be called when render error is happend
     this.error = function(fn) { return _action.call(this, errorStream, fn, false, 'error'); }
