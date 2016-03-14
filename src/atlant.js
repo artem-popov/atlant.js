@@ -25,7 +25,7 @@ function Atlant(){
     ;
 
     import console from './utils/log';
-    import _stream from './inc/stream';
+    import Stream from './inc/stream';
     import baseStreams from "./inc/base-streams";
 
     // Preferences set by user
@@ -274,6 +274,7 @@ function Atlant(){
                     return acc 
                 }, {found: false, items: []})
 
+                console.log('whens:', _whens);
             _whens.items.forEach( whenData => { 
                 // Storing here the data for actions.
                 atlantState.lastMask = whenData.route.masks;
@@ -293,10 +294,12 @@ function Atlant(){
                     window.scrollTo(0, 0);
                 } 
 
-                var stream = whenData.route.fn( depData ) // @TODO should be a Stream.
+                console.log('when:', whenData)
+                var stream = whenData.route.fn instanceof Stream ? whenData.route.fn : whenData.route.fn( depData ); // @TODO should be a Stream.
                 if(whenData.when.type === types.WhenOrMatch.when) stream.onValue( _ => atlantState.streams.renderEndStream.push(_) )
 
-                stream.push( depData )
+                if(stream instanceof Stream) stream.push( depData );
+                else console.error('unknown return from Stream function')
             });
 
             if ( !_whens.items.length || !_whens.found ) {  // Only matches or nothing at all
@@ -369,8 +372,10 @@ function Atlant(){
                 depValue = Object.assign(depValue, atlantState.whenData);
             }
 
-            var stream = fn( depValue ); 
-            stream.push( depValue )
+            var stream = fn instanceof Stream ? fn : fn( depValue ); 
+
+            if(stream instanceof Stream) stream.push( depValue );
+            else console.error('unknown return from Stream function')
 
         })
 
@@ -850,7 +855,7 @@ function Atlant(){
 
 
     // Create stream.
-    this.stream = _stream(atlantState, prefs);
+    this.stream =  _ => new Stream(atlantState, prefs);
 
 
     return this;

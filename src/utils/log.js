@@ -23,6 +23,12 @@ var Log = function Log(){
         console.warn(atlantPrefix, ...args)
     }
 
+    this.error = function(...args) {
+        if (!on) return;
+        
+        console.error(atlantPrefix, ...args)
+    }
+
     this.time = function(name) {
         if (!on) return;
         if (console.time) {

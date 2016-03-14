@@ -719,10 +719,5 @@ var Stream = function(atlantState, prefs){
 
 }
 
-
-var streamBind = function(atlantState, prefs) {
-    return _ => new Stream(atlantState, prefs );
-}
-
-export default streamBind;
+export default Stream;
 
