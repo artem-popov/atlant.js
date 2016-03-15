@@ -104,23 +104,7 @@ var Stream = function(atlantState, prefs){
 
         } 
 
-        // when render applyed, no more renders will be accepted for this .when and viewName
-        var renderStopper = function(upstream) {
-            if (upstream.render.renderOperation !== types.RenderOperation.render || upstream.isAction )
-                return true; // always continue for this operations
-
-            if ( upstream.render.viewName in atlantState.viewRendered ) {  // If this view is already rendered...
-                return false;
-            } else { // If this view not yet rendered...
-                atlantState.viewRendered[upstream.render.viewName] = upstream.id;
-
-                return true;
-            }
-        }
-
-
         return function(upstream){
-                    if (!renderStopper(upstream)) return false;
                     if( void 0 === upstream || atlantState.activeStreamId.value !== upstream.id ) return false; 
 
                     try{ 
@@ -490,7 +474,7 @@ var Stream = function(atlantState, prefs){
      */
 
     var _render = (function(){
-        var closeBlock = (renderOperation, viewName, _) => {
+        var closeBlock = (renderOperation, viewName) => {
             if (void 0 !== State.state.lastIf && renderOperation !== types.RenderOperation.draw){ 
                 State.rollback(); 
             }
@@ -504,8 +488,8 @@ var Stream = function(atlantState, prefs){
             }
             s.type(viewName, 'string');
             s.type(renderOperation, 'number')
-            closeBlock = closeBlock.bind(this, renderProvider, viewName );
-            if(renderOperation === types.RenderOperation.nope) { State.state.lastOp.onValue(_=>_); closeBlock(); return this; } // Do nothing if "nope"
+            var closeThisBlock = closeBlock.bind(this, renderOperation, viewName );
+            if(renderOperation === types.RenderOperation.nope) { State.state.lastOp.onValue(_=>_); closeThisBlock(); return this; } // Do nothing if "nope"
             viewName = viewName || s.last(prefs.viewState);
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             // ------end of check/
@@ -528,13 +512,13 @@ var Stream = function(atlantState, prefs){
                 State.state.lastOpId = renderId;
             }
 
-            renderStream.onValue( _ => {
+            State.state.lastOp.onValue( _ => {
              // if ( renderOperation === types.RenderOperation.draw )  { 
                 //     prefs.onDrawEndCallbacks.forEach( _ => _() ) // process user onDrawEnd signal
                 // }
             })
 
-            closeBlock();
+            closeThisBlock();
 
             return this;
         }
@@ -542,6 +526,9 @@ var Stream = function(atlantState, prefs){
 
 
     var _end = function() {
+
+        State.state.lastOp.onValue(_=>_); // Subscribing to last item, else this .if() will be not executed - because of Bacon lazyness
+
         if (void 0 !== State.state.lastIf) {
             State.rollback(); 
         }
@@ -646,6 +633,7 @@ var Stream = function(atlantState, prefs){
 
     // create scope for data provider .select(), .depends() are supported
     this.with = _with;
+    this.where = _with;
 
     /*
      * Injects variables into ".render()".

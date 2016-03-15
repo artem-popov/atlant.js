@@ -43,8 +43,7 @@ function Atlant(){
 
     // Contains state shared across atlant
     var atlantState = {
-        viewRendered: {} // Flag that this view is rendered. Stops other streams to perform render then.
-        ,isLastWasMatched: false // Allow lastWhen to stop other when's execution
+        isLastWasMatched: false // Allow lastWhen to stop other when's execution
         ,actions: {}
         // States from current route. Updated on route Load:
         ,lastPath: void 0 // Stores last visited path. Workaround for safari bug of calling onpopstate after assets loaded.
@@ -225,7 +224,6 @@ function Atlant(){
             stream.id = _.uniqueId();
             atlantState.activeStreamId.value = stream.id;
 
-            atlantState.viewRendered = {};
             atlantState.isLastWasMatched = false;
             return stream;
         });
@@ -285,15 +283,14 @@ function Atlant(){
                 // Storing here the data for actions.
                 atlantState.lastMask = whenData.route.masks;
 
-                var depData = {
+                var depData = Object.assign({
                     location: upstream.path
                     ,mask: whenData.mask 
                     ,pattern: whenData.mask 
                     ,masks: whenData.route.masks
-                    ,params: whenData.params
                     ,referrer: upstream.referrer
                     ,history: upstream.history
-                };
+                }, whenData.params);
                 atlantState.whenData = depData;
 
                 if (whenData.when.type === types.WhenOrMatch.when && ('function' === typeof whenData.scrollToTop.value ? whenData.scrollToTop.value(depData.params) : whenData.scrollToTop.value) && 'undefined' !== typeof window) {
