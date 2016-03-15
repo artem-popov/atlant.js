@@ -523,10 +523,10 @@ var Stream = function(atlantState, prefs){
                 return renderView(upstream)
             })
 
-            State.state.lastOp = renderStream;
-            State.state.lastOpId = renderId;
-
-
+            if (renderOperation === types.RenderOperation.draw){ 
+                State.state.lastOp = renderStream;
+                State.state.lastOpId = renderId;
+            }
 
             renderStream.onValue( _ => {
              // if ( renderOperation === types.RenderOperation.draw )  { 
