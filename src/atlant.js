@@ -22,7 +22,6 @@ function Atlant(){
         ,clientFuncs = require('./inc/clientFuncs')
         ,Storage = require('./inc/storage')
         ,types = require('./inc/types')
-        ,performanceNow = require('./inc/performanceNow')
         ,wrapPushState = require( './inc/wrap-push-state.js').wrapPushState 
 
     import console from './utils/log';
@@ -639,7 +638,7 @@ function Atlant(){
         if( !(updaterName in atlantState.emitStreams ) ) atlantState.emitStreams[updaterName] = baseStreams.bus();
         
         baseStreams.onValue(atlantState.emitStreams[updaterName], function(storeName, updater, updaterName, scope){ // scope is the value of .update().with(scope) what was pushed in
-            stores[storeName].changes.push( function(scope, updater, storeName, updaterName, state){  // state is the value which passed through atom
+            atlantState.stores[storeName].changes.push( function(scope, updater, storeName, updaterName, state){  // state is the value which passed through atom
                 try {
                     return updater( state, scope );
                 } catch(e) {

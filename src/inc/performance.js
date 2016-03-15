@@ -9,6 +9,5 @@ if (!performance || !performance.now) {
   performance = Date;
 }
 
-var performanceNow = performance.now.bind(performance);
 
-module.exports = performanceNow;
+module.exports = performance;

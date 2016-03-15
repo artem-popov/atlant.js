@@ -7,6 +7,7 @@ var baseStreams = require('./base-streams')
         ,interfaces = require('./interfaces')
         ,clientFuncs = require('./clientFuncs')
         ,utils = require('../utils/utils')
+        ,performance = require('./performance')
     ;
 
 var Stream = function(atlantState, prefs){
@@ -67,7 +68,7 @@ var Stream = function(atlantState, prefs){
             // if (upstream.render.subscribe) streamState.subscribersCount++;
 
             atlantState.viewSubscriptionsUnsubscribe[viewName] = atlantState.viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, value){ 
-                let start = performanceNow();
+                let start = performance.now();
 
                 value =  Object.keys(upstream.chains)
                     .map( _ => upstream.chains[_] )
