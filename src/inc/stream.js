@@ -488,11 +488,15 @@ var Stream = function(atlantState, prefs){
             }
             s.type(viewName, 'string');
             s.type(renderOperation, 'number')
+            viewName = viewName || s.last(prefs.viewState);
+
+            if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
+
             var closeThisBlock = closeBlock.bind(this, renderOperation, viewName );
             if(renderOperation === types.RenderOperation.nope) { State.state.lastOp.onValue(_=>_); closeThisBlock(); return this; } // Do nothing if "nope"
-            viewName = viewName || s.last(prefs.viewState);
-            if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
             // ------end of check/
+
+
 
             let subscribe  = 'once' !== once ? true : false;
             var renderId = _.uniqueId();
@@ -500,7 +504,6 @@ var Stream = function(atlantState, prefs){
             
             var renderStream = State.state.lastOp.map( function(upstream){
                 if (!upstream.isAction && upstream.id !== atlantState.activeStreamId.value) return Bacon.never(); // Obsolete streams invoked on previous route.
-
 
                 upstream.render = { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: types.RenderOperationKey[renderOperation], subscribe: subscribe, parent: State.state.lastOpId };
             
@@ -512,7 +515,7 @@ var Stream = function(atlantState, prefs){
                 State.state.lastOpId = renderId;
             }
 
-            State.state.lastOp.onValue( _ => {
+            renderStream.onValue( _ => {
              // if ( renderOperation === types.RenderOperation.draw )  { 
                 //     prefs.onDrawEndCallbacks.forEach( _ => _() ) // process user onDrawEnd signal
                 // }
