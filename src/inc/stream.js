@@ -516,6 +516,7 @@ var Stream = function(atlantState, prefs){
              // if ( renderOperation === types.RenderOperation.draw )  { 
                 //     prefs.onDrawEndCallbacks.forEach( _ => _() ) // process user onDrawEnd signal
                 // }
+                return _
             })
 
             closeThisBlock();
@@ -551,18 +552,15 @@ var Stream = function(atlantState, prefs){
         return this;
     }
 
-    var _log = function(strings) {
-        var arr = s.a2a(arguments).slice();
-        return _depends.bind(this)( function(arr, scope){
-            arr.push(scope);
-
+    var _log = function(...args) {
+        return _depends.bind(this)( function(args, scope){
             try{
-                console.log.apply(console, arr);
+                console.log.apply(console, args.concat(scope));
                 return void 0;
             } catch(e) {
                 return void 0;
             }
-        }.bind(void 0, arr), types.Depends.continue );
+        }.bind(void 0, args), types.Depends.continue );
     }
 
     var _select = function(dependsBehaviour, isAtom, partName, storeName, dependsOn) {
@@ -572,13 +570,15 @@ var Stream = function(atlantState, prefs){
 
         return _depends.bind(this)( function(storeName, partName){
             return function(storeName, partName, id){
+                var value;
                 try {
                     // console.log('executing select', partName , 'from', '<' + storeName + '>', atlantState.stores[storeName].staticValue, 'with', atlantState.stores[storeName].parts[partName], '(',id(),')', ' = ', atlantState.stores[storeName].parts[partName](atlantState.stores[storeName].staticValue, id()))
-                    return atlantState.stores[storeName].parts[partName](atlantState.stores[storeName].staticValue, id());
+                    value = atlantState.stores[storeName].parts[partName](atlantState.stores[storeName].staticValue, id());
                 } catch(e) {
                     console.error('select', partName, 'from', storeName,'failed:', e.stack)
-                    return void 0;
+                    value = void 0;
                 }
+                return value;
             }.bind(void 0, storeName, partName)
         }.bind(void 0, storeName, partName), dependsBehaviour, { storeName: storeName, dependsOn: dependsOn, partName: partName, bus: atlantState.stores[storeName].bus, partProvider: atlantState.stores[storeName].parts[partName], storeData: atlantState.stores[storeName]}, isAtom );
     }
