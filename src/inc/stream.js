@@ -235,8 +235,6 @@ var Stream = function(atlantState, prefs){
         State.state.lastWhen = lastWhen;
         State.state.lastOp = State.state.lastWhen;
         State.state.lastOpId = whenId;
-        State.state.lastConditionId = whenId;
-        TopState.state.lastActionId = whenId;
         TopState.state.lastAction = depName
     
     }())
@@ -292,6 +290,7 @@ var Stream = function(atlantState, prefs){
 
             stream = stream // Treat dependency results
                 .map(function(depName, injects, upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
+                    console.log('imhere:', upstream)
                     return injectsGrabber.add(depName, upstream.depends[depName], injects, upstream);
                 }.bind(void 0, depName, injects))
                 .mapError(function(_){ console.error('Unhandled error', _)})
@@ -377,7 +376,7 @@ var Stream = function(atlantState, prefs){
 
             State.state.lastDep = thisDep;
             State.state.lastDepName = depName;
-            State.state.lastOp = State.state.lastDep;
+            State.state.lastOp = thisDep;
             State.state.lastOpId = opId;
 
             return this;
@@ -405,41 +404,40 @@ var Stream = function(atlantState, prefs){
         var depName = 'if_' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
 
-        var thisCommonIf = State.state.lastOp
-            .map( function(u){ return _.extend( {}, u) } ) // Copy
-
-
-        var thisIf = thisCommonIf
+        var commonIf = State.state.lastOp
             .map(function(ifId, fn, condition, upstream){
                 var scope = clientFuncs.createScope(upstream);
                 var checkCondition = s.compose(clientFuncs.applyScopeD, s.tryD)(fn);
-                if ( checkCondition(scope) ) return upstream;
-                else return void 0;
+                upstream.check = checkCondition(scope);
+                return upstream;
             }.bind(void 0, ifId, fn, condition))
-            .filter( s.id )
+
+        var thisIf = commonIf
+            .map( _.extend.bind(_, {} ) ) // Copy
+            .filter( _ => boolTransform(_.check) )
             .map( function(ifId, depName, injects, upstream) {
+                console.log('thisIf:', upstream)
+                delete upstream.check;
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
                 return stream;
             }.bind(void 0, ifId, depName, injects))
 
-        var thisIfNegate = thisCommonIf 
-            .map(function(ifId, fnNegate, condition, upstream){
-                var scope = clientFuncs.createScope(upstream);
-                var checkCondition = s.compose(clientFuncs.applyScopeD, s.tryD)(fnNegate);
-                if ( checkCondition(scope) ) return upstream;
-                else return void 0;
-            }.bind(void 0, ifId, fnNegate, condition))
-            .filter( s.id )
+        var thisElse = commonIf 
+            .map( _.extend.bind(_, {} ) ) // Copy
+            .filter( _ => !boolTransform(_.check) )
+            .map( function(ifId, depName, injects, upstream) {
+                console.log('thisElse:', upstream, boolTransform, upstream.check)
+                delete upstream.check;
+                var stream = injectsGrabber.add(depName, {}, injects, upstream);
+                return stream;
+            }.bind(void 0, ifId, depName, injects))
 
-        // thisIfNegate.onValue(function(ifId, actionId, condition, u){
-        // }.bind(void 0, ifId, TopState.state.lastActionId, condition))
 
         State.state.lastIf = thisIf;
+        State.state.lastElse = thisElse;
         State.state.lastOp = State.state.lastIf;
         State.state.lastOpId = ifId;
-        State.state.lastConditionId = ifId;
-        State.state.lastIfId = ifId;
-        State.state.lastIfIds.push(ifId) // Stores upper stack of if ids
+        State.state.lastDep = void 0
 
         return this;
     }
@@ -475,9 +473,20 @@ var Stream = function(atlantState, prefs){
 
     var _render = (function(){
         var closeBlock = (renderOperation, viewName) => {
+
             if (void 0 !== State.state.lastIf && renderOperation !== types.RenderOperation.draw){ 
+
+                var dep = State.state.lastDep ? State.state.lastDep.merge(State.state.lastElse) : void 0;
+                var op = State.state.lastOp.merge(State.state.lastElse); 
+
                 State.rollback(); 
+
+                State.state.lastDep = dep; 
+                State.state.lastOp = op;
+                console.log('Rolled back ', viewName, '!')
+
             }
+
         }
         return function(renderProvider, viewName, once, renderOperation){
             // /check
@@ -493,7 +502,8 @@ var Stream = function(atlantState, prefs){
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
 
             var closeThisBlock = closeBlock.bind(this, renderOperation, viewName );
-            if(renderOperation === types.RenderOperation.nope) { State.state.lastOp.onValue(_=>_); closeThisBlock(); return this; } // Do nothing if "nope"
+            
+            if(renderOperation === types.RenderOperation.nope) { closeThisBlock(); State.state.lastOp.onValue( _ => _ ); return this; } // Do nothing if "nope"
             // ------end of check/
 
 
@@ -513,14 +523,15 @@ var Stream = function(atlantState, prefs){
             if (renderOperation === types.RenderOperation.draw){ 
                 State.state.lastOp = renderStream;
                 State.state.lastOpId = renderId;
+            } else {
+                renderStream.onValue( _ => {
+                // if ( renderOperation === types.RenderOperation.draw )  { 
+                    //     prefs.onDrawEndCallbacks.forEach( _ => _() ) // process user onDrawEnd signal
+                    // }
+                    return _
+                })
             }
 
-            renderStream.onValue( _ => {
-             // if ( renderOperation === types.RenderOperation.draw )  { 
-                //     prefs.onDrawEndCallbacks.forEach( _ => _() ) // process user onDrawEnd signal
-                // }
-                return _
-            })
 
             closeThisBlock();
 
@@ -581,6 +592,7 @@ var Stream = function(atlantState, prefs){
                     console.error('select', partName, 'from', storeName,'failed:', e.stack)
                     value = void 0;
                 }
+                if(partName === 'load-range')console.error('select', partName, 'from', storeName,'results:', value)
                 return value;
             }.bind(void 0, storeName, partName)
         }.bind(void 0, storeName, partName), dependsBehaviour, { storeName: storeName, dependsOn: dependsOn, partName: partName, bus: atlantState.stores[storeName].bus, partProvider: atlantState.stores[storeName].parts[partName], storeData: atlantState.stores[storeName]}, isAtom );

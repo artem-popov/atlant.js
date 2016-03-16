@@ -3,8 +3,7 @@
 var _ = require('lodash');
 
 var StateType = function(state) {
-    var newState = _.extend( {}, {lastIf: void 0, lastIfIds: [], lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0, lastStoreName: void 0 }, state);
-    newState.lastIfIds = [].concat( newState.lastIfIds );
+    var newState = _.extend( {}, {lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0, lastStoreName: void 0 }, state);
     return newState
 };
 

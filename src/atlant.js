@@ -295,7 +295,6 @@ function Atlant(){
                     window.scrollTo(0, 0);
                 } 
 
-                console.log('when:', whenData)
                 var stream = whenData.route.fn instanceof Stream ? whenData.route.fn : whenData.route.fn( depData ); // @TODO should be a Stream.
                 if(whenData.when.type === types.WhenOrMatch.when) stream.onValue( _ => atlantState.streams.renderEndStream.push(_) )
 
@@ -452,7 +451,6 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastOpId = whenId;
         State.state.lastWhenType = 'action';
-        State.state.lastConditionId = whenId;
         TopState.state.lastActionId = whenId;
         TopState.state.lastAction = 'interceptor';
 
