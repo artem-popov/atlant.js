@@ -41,6 +41,7 @@ gulp.task('examples', function() {
 });
 
 gulp.task('watch', function() {
+        process.env.NODE_PATH = 'modules/';
         return gulp
             .src(['src/**/*.js', 'src/**/*.sjs', 'src/**/*.ls'])
             .pipe( plumber() )

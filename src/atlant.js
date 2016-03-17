@@ -13,20 +13,20 @@ function Atlant(){
     // Imports
     var s = require('utils/lib')
         ,utils = require('utils/utils')
-        ,simpleRender = require('./renders/simple')
-        ,reactRender = require('./renders/react')
+        ,simpleRender = require('renders/simple')
+        ,reactRender = require('renders/react')
         ,Bacon = require('baconjs')
         ,_ = require('lodash')
-        ,interfaces = require('./inc/interfaces')
-        ,StateClass = require('./inc/state')
-        ,clientFuncs = require('./inc/clientFuncs')
-        ,Storage = require('./inc/storage')
-        ,types = require('./inc/types')
-        ,wrapPushState = require( './inc/wrap-push-state.js').wrapPushState 
+        ,interfaces = require('inc/interfaces')
+        ,StateClass = require('inc/state')
+        ,clientFuncs = require('inc/clientFuncs')
+        ,Storage = require('inc/storage')
+        ,types = require('inc/types')
+        ,wrapPushState = require( 'inc/wrap-push-state.js').wrapPushState 
 
-    import console from './utils/log';
-    import Stream from './inc/stream';
-    import baseStreams from "./inc/base-streams";
+    import console from 'utils/log';
+    import Stream from 'inc/stream';
+    import baseStreams from "inc/base-streams";
 
     // Preferences set by user
     var prefs = {
@@ -69,7 +69,7 @@ function Atlant(){
         ,viewSubscriptions: {}
     }
 
-    import views from "./views/views";
+    import views from "views/views";
     let unsubscribeView = views(atlantState);
 
     // Patching goTo for further use
@@ -823,15 +823,15 @@ function Atlant(){
      * These commands doesn't return "this".
      */
     // Returns atlant.js version
-    this.version = require('./atlant-version');
+    this.version = require('atlant-version');
     // Returns timestamp of the creation time
-    this.build = require('./atlant-build');
+    this.build = require('atlant-build');
 
     this.destroy = _destroy;
     this.isServer = function(){ return 'undefined' === typeof window }
     this.isBrowser = function(){ return 'undefined' !== typeof window }
 
-    this.utils = require('./inc/tools'); // @TODO: rename to 'tools'
+    this.utils = require('inc/tools'); // @TODO: rename to 'tools'
     this.utils.setTitle = this.utils.setTitle.bind(void 0, atlantState.titleStore);
     this.utils.getTitle = this.utils.getTitle.bind(void 0, atlantState.titleStore);
     // Needed only for browsers not supporting canceling history.scrollRestoration

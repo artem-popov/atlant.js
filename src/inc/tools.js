@@ -1,8 +1,8 @@
 "use strict";
 
-var utils = require('../utils/utils')
+var utils = require('utils/utils')
     ,_ = require('lodash')
-    ,s = require('../utils/lib')
+    ,s = require('utils/lib')
 ;
 
 var _test = function(path, mask){

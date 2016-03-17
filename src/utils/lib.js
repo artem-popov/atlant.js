@@ -2,7 +2,7 @@
 
 var container = Object.create(null);
 
-import console from "./log";
+import console from "utils/log";
 
 var s = (function(){
 

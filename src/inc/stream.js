@@ -1,13 +1,13 @@
 "use strict";
 
-var baseStreams = require('./base-streams')
-        ,s = require('../utils/lib')
-        ,StateClass = require('./state')
-        ,types = require('./types')
-        ,interfaces = require('./interfaces')
-        ,clientFuncs = require('./clientFuncs')
-        ,utils = require('../utils/utils')
-        ,performance = require('./performance')
+var baseStreams = require('inc/base-streams')
+        ,s = require('utils/lib')
+        ,StateClass = require('inc/state')
+        ,types = require('inc/types')
+        ,interfaces = require('inc/interfaces')
+        ,clientFuncs = require('inc/clientFuncs')
+        ,utils = require('utils/utils')
+        ,performance = require('inc/performance')
     ;
 
 var Stream = function(atlantState, prefs){
@@ -21,7 +21,7 @@ var Stream = function(atlantState, prefs){
     var id = _.uniqueId();
     var root = baseStreams.bus();
 
-    import views from "../views/views";
+    import views from "views/views";
     let unsubscribeView = views(atlantState);
 
     var lastWhen;
