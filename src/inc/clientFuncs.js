@@ -100,12 +100,7 @@ var createScope = function ( upstream ) {
     var data = injectsData.object;
     var joinsData = fullfil( joins );
 
-    // Injecting of mask and location.
-    var params = s.reduce(function(result, item) { result[item] = upstream.params[item]; return result;}, {} , _.keys(upstream.params))
-    params['mask'] = (upstream.route) ? upstream.route.mask : void 0;    
-    params['location'] = upstream.path;
-
-    data = s.extend( refsData, params, data, joinsData ); 
+    data = s.extend( refsData, upstream.params, data, joinsData ); 
 
     return data;
 };

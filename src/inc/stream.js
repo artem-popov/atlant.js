@@ -212,13 +212,14 @@ var Stream = function(atlantState, prefs){
                     if(!('mask' in depValue)) depValue.mask = atlantState.lastMask;
                     if(!('masks' in depValue)) depValue.masks = atlantState.lastMask;
                     if(!('pattern' in depValue)) depValue.pattern = atlantState.lastMask;
-                    depValue.location = atlantState.lastPath;
-                    depValue.referrer = atlantState.lastReferrer;
-                    depValue.history = atlantState.lastHistory;
+                    if(!('location' in depValue)) depValue.location = atlantState.lastPath;
+                    if(!('referrer' in depValue)) depValue.referrer = atlantState.lastReferrer;
+                    if(!('history' in depValue)) depValue.history = atlantState.lastHistory;
                 }
 
                 var stream = injectsGrabber.add(depName, depValue, injects, {});
                 stream = dependsName.add( depName, nameContainer, stream); 
+                stream.params = s.extend({}, depValue);
 
                 stream.stats = stats;
                 stream.whenId = whenId;
@@ -588,7 +589,6 @@ var Stream = function(atlantState, prefs){
                     console.error('select', partName, 'from', storeName,'failed:', e.stack)
                     value = void 0;
                 }
-                if(partName === 'load-range')console.error('select', partName, 'from', storeName,'results:', value)
                 return value;
             }.bind(void 0, storeName, partName)
         }.bind(void 0, storeName, partName), dependsBehaviour, { storeName: storeName, dependsOn: dependsOn, partName: partName, bus: atlantState.stores[storeName].bus, partProvider: atlantState.stores[storeName].parts[partName], storeData: atlantState.stores[storeName]}, isAtom );
