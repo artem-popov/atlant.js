@@ -8,13 +8,13 @@ var utils = require('../utils/utils')
 var _test = function(path, mask){
     if ( !path || !mask ) return false;
 
-    return null !== utils.matchRoute(path, mask)
+    return void 0 !== utils.matchRoute(path, mask)
 }
 
 var _return = function(path, mask){
     if ( !path || !mask ) return false;
 
-    return null !== utils.matchRoute(path, mask) ? mask : void 0
+    return void 0 !== utils.matchRoute(path, mask) ? mask : void 0
 }
 
 var _testAll = function(path, masks){

@@ -290,7 +290,6 @@ var Stream = function(atlantState, prefs){
 
             stream = stream // Treat dependency results
                 .map(function(depName, injects, upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
-                    console.log('imhere:', upstream)
                     return injectsGrabber.add(depName, upstream.depends[depName], injects, upstream);
                 }.bind(void 0, depName, injects))
                 .mapError(function(_){ console.error('Unhandled error', _)})
@@ -416,7 +415,6 @@ var Stream = function(atlantState, prefs){
             .map( _.extend.bind(_, {} ) ) // Copy
             .filter( _ => boolTransform(_.check) )
             .map( function(ifId, depName, injects, upstream) {
-                console.log('thisIf:', upstream)
                 delete upstream.check;
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
                 return stream;
@@ -426,7 +424,6 @@ var Stream = function(atlantState, prefs){
             .map( _.extend.bind(_, {} ) ) // Copy
             .filter( _ => !boolTransform(_.check) )
             .map( function(ifId, depName, injects, upstream) {
-                console.log('thisElse:', upstream, boolTransform, upstream.check)
                 delete upstream.check;
                 var stream = injectsGrabber.add(depName, {}, injects, upstream);
                 return stream;
@@ -483,7 +480,6 @@ var Stream = function(atlantState, prefs){
 
                 State.state.lastDep = dep; 
                 State.state.lastOp = op;
-                console.log('Rolled back ', viewName, '!')
 
             }
 

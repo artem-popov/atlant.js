@@ -247,8 +247,7 @@ utils.attachGuardToLinks = function() {
  * @param when - compare mask
  * @returns (*)
  */
-utils.matchRoute = _.curry( function(path, mask){ 
-    return s.memoize( function(path, mask){ 
+utils.matchRoute = _.curry( s.memoize( function(path, mask){ 
     // TODO(i): this code is convoluted and inefficient, we should construct the route matching
     //   regex only once and then reuse it
     var negate = '!' === mask[0];
@@ -300,7 +299,7 @@ utils.matchRoute = _.curry( function(path, mask){
     }
 
     return isMatched ? dst  : void 0;
-})(path, mask) });
+}));
 
 // Utility function
 // Adding slashes at the end, i.e. ['/story'] became [['/story/', '/story']]

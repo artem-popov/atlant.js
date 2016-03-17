@@ -276,7 +276,6 @@ function Atlant(){
                     return acc 
                 }, {found: false, items: []})
 
-                console.log('whens:', _whens);
             _whens.items.forEach( whenData => { 
                 // Storing here the data for actions.
                 atlantState.lastMask = whenData.route.masks;
@@ -451,7 +450,6 @@ function Atlant(){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastOpId = whenId;
         State.state.lastWhenType = 'action';
-        TopState.state.lastActionId = whenId;
         TopState.state.lastAction = 'interceptor';
 
         return this;
