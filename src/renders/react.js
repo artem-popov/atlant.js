@@ -79,8 +79,9 @@ var Render = function(React) {
 
         var instance = state.getThis(name);
 
-        if( instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) instance.forceUpdate();
-        // if(instance) instance.forceUpdate(); // If root component contained this view is not yet rendered, then it's not a big deal. When it will be rendered, it will catch all rendered instances of it's children and draw them. 
+        if( instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) { 
+            instance.forceUpdate();
+        }
 
         console.timeEnd('rendering view ' + name);
 

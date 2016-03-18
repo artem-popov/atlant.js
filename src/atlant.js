@@ -55,7 +55,7 @@ function Atlant(){
         ,emitStreams: {}
         ,viewData: {} // To check if the rendered data is the as data to be rendered.
         ,routes: []  // Routes collected
-        ,streams: {
+        ,devStreams: {
             renderEndStream: baseStreams.bus()
             ,interceptorBus: baseStreams.bus()
             ,otherwiseStream: baseStreams.bus() 
@@ -67,6 +67,8 @@ function Atlant(){
         ,titleStore: { value: '' }
         ,viewSubscriptionsUnsubscribe: {}
         ,viewSubscriptions: {}
+        ,streams: {}
+        ,atlant: this
     }
 
     import views from "views/views";
@@ -95,12 +97,12 @@ function Atlant(){
     }
 
     // can be removed, just imformational
-    baseStreams.onValue(atlantState.streams.renderEndStream, s.baconTryD(_ => console.log('render end:', _)));
+    baseStreams.onValue(atlantState.devStreams.renderEndStream, s.baconTryD(_ => console.log('render end:', _)));
 
     var injectsGrabber = new interfaces.injectsGrabber();
     var TopState = new StateClass(); // State which up to when
 
-    var routeChangedStream =  atlantState.streams.publishStream
+    var routeChangedStream =  atlantState.devStreams.publishStream
         .merge( Bacon.fromBinder(function(sink) {
             if ( 'undefined' === typeof window) return;
             var routeChanged = function(sink, event) {
@@ -236,11 +238,11 @@ function Atlant(){
 
 
         atlantState.rootStream
-            .onValue( function(upstream) {
+            .onValue( s.tryD(function(upstream) {
 
             const skipRoutes = prefs.skipRoutes.map( _ => utils.matchRoute(upstream.path, _) || utils.matchRoute(utils.getPossiblePath(upstream.path), _) ).filter( _ => !!_ );
             if(skipRoutes.length) {
-                atlantState.streams.renderEndStream.push({ httpStatus: 404, httpMessage: 'Resource is forbidden' });
+                atlantState.devStreams.renderEndStream.push({ httpStatus: 404, httpMessage: 'Resource is forbidden' });
                 return
             }
 
@@ -295,18 +297,20 @@ function Atlant(){
                 } 
 
                 var stream = whenData.route.fn instanceof Stream ? whenData.route.fn : whenData.route.fn( depData ); // @TODO should be a Stream.
-                if(whenData.when.type === types.WhenOrMatch.when) stream.onValue( _ => atlantState.streams.renderEndStream.push(_) )
 
-                if(stream instanceof Stream) stream.push( depData );
-                else console.error('unknown return from Stream function')
+                if(!stream || !(stream instanceof Stream)) throw new Error('Unknown return from Stream function');
+
+                if(whenData.when.type === types.WhenOrMatch.when) stream.onValue( _ => atlantState.devStreams.renderEndStream.push(_) )
+
+                stream.push( depData );
             });
 
             if ( !_whens.items.length || !_whens.found ) {  // Only matches or nothing at all
-                atlantState.streams.otherwiseStream.push(upstream);
+                atlantState.devStreams.otherwiseStream.push(upstream);
                 return
             } 
 
-        })
+        }))
 
 
     /* Base */
@@ -327,6 +331,8 @@ function Atlant(){
                         .filter(function(_){ return _.length });
 
             if ( !masks.length ) throw new Error('At least one route mask should be specified.');
+
+            if ('function' !== typeof fn) throw new Error('Make use "fn = _ => Stream" as second parameter of atlant.when() for ' + masks);
 
             TopState.state.lastMasks = masks;
 
@@ -356,32 +362,6 @@ function Atlant(){
             return this;
         };
     }();
-
-    var _action = function(action, fn, isAction, depCode){
-        TopState.first();
-
-        if (!action) throw new Error('Atlant.js: action stream is not provided!');
-        if (!fn) throw new Error('Atlant.js: follow stream function is not provided!');
-
-        action.onValue(function(depValue){
-            if ('undefined' === typeof depValue) {
-                depValue = {};
-            }
-            if ('object' === typeof depValue) {
-                depValue = Object.assign(depValue, atlantState.whenData);
-            }
-
-            var stream = fn instanceof Stream ? fn : fn( depValue ); 
-
-            if(stream instanceof Stream) stream.push( depValue );
-            else console.error('unknown return from Stream function')
-
-        })
-
-
-        return this;
-
-    };
 
     var _pre = function(fn){
         prefs.pre = fn;
@@ -420,7 +400,7 @@ function Atlant(){
         var depName = 'interceptor' + _.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
 
-        State.state.lastWhen = atlantState.streams.interceptorBus
+        State.state.lastWhen = atlantState.devStreams.interceptorBus
             .map( function(depName, injects, whenId, obj) {
 
                 var depValue = {};  // @TODO RETHINK
@@ -437,7 +417,6 @@ function Atlant(){
 
                 stream.action = true;
                 stream.isInterceptor = true;
-                stream.isAction = true;
                 stream.whenId = whenId;
                 stream.id = atlantState.activeStreamId.value;
 
@@ -475,7 +454,7 @@ function Atlant(){
      */
     var _publish = function(path){
         if (path) s.type(path, 'string');
-        atlantState.streams.publishStream.push({published:true, path:path});
+        atlantState.devStreams.publishStream.push({published:true, path:path});
     }
 
     var _set = function( view ) {
@@ -497,12 +476,12 @@ function Atlant(){
 
 
     var _onRenderEnd = function(callback) { // Use this to get early callback for server render
-        baseStreams.onValue(atlantState.streams.renderEndStream, s.baconTryD(callback));
+        baseStreams.onValue(atlantState.devStreams.renderEndStream, s.baconTryD(callback));
         return this;
     }
 
     var _onDestroy = function(callback) { // Use this to get early callback for server render
-        baseStreams.onValue(atlantState.streams.onDestroyStream, s.baconTryD(callback));
+        baseStreams.onValue(atlantState.devStreams.onDestroyStream, s.baconTryD(callback));
         return this;
     }
 
@@ -555,11 +534,6 @@ function Atlant(){
             return window.location.assign(url)
         else
             console.error('no window object...')
-    }
-
-    var _push = function(actionName) {
-        throw new Error('atlant.push() not implemented');
-        return this;
     }
 
     var _store = function(storeName) {
@@ -674,7 +648,7 @@ function Atlant(){
 
         s = l = simpleRender = reactRender = utils = Bacon = _ = interfaces = StateClass = clientFuncs =  safeGoToCopy = null;// @TODO more
 
-        atlantState.streams.onDestroyStream.push();
+        atlantState.devStreams.onDestroyStream.push();
     }
 
     /**
@@ -700,25 +674,23 @@ function Atlant(){
     this.match = function(masks, fn) { return _when.bind(this)( masks, fn, types.Matching.continue, types.WhenOrMatch.match ); }
 
     // declare branch that will work if no routes declared by .when() are matched. Routes declared by .match() will be ignored even if they matched.
-    this.otherwise = function(fn) { return _action.call(this, atlantState.streams.otherwiseStream, fn, false, 'otherwise'); }
+    this.otherwise = function(fn) { return atlant.streams.reg.call(this, atlantState.devStreams.otherwiseStream, fn); }
 
     // Creates stream which will be called when render error is happend
-    this.error = function(fn) { return _action.call(this, atlantState.streams.errorStream, fn, false, 'error'); }
+    this.error = function(fn) { return atlant.streams.reg.call(this, atlantState.devStreams.errorStream, fn); }
 
 
     // Creates stream which will be called when status!= undefined is happend @TODO change this to : when reject is happend
     // this.catch = _catch;
 
     // Creates custom stream which accepts Bacon stream
-    this.action = function(action, fn) { return _action.call(this, action, fn, true, 'action'); }
+    this.action = function(action, fn) { return atlant.streams.reg.call(this, action, fn); }
 
     // creates branch which can destruct all what declared by .when() or .match()
     // this.finally =  _finally; // was removed, not reimplemented yet 
 
     // side-effect
     this.interceptor = _interceptor;
-
-    this.push = _push;
 
     /**
      * Stores!
@@ -855,7 +827,57 @@ function Atlant(){
 
 
     // Create stream.
-    this.stream =  _ => new Stream(atlantState, prefs);
+    this.stream = bus => new Stream(atlantState, prefs, bus);
+
+    
+
+    this.streams = { 
+        _getStream: function(stream){
+            if('string' === typeof stream) {
+                stream = atlant.streams.get(stream)
+            } else if( stream instanceof Bacon.Bus) {
+                stream = atlant.stream(stream)
+                atlantState.streams[stream] = stream
+            }
+            return stream
+        },
+        get: name => {
+            if (!atlantState.streams[name])
+                atlantState.streams[name] = this.stream();
+
+            // let push = atlantState.streams[name].push.bind(atlantState.streams[name]);
+            // atlantState.streams[name].pushSync = push;
+            // atlantState.streams[name].push = (...args) => setTimeout( _ => push(...args), 0);
+
+            return atlantState.streams[name];
+        },
+        reg: function(stream, fn){
+            TopState.first();
+
+            if (!stream) throw new Error('Atlant.js stream or stream name is not provided!');
+            if (!fn) throw new Error('Atlant.js: follow stream function is not provided!');
+
+            stream = atlant.streams._getStream(stream);
+
+            stream.onStart(function(depValue){
+                if ('undefined' === typeof depValue) {
+                    depValue = {};
+                }
+                if ('object' === typeof depValue) {
+                    depValue = Object.assign(depValue, atlantState.whenData);
+                }
+
+                var stream = fn instanceof Stream ? fn : fn( depValue ); 
+
+                if(stream instanceof Stream) stream.push( depValue );
+                else console.error('unknown return from Stream function')
+
+            })
+
+
+            return this
+        }
+    }
 
 
     return this;

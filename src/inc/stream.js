@@ -10,7 +10,11 @@ var baseStreams = require('inc/base-streams')
         ,performance = require('inc/performance')
     ;
 
-var Stream = function(atlantState, prefs){
+import console from 'utils/log';
+
+var Stream = function(atlantState, prefs, bus){
+    if(bus && bus instanceof Bacon.Bus) console.warn('Using Bacon.Bus streams are deprecated');
+
 
     var TopState = new StateClass(); // State which up to when
     var State = new StateClass(); // State which up to any last conditional: when, if
@@ -19,7 +23,8 @@ var Stream = function(atlantState, prefs){
     var dependsName = new interfaces.dependsName();
     var withGrabber = new interfaces.withGrabber();
     var id = _.uniqueId();
-    var root = baseStreams.bus();
+    
+    var root = bus || baseStreams.bus();
 
     import views from "views/views";
     let unsubscribeView = views(atlantState);
@@ -27,6 +32,7 @@ var Stream = function(atlantState, prefs){
     var lastWhen;
 
     var streamState = {
+        end: false
     }
 
     var streamCallbacks = [];
@@ -273,7 +279,7 @@ var Stream = function(atlantState, prefs){
                             .mapError(function(_){ console.error('Network error: status === ', _.status); return _})
                             .map(function(upstream, atomParams, store, depName, isAtom, atomValue, results){
                                 if ( 'function' === typeof results ) results = results.bind(void 0, atomParams);
-                                if ( !upstream.isInterceptor ) atlantState.streams.interceptorBus.push({upstream: upstream, scope: results}); // pushing into global depends .interceptor() 
+                                if ( !upstream.isInterceptor ) atlantState.devStreams.interceptorBus.push({upstream: upstream, scope: results}); // pushing into global depends .interceptor() 
                                 if (!upstream.depends) upstream.depends = {};
                                 upstream.depends[depName] = results;
 
@@ -446,6 +452,7 @@ var Stream = function(atlantState, prefs){
         s.type(key, 'string');
         if ( ! State.state.lastDepName ) throw new Error('.inject should follow .depends');
 
+        console.warn(`Use of atlant.inject( ${key}, ${expression} ) is deprecated at ${atlantState.lastMask}`);
 
         State.state.lastInjects[key] = { name: State.state.lastDepName, expression: expression };
 
@@ -455,6 +462,8 @@ var Stream = function(atlantState, prefs){
     var _join = function( key, expression ) {
         s.type(key, 'string');
         State.state.lastInjects[key] = { name: State.state.lastDepName, expression: expression, injects: Array.prototype.slice.apply(State.state.lastInjects) };
+
+        console.warn(`Use of atlant.join( ${key}, ${expression} ) is deprecated at ${atlantState.lastMask}`);
 
         return this;
     }
@@ -563,17 +572,6 @@ var Stream = function(atlantState, prefs){
         return this;
     }
 
-    var _log = function(...args) {
-        return _depends.bind(this)( function(args, scope){
-            try{
-                console.log.apply(console, args.concat(scope));
-                return void 0;
-            } catch(e) {
-                return void 0;
-            }
-        }.bind(void 0, args), types.Depends.continue );
-    }
-
     var _select = function(dependsBehaviour, isAtom, partName, storeName, dependsOn) {
         if (!(storeName in atlantState.stores)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(', storeName + ')');
         if (!(partName in atlantState.stores[storeName].parts)) throw new Error('atlant.js: store ' + storeName + ' is not defined. Use atlant.store(' + storeName + ')');
@@ -592,6 +590,25 @@ var Stream = function(atlantState, prefs){
                 return value;
             }.bind(void 0, storeName, partName)
         }.bind(void 0, storeName, partName), dependsBehaviour, { storeName: storeName, dependsOn: dependsOn, partName: partName, bus: atlantState.stores[storeName].bus, partProvider: atlantState.stores[storeName].parts[partName], storeData: atlantState.stores[storeName]}, isAtom );
+    }
+
+    var _log = function(...args) {
+        return _depends.bind(this)( function(args, scope){
+            try{
+                console.log.apply(console, args.concat(scope));
+                return void 0;
+            } catch(e) {
+                return void 0;
+            }
+        }.bind(void 0, args), types.Depends.continue );
+    }
+
+    var _send = function(stream) {
+        return _depends.bind(this)( function(scope){
+            stream = atlantState.atlant.streams._getStream(stream);
+            stream.push(scope);
+            return void 0;
+        }, false, types.Depends.continue );
     }
 
     // Create scope for prefixed method (currently .select(), .update(), .depends())
@@ -619,11 +636,11 @@ var Stream = function(atlantState, prefs){
     /**
      *  Asyncroniously run the dependency. 
      */
-    this.async =  function( dependency ) { return _depends.bind(this)( dependency, false, types.Depends.async) };
+    this.async =  function( dependency ) { return _depends.bind(this)( dependency, types.Depends.async) };
     /*
      *  Continuesly run the dependency. First executed previous dependency, and only after - this one.
      * */
-    this.dep =  function( dependency ) { return _depends.bind(this)( dependency, false, types.Depends.continue) };
+    this.dep =  function( dependency ) { return _depends.bind(this)( dependency, types.Depends.continue) };
     /*
      * .data() allow catch every peace of data which where piped with .depends(), .and()
      **/
@@ -669,6 +686,9 @@ var Stream = function(atlantState, prefs){
      */
     //Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
     this.log =  _log;
+    // shortcode for .dep( _ => atlant.streams.get('streamName').push(_))
+    this.send =  _send;
+
     /* Renders the view. first - render provider, second - view name */
     this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'always', types.RenderOperation.render);}
     /* Do not subscribe selects on view */
@@ -698,10 +718,11 @@ var Stream = function(atlantState, prefs){
         root.push(_)
     }
 
-    this.onValue = _ => {
-       streamCallbacks.push(_); 
+    this.onStart = _ => {
+        root.onValue(_)
     }
 
+    this.onValue = streamCallbacks.push.bind(streamCallbacks);
 }
 
 export default Stream;
