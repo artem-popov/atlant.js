@@ -279,6 +279,10 @@ function Atlant(){
                 }, {found: false, items: []})
 
             _whens.items.forEach( whenData => { 
+                if(whenData.isMatch && types.Matching.once === whenData.matchingBehaviour && whenData.isDone) return;
+
+                whenData.isDone = true;
+
                 // Storing here the data for actions.
                 atlantState.lastMask = whenData.route.masks;
 
@@ -356,7 +360,8 @@ function Atlant(){
                 route: { masks: masks, fn: fn},
                 isFinally: false,
                 isMatch: types.WhenOrMatch.match === whenType,
-                scrollToTop: scrollToTop
+                scrollToTop: scrollToTop,
+                matchingBehaviour: matchingBehaviour
             };
 
             return this;
@@ -672,6 +677,10 @@ function Atlant(){
 
     // Match declare a route which will be ignored by .otherwise()
     this.match = function(masks, fn) { return _when.bind(this)( masks, fn, types.Matching.continue, types.WhenOrMatch.match ); }
+
+    // Match declare a route which will be ignored by .otherwise()
+    this.matchOnce = function(masks, fn) { return _when.bind(this)( masks, fn, types.Matching.once, types.WhenOrMatch.match ); }
+
 
     // declare branch that will work if no routes declared by .when() are matched. Routes declared by .match() will be ignored even if they matched.
     this.otherwise = function(fn) { return atlant.streams.reg.call(this, atlantState.devStreams.otherwiseStream, fn); }

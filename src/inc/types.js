@@ -28,6 +28,7 @@ RenderOperationKey[RenderOperation.nope] = 'nope';
 var Matching = {
     stop: _.uniqueId()
     ,continue: _.uniqueId()
+    ,once: _.uniqueId()
 }
 
 var WhenOrMatch = {
