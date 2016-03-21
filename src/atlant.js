@@ -25,7 +25,7 @@ function Atlant(){
         ,wrapPushState = require( 'inc/wrap-push-state.js').wrapPushState 
 
     import console from 'utils/log';
-    import Stream from 'inc/stream';
+    import { Stream, ReadyStream } from 'inc/stream';
     import baseStreams from "inc/base-streams";
 
     // Preferences set by user
@@ -69,6 +69,7 @@ function Atlant(){
         ,viewSubscriptions: {}
         ,streams: {}
         ,atlant: this
+        ,busses: {}
     }
 
     import views from "views/views";
@@ -302,9 +303,12 @@ function Atlant(){
 
                 var stream = whenData.route.fn instanceof Stream ? whenData.route.fn : whenData.route.fn( depData ); // @TODO should be a Stream.
 
-                if(!stream || !(stream instanceof Stream)) throw new Error('Unknown return from Stream function');
+                console.log('when:', whenData, stream, whenData.route.fn)
+                if (stream instanceof Stream) { console.warn('Failed stream source:', whenData.route.fn); throw new Error('You should end the Stream. Try add more .end()\'s ') };
+                if (!stream || !(stream instanceof ReadyStream)){ console.warn('Failed stream source:', whenData.route.fn); throw new Error('Unknown return from Stream function', whenData.route.fn) };
+                console.log('When: this is before pushing into received stream.', stream);
 
-                if(whenData.when.type === types.WhenOrMatch.when) stream.onValue( _ => atlantState.devStreams.renderEndStream.push(_) )
+                if(whenData.when.type === types.WhenOrMatch.when) stream.onResolve( _ => atlantState.devStreams.renderEndStream.push(_) )
 
                 stream.push( depData );
             });
@@ -841,34 +845,25 @@ function Atlant(){
     
 
     this.streams = { 
-        _getStream: function(stream){
-            if('string' === typeof stream) {
-                stream = atlant.streams.get(stream)
-            } else if( stream instanceof Bacon.Bus) {
-                stream = atlant.stream(stream)
-                atlantState.streams[stream] = stream
-            }
-            return stream
-        },
         get: name => {
-            if (!atlantState.streams[name])
-                atlantState.streams[name] = this.stream();
-
-            // let push = atlantState.streams[name].push.bind(atlantState.streams[name]);
-            // atlantState.streams[name].pushSync = push;
-            // atlantState.streams[name].push = (...args) => setTimeout( _ => push(...args), 0);
+            if (!atlantState.streams[name]) {
+                var bus = baseStreams.bus();
+                atlantState.busses[name] = bus
+                atlantState.streams[name] = this.stream(bus);
+            }
 
             return atlantState.streams[name];
         },
         reg: function(stream, fn){
-            TopState.first();
+            if('string' !== typeof stream && !(stream instanceof Bacon.Bus)) throw new Error('Provide either Bacon.Bus() either Stream name.')
 
-            if (!stream) throw new Error('Atlant.js stream or stream name is not provided!');
+            if (!stream) throw new Error('Atlant.js Bacon.Bus() stream or stream name is not provided!');
             if (!fn) throw new Error('Atlant.js: follow stream function is not provided!');
 
-            stream = atlant.streams._getStream(stream);
+            var streamName = ('string' === typeof stream ) ? stream : stream.id; // Bacon.Bus has id
+            this.streams.get(streamName); 
 
-            stream.onStart(function(depValue){
+            atlantState.busses[streamName].onValue(function(depValue){
                 if ('undefined' === typeof depValue) {
                     depValue = {};
                 }
@@ -882,7 +877,6 @@ function Atlant(){
                 else console.error('unknown return from Stream function')
 
             })
-
 
             return this
         }

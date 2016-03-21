@@ -1,28 +1,20 @@
 "use strict"; 
 
+var Symbol = Symbol;
+
+if (void 0 === Symbol) Symbol = _ => _;
 
 var RenderOperation = {
-    render: parseInt(_.uniqueId())
-    ,draw: parseInt(_.uniqueId())
-    ,replace: parseInt(_.uniqueId())
-    ,change: parseInt(_.uniqueId())
-    ,clear: parseInt(_.uniqueId())
-    ,redirect: parseInt(_.uniqueId())
-    ,refresh: parseInt(_.uniqueId())
-    ,move: parseInt(_.uniqueId())
-    ,nope: parseInt(_.uniqueId())
+    render: Symbol('render')
+    ,draw: Symbol('draw')
+    ,replace: Symbol('replace')
+    ,change: Symbol('change')
+    ,clear: Symbol('clear')
+    ,redirect: Symbol('redirect')
+    ,refresh: Symbol('refresh')
+    ,move: Symbol('move')
+    ,nope: Symbol('nope')
 }
-
-var RenderOperationKey = {};
-RenderOperationKey[RenderOperation.render] = 'render'; 
-RenderOperationKey[RenderOperation.draw] = 'draw'; 
-RenderOperationKey[RenderOperation.replace] = 'replace'; 
-RenderOperationKey[RenderOperation.change] = 'change'; 
-RenderOperationKey[RenderOperation.clear] = 'clear'; 
-RenderOperationKey[RenderOperation.redirect] = 'redirect'; 
-RenderOperationKey[RenderOperation.refresh] = 'refresh'; 
-RenderOperationKey[RenderOperation.move] = 'move'; 
-RenderOperationKey[RenderOperation.nope] = 'nope'; 
 
 // Matching enum for when.
 var Matching = {
@@ -45,7 +37,6 @@ var Depends = {
 
 module.exports = {
     RenderOperation,
-    RenderOperationKey,
     Depends,
     WhenOrMatch,
     Matching

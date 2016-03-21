@@ -8,13 +8,39 @@ var baseStreams = require('inc/base-streams')
         ,clientFuncs = require('inc/clientFuncs')
         ,utils = require('utils/utils')
         ,performance = require('inc/performance')
+        ,lodash = require('lodash')
     ;
 
 import console from 'utils/log';
 
-var Stream = function(atlantState, prefs, bus){
-    if(bus && bus instanceof Bacon.Bus) console.warn('Using Bacon.Bus streams are deprecated');
+export function ReadyStream(streamState, stream){
 
+    if(stream instanceof Stream) Object.keys(stream).forEach( __ => this[__] = _ => console.error('This stream is ready! You can only .push(data) or subscribe: .onValue(), onStart(). The "' + __ + '" is wrong here!') )
+
+    this.push = (...args) => setTimeout( _ => stream.push(...args), 0);
+    this.pushSync = _ => stream.push(_);
+
+    this.onStart = _ => {
+        stream.onValue(_)
+    }
+
+
+    this.onResolve = _ => { 
+        if (!streamState || !streamState.streamCallbacks)
+            console.log('not supported yet, use named action instead of Bacon.bus()');
+        else 
+            streamState.streamCallbacks.push(_)
+    }
+
+    return this;
+}
+
+export function Stream (atlantState, prefs, fn, bus){
+
+    if(bus && bus instanceof Bacon.Bus) {
+        console.warn('1Using Bacon.Bus streams are deprecated!');
+        return new ReadyStream(streamState, bus)
+    }
 
     var TopState = new StateClass(); // State which up to when
     var State = new StateClass(); // State which up to any last conditional: when, if
@@ -32,10 +58,8 @@ var Stream = function(atlantState, prefs, bus){
     var lastWhen;
 
     var streamState = {
-        end: false
+        streamCallbacks: []
     }
-
-    var streamCallbacks = [];
 
     var renderView = function(){
 
@@ -468,6 +492,29 @@ var Stream = function(atlantState, prefs, bus){
         return this;
     }
 
+    var closeBlock = (renderOperation, viewName) => {
+        if (void 0 !== renderOperation && renderOperation === types.RenderOperation.draw) return this;
+
+        if (void 0 !== State.state.lastIf ){ 
+
+            var dep = State.state.lastDep ? State.state.lastDep.merge(State.state.lastElse) : void 0;
+            var op = State.state.lastOp.merge(State.state.lastElse); 
+
+            State.rollback(); 
+
+            State.state.lastDep = dep; 
+            State.state.lastOp = op;
+            console.log('closeBlock:if')
+
+            return this
+        } else {
+            console.log('closeBlock:else')
+            return new ReadyStream(streamState, this);
+        }
+
+    }
+
+
     /**
      * render Function
      * Customize the stream which created by "when" route.
@@ -479,21 +526,7 @@ var Stream = function(atlantState, prefs, bus){
      */
 
     var _render = (function(){
-        var closeBlock = (renderOperation, viewName) => {
 
-            if (void 0 !== State.state.lastIf && renderOperation !== types.RenderOperation.draw){ 
-
-                var dep = State.state.lastDep ? State.state.lastDep.merge(State.state.lastElse) : void 0;
-                var op = State.state.lastOp.merge(State.state.lastElse); 
-
-                State.rollback(); 
-
-                State.state.lastDep = dep; 
-                State.state.lastOp = op;
-
-            }
-
-        }
         return function(renderProvider, viewName, once, renderOperation){
             // /check
             if ( ! State.state.lastOp ) throw new Error('"render" should nest something');
@@ -502,17 +535,15 @@ var Stream = function(atlantState, prefs, bus){
                 throw new Error('Atlant.js: render first param should be function or URI')
             }
             s.type(viewName, 'string');
-            s.type(renderOperation, 'number')
             viewName = viewName || s.last(prefs.viewState);
 
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
 
             var closeThisBlock = closeBlock.bind(this, renderOperation, viewName );
             
-            if(renderOperation === types.RenderOperation.nope) { closeThisBlock(); State.state.lastOp.onValue( _ => _ ); return this; } // Do nothing if "nope"
+            console.log('attaching render:', viewName, renderOperation)
+            if(renderOperation === types.RenderOperation.nope) { console.log('will close'); var that = closeThisBlock(); State.state.lastOp.onValue( _ => _ ); return that; } // Just close if's and stream if "nope"
             // ------end of check/
-
-
 
             let subscribe  = 'once' !== once ? true : false;
             var renderId = _.uniqueId();
@@ -521,7 +552,7 @@ var Stream = function(atlantState, prefs, bus){
             var renderStream = State.state.lastOp.map( function(upstream){
                 if (!upstream.isAction && upstream.id !== atlantState.activeStreamId.value) return Bacon.never(); // Obsolete streams invoked on previous route.
 
-                upstream.render = { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: types.RenderOperationKey[renderOperation], subscribe: subscribe, parent: State.state.lastOpId };
+                upstream.render = { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: renderOperation, subscribe: subscribe, parent: State.state.lastOpId };
             
                 return renderView(upstream)
             })
@@ -531,17 +562,14 @@ var Stream = function(atlantState, prefs, bus){
                 State.state.lastOpId = renderId;
             } else {
                 renderStream.onValue( _ => {
-                // if ( renderOperation === types.RenderOperation.draw )  { 
-                    //     prefs.onDrawEndCallbacks.forEach( _ => _() ) // process user onDrawEnd signal
-                    // }
-                    return _
+                    if ( renderOperation === types.RenderOperation.draw )  { 
+                        prefs.onDrawEndCallbacks.forEach( _ => _() ) // process user onDrawEnd signal
+                    }
                 })
             }
 
-
-            closeThisBlock();
-
-            return this;
+            console.log('will close block')
+            return closeThisBlock();
         }
     })();
 
@@ -550,11 +578,7 @@ var Stream = function(atlantState, prefs, bus){
 
         State.state.lastOp.onValue(_=>_); // Subscribing to last item, else this .if() will be not executed - because of Bacon lazyness
 
-        if (void 0 !== State.state.lastIf) {
-            State.rollback(); 
-        }
-
-        return this
+        return closeBlock.bind(this)();
     }
 
     var _update = function( dependsBehaviour, key ) {
@@ -603,10 +627,10 @@ var Stream = function(atlantState, prefs, bus){
         }.bind(void 0, args), types.Depends.continue );
     }
 
-    var _send = function(stream) {
+    var _push = function(isSync, stream) {
         return _depends.bind(this)( function(scope){
             stream = atlantState.atlant.streams._getStream(stream);
-            stream.push(scope);
+            if(isSync) stream.pushSync(scope); else stream.push(scope);
             return void 0;
         }, false, types.Depends.continue );
     }
@@ -687,7 +711,8 @@ var Stream = function(atlantState, prefs, bus){
     //Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
     this.log =  _log;
     // shortcode for .dep( _ => atlant.streams.get('streamName').push(_))
-    this.send =  _send;
+    this.push =  _push.bind(this, false);
+    this.pushSync =  _push.bind(this, true);
 
     /* Renders the view. first - render provider, second - view name */
     this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'always', types.RenderOperation.render);}
@@ -714,16 +739,10 @@ var Stream = function(atlantState, prefs, bus){
     // render which render nothing into nowhere
     this.nope = function(){ return _render.bind(this)(void 0, void 0, 'once', types.RenderOperation.nope)}
 
-    this.push = _ => {
-        root.push(_)
-    }
+    // This 2 methods actually not exists in stream. They can be called if streams is already declared, but then trryed to continue to configure
+    this.onStart = _ => console.error('You have lost at least 1 .end() in stream declaration:', fn)
+    this.onResolve = this.onStart;
 
-    this.onStart = _ => {
-        root.onValue(_)
-    }
-
-    this.onValue = streamCallbacks.push.bind(streamCallbacks);
 }
 
-export default Stream;
 
