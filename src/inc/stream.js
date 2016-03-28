@@ -707,7 +707,7 @@ export function Stream (atlantState, prefs, fn){
     //Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
     this.log =  _log;
     // shortcode for .dep( _ => atlant.streams.get('streamName').push(_))
-    this.send =  _push.bind(this, false);
+    this.push =  _push.bind(this, false);
     this.pushSync =  _push.bind(this, true);
 
     /* Renders the view. first - render provider, second - view name */
