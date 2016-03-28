@@ -305,9 +305,9 @@ function Atlant(){
                 var stream = whenData.route.fn instanceof Stream ? whenData.route.fn : whenData.route.fn( depData ); // @TODO should be a Stream.
 
                 if (stream instanceof Stream) { console.warn('Failed stream source:', whenData.route.fn); throw new Error('You should end the Stream. Try add more .end()\'s ') };
-                if (!stream || !(stream instanceof ReadyStream)){ console.warn('Failed stream source:', whenData.route.fn); throw new Error('Unknown return from Stream function', whenData.route.fn) };
+                if (!stream || !(stream instanceof ReadyStream) && !(stream instanceof Bacon.Bus)){ console.warn('Failed stream source:', whenData.route.fn); throw new Error('Unknown return from Stream function, should be atlant.stream or Bacon.Bus', whenData.route.fn) };
 
-                if(whenData.when.type === types.WhenOrMatch.when) stream.onResolve( _ => atlantState.devStreams.renderEndStream.push(_) )
+                if(whenData.when.type === types.WhenOrMatch.when) stream.onValue( _ => atlantState.devStreams.renderEndStream.push(_) )
 
                 stream.push( depData );
             });
@@ -339,7 +339,7 @@ function Atlant(){
 
             if ( !masks.length ) throw new Error('At least one route mask should be specified.');
 
-            if ('function' !== typeof fn) throw new Error('Make use "fn = _ => Stream" as second parameter of atlant.when() for ' + masks);
+            if ('function' !== typeof fn) { console.warn('Failed stream source:', fn); throw new Error('Make use "fn = _ => Stream" as second parameter of atlant.when() for ' + masks) };
 
             TopState.state.lastMasks = masks;
 
@@ -355,7 +355,7 @@ function Atlant(){
             var scrollToTop = { value: whenType === types.WhenOrMatch.match ? false : true };
             TopState.state.scrollToTop = scrollToTop;
 
-            if( types.WhenOrMatch.when === whenType ) // Imformational thing
+            if( types.WhenOrMatch.when === whenType ) // Informational thing
                 masks.forEach( _ => atlantState.routes.push( utils.stripLastSlash(_) ) ) 
 
             atlantState.whens[name] = { 
@@ -878,7 +878,7 @@ function Atlant(){
                 var stream = fn( depValue ); 
 
                 if (stream instanceof Stream) { console.warn('Failed stream source:', fn); throw new Error('You should end the Stream. Try add more .end()\'s ') };
-                if (!stream || !(stream instanceof ReadyStream)){ console.warn('Failed stream source:', fn); throw new Error('Unknown return from Stream function') };
+                if (!stream || !(stream instanceof ReadyStream) && !(stream instanceof Bacon.Bus)){ console.warn('Failed stream source:', fn); throw new Error('Unknown return from Stream function') };
 
                 console.log('will push to ', busName, ' value: ', depValue);
 

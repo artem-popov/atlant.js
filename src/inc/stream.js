@@ -24,17 +24,15 @@ export function ReadyStream(streamState, bus, stream){
         bus.onValue(_)
     }
 
-    this.onResolve = _ => { 
+    this.onValue = _ => {  // Stream is Resolved
         if (!streamState || !streamState.streamCallbacks)
-            console.log('not supported yet, use named action instead of Bacon.bus()');
+            console.log('not supported yet, use named action instead of Bacon.Bus()');
         else 
             streamState.streamCallbacks.push(_)
     }
 
     return this;
 }
-
-window.ReadyStream = ReadyStream;
 
 export function Stream (atlantState, prefs, fn){
 
@@ -756,7 +754,7 @@ export function Stream (atlantState, prefs, fn){
 
     // This 2 methods actually not exists in stream. They can be called if streams is already declared, but then trryed to continue to configure
     this.onStart = _ => console.error('You have lost at least 1 .end() in stream declaration:', fn)
-    this.onResolve = this.onStart;
+    this.onValue = this.onStart;
 
 
 }
