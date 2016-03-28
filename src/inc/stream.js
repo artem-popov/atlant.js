@@ -263,6 +263,10 @@ export function Stream (atlantState, prefs, fn){
         State.state.lastOp = State.state.lastWhen;
         State.state.lastOpId = whenId;
         TopState.state.lastAction = depName
+
+        // Nulling for async
+        State.state.lastAsync = void 0; 
+        State.state.lastBeforeAsync = lastWhen;
     
     }())
 
@@ -388,21 +392,29 @@ export function Stream (atlantState, prefs, fn){
             var depName = (State.state.lastDepName ? State.state.lastDepName + prefix : 'depend_') + _.uniqueId();
 
             var lastOp = State.state.lastOp;
-            if (dependsBehaviour === types.Depends.async) {
-                lastOp = State.state.lastIf || State.state.lastWhen;
-            }
+            // if (dependsBehaviour === types.Depends.async && State.state.lastBeforeAsync) {
+            //     lastOp = State.state.lastBeforeAsync;
+            // }
 
             injectsGrabber.init(depName, State.state);
 
-            var thisDep = createDepStream(lastOp, opId, depName, dependency, State.state.lastInjects, store, isAtom);
+            var thisOp = createDepStream(lastOp, opId, depName, dependency, State.state.lastInjects, store, isAtom);
 
-            if( dependsBehaviour === types.Depends.async && State.state.lastDep) { // if deps was before then we need to zip all of them to be arrived simultaneously
-                thisDep = State.state.lastDep.zip( thisDep, zippersJoin.bind( void 0, State.state.lastDepName, depName ) );
+            // if( dependsBehaviour === types.Depends.async && State.state.lastDep) { // if deps was before then we need to zip all of them to be arrived simultaneously
+            //     thisOp = State.state.lastDep.zip( thisOp, zippersJoin.bind( void 0, State.state.lastDepName, depName ) );
+            // }
+
+            if( dependsBehaviour === types.Depends.async) { 
+                State.state.lastAsync = thisOp; 
+                State.state.lastBeforeAsync = lastOp // This is operation BEFORE async
+            } else { 
+                State.state.lastAsync = void 0; 
+                State.state.lastBeforeAsync = thisOp 
             }
 
-            State.state.lastDep = thisDep;
+            State.state.lastDep = thisOp;
             State.state.lastDepName = depName;
-            State.state.lastOp = thisDep;
+            State.state.lastOp = thisOp;
             State.state.lastOpId = opId;
 
             return this;
@@ -462,6 +474,10 @@ export function Stream (atlantState, prefs, fn){
         State.state.lastOp = State.state.lastIf;
         State.state.lastOpId = ifId;
         State.state.lastDep = void 0
+
+        // Nulling for async
+        State.state.lastAsync = void 0; 
+        State.state.lastBeforeAsync = thisIf;
 
         return this;
     }
@@ -535,7 +551,12 @@ export function Stream (atlantState, prefs, fn){
 
             var closeThisBlock = closeBlock.bind(this, renderOperation, viewName );
             
-            if(renderOperation === types.RenderOperation.nope) { var that = closeThisBlock(); State.state.lastOp.onValue( _ => _ ); return that; } // Just close if's and stream if "nope"
+            if(renderOperation === types.RenderOperation.nope) { // Just close if's and stream if "nope"
+                var that = closeThisBlock(); 
+                State.state.lastOp.onValue( _ => _ );
+                // if(State.state.lastDep) State.state.lastDep.onValue( _ => _ );
+                return that; 
+            } 
             // ------end of check/
 
             let subscribe  = 'once' !== once ? true : false;
@@ -559,6 +580,7 @@ export function Stream (atlantState, prefs, fn){
                         prefs.onDrawEndCallbacks.forEach( _ => _() ) // process user onDrawEnd signal
                     }
                 })
+                // if(State.state.lastDep) State.state.lastDep.onValue( _ => _ ); 
             }
 
             return closeThisBlock();
@@ -569,6 +591,7 @@ export function Stream (atlantState, prefs, fn){
     var _end = function() {
 
         State.state.lastOp.onValue(_=>_); // Subscribing to last item, else this .if() will be not executed - because of Bacon lazyness
+        // if(State.state.lastDep) State.state.lastDep.onValue(_=>_); // Subscribing to last item, else this .if() will be not executed - because of Bacon lazyness
 
         return closeBlock.bind(this)();
     }
