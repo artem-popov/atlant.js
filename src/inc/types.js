@@ -34,10 +34,15 @@ var Depends = {
     ,continue: _.uniqueId()
 }
 
+var get = _ => {
+    // _.__proto__.contructor.name
+    return ( ( (_ || {__proto__: void 0}).__proto__ || {constructor: void 0} ).constructor || {name: void 0}).name
+}
 
 module.exports = {
     RenderOperation,
     Depends,
     WhenOrMatch,
-    Matching
+    Matching,
+    get
 }

@@ -13,17 +13,16 @@ var baseStreams = require('inc/base-streams')
 
 import console from 'utils/log';
 
-export function ReadyStream(streamState, stream){
+export function ReadyStream(streamState, bus, stream){
 
     if(stream instanceof Stream) Object.keys(stream).forEach( __ => this[__] = _ => console.error('This stream is ready! You can only .push(data) or subscribe: .onValue(), onStart(). The "' + __ + '" is wrong here!') )
 
-    this.push = (...args) => setTimeout( _ => stream.push(...args), 0);
-    this.pushSync = _ => stream.push(_);
+    this.push = (...args) => setTimeout( _ => bus.push(...args), 0);
+    this.pushSync = _ => bus.push(_);
 
     this.onStart = _ => {
-        stream.onValue(_)
+        bus.onValue(_)
     }
-
 
     this.onResolve = _ => { 
         if (!streamState || !streamState.streamCallbacks)
@@ -35,12 +34,9 @@ export function ReadyStream(streamState, stream){
     return this;
 }
 
-export function Stream (atlantState, prefs, fn, bus){
+window.ReadyStream = ReadyStream;
 
-    if(bus && bus instanceof Bacon.Bus) {
-        console.warn('1Using Bacon.Bus streams are deprecated!');
-        return new ReadyStream(streamState, bus)
-    }
+export function Stream (atlantState, prefs, fn){
 
     var TopState = new StateClass(); // State which up to when
     var State = new StateClass(); // State which up to any last conditional: when, if
@@ -50,7 +46,7 @@ export function Stream (atlantState, prefs, fn, bus){
     var withGrabber = new interfaces.withGrabber();
     var id = _.uniqueId();
     
-    var root = bus || baseStreams.bus();
+    var root = baseStreams.bus();
 
     import views from "views/views";
     let unsubscribeView = views(atlantState);
@@ -509,7 +505,7 @@ export function Stream (atlantState, prefs, fn, bus){
             return this
         } else {
             console.log('closeBlock:else')
-            return new ReadyStream(streamState, this);
+            return new ReadyStream(streamState, root, this);
         }
 
     }
@@ -629,7 +625,7 @@ export function Stream (atlantState, prefs, fn, bus){
 
     var _push = function(isSync, stream) {
         return _depends.bind(this)( function(scope){
-            stream = atlantState.atlant.streams._getStream(stream);
+            stream = atlantState.atlant.streams.get(stream);
             if(isSync) stream.pushSync(scope); else stream.push(scope);
             return void 0;
         }, false, types.Depends.continue );
@@ -711,7 +707,7 @@ export function Stream (atlantState, prefs, fn, bus){
     //Prints the scope which will be passed to ".render()". Use params as prefixes for logged data.
     this.log =  _log;
     // shortcode for .dep( _ => atlant.streams.get('streamName').push(_))
-    this.push =  _push.bind(this, false);
+    this.send =  _push.bind(this, false);
     this.pushSync =  _push.bind(this, true);
 
     /* Renders the view. first - render provider, second - view name */
@@ -742,6 +738,7 @@ export function Stream (atlantState, prefs, fn, bus){
     // This 2 methods actually not exists in stream. They can be called if streams is already declared, but then trryed to continue to configure
     this.onStart = _ => console.error('You have lost at least 1 .end() in stream declaration:', fn)
     this.onResolve = this.onStart;
+
 
 }
 

@@ -16,13 +16,14 @@ function Atlant(){
         ,simpleRender = require('renders/simple')
         ,reactRender = require('renders/react')
         ,Bacon = require('baconjs')
-        ,_ = require('lodash')
+        ,lodash = require('lodash')
         ,interfaces = require('inc/interfaces')
         ,StateClass = require('inc/state')
         ,clientFuncs = require('inc/clientFuncs')
         ,Storage = require('inc/storage')
         ,types = require('inc/types')
-        ,wrapPushState = require( 'inc/wrap-push-state.js').wrapPushState 
+        ,wrapPushState = require( 'inc/wrap-push-state.js').wrapPushState
+    ;
 
     import console from 'utils/log';
     import { Stream, ReadyStream } from 'inc/stream';
@@ -215,7 +216,7 @@ function Atlant(){
             return stream;
         })
         .map(function(upstream) {
-            var stream = _.extend({}, upstream);
+            var stream = lodash.extend({}, upstream);
 
             // Storing here the data for actions.
             atlantState.lastPath = stream.path;
@@ -223,7 +224,7 @@ function Atlant(){
             atlantState.lastHistory = stream.history;
             atlantState.lastMask = void 0;
 
-            stream.id = _.uniqueId();
+            stream.id = lodash.uniqueId();
             atlantState.activeStreamId.value = stream.id;
 
             return stream;
@@ -303,10 +304,8 @@ function Atlant(){
 
                 var stream = whenData.route.fn instanceof Stream ? whenData.route.fn : whenData.route.fn( depData ); // @TODO should be a Stream.
 
-                console.log('when:', whenData, stream, whenData.route.fn)
                 if (stream instanceof Stream) { console.warn('Failed stream source:', whenData.route.fn); throw new Error('You should end the Stream. Try add more .end()\'s ') };
                 if (!stream || !(stream instanceof ReadyStream)){ console.warn('Failed stream source:', whenData.route.fn); throw new Error('Unknown return from Stream function', whenData.route.fn) };
-                console.log('When: this is before pushing into received stream.', stream);
 
                 if(whenData.when.type === types.WhenOrMatch.when) stream.onResolve( _ => atlantState.devStreams.renderEndStream.push(_) )
 
@@ -346,11 +345,11 @@ function Atlant(){
 
             if (masks.filter(function(mask){ return '*' === mask}).length && whenType === types.WhenOrMatch.when) { throw new Error( 'Atlant.js: Error! You using atlant.when("*") which is prohibited. For astericks use atlant.match("*")' ); }
 
-            var whenId = _.uniqueId();
+            var whenId = lodash.uniqueId();
             var name = (whenType === types.WhenOrMatch.match) ? 'match' : 'when';
             var sanitizeName = s.compose( s.replace(/:/g, 'By_'), s.replace(/\//g,'_') );
             var createNameFromMasks = s.compose( s.reduce(s.plus, ''), s.map(sanitizeName) );
-            name = name + createNameFromMasks(masks) + _.uniqueId();
+            name = name + createNameFromMasks(masks) + lodash.uniqueId();
 
             // Allows attaching injects to .when().
             var scrollToTop = { value: whenType === types.WhenOrMatch.match ? false : true };
@@ -405,8 +404,8 @@ function Atlant(){
     var _interceptor = function(){
         TopState.first();
 
-        var whenId = _.uniqueId();
-        var depName = 'interceptor' + _.uniqueId();
+        var whenId = lodash.uniqueId();
+        var depName = 'interceptor' + lodash.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
 
         State.state.lastWhen = atlantState.devStreams.interceptorBus
@@ -655,7 +654,7 @@ function Atlant(){
 
         baseStreams.destroy(); 
 
-        s = l = simpleRender = reactRender = utils = Bacon = _ = interfaces = StateClass = clientFuncs =  safeGoToCopy = null;// @TODO more
+        s = l = simpleRender = reactRender = utils = Bacon = interfaces = StateClass = clientFuncs =  safeGoToCopy = null;// @TODO more
 
         atlantState.devStreams.onDestroyStream.push();
     }
@@ -826,7 +825,7 @@ function Atlant(){
     this.state = {}
 
     this.data = {
-        get routes() { return _(atlantState.routes) 
+        get routes() { return lodash(atlantState.routes) 
             .uniq() // @TODO better not to double it for info :)  
             .value() 
         }    
@@ -843,27 +842,32 @@ function Atlant(){
     this.stream = bus => new Stream(atlantState, prefs, bus);
 
     
-
     this.streams = { 
-        get: name => {
-            if (!atlantState.streams[name]) {
+        get: name => { // @deprecated, used here only because there are many actions with Bacon.Bus()'es declared yet.
+            if (!atlantState.busses[name]) {
                 var bus = baseStreams.bus();
-                atlantState.busses[name] = bus
-                atlantState.streams[name] = this.stream(bus);
+                this.streams.put(name, bus)
             }
 
-            return atlantState.streams[name];
+            return atlantState.busses[name]
         },
-        reg: function(stream, fn){
-            if('string' !== typeof stream && !(stream instanceof Bacon.Bus)) throw new Error('Provide either Bacon.Bus() either Stream name.')
+        put: (name, bus) => {  // @deprecated because sets Bacon.Bus() into atlant streams cache. Bacon.Bus() should be avoided.
+            atlantState.busses[name] = bus
+        },
+        reg: function(busOrName, fn){
+            if('string' !== typeof busOrName && !(busOrName instanceof Bacon.Bus)) throw new Error('Provide either Bacon.Bus() either Stream name.')
 
-            if (!stream) throw new Error('Atlant.js Bacon.Bus() stream or stream name is not provided!');
-            if (!fn) throw new Error('Atlant.js: follow stream function is not provided!');
+            if (!busOrName) { console.warn('Failed stream source:', fn); throw new Error('Atlant.js Bacon.Bus() stream or stream name is not provided!') };
+            if (!fn || 'function' !== typeof fn) { console.warn('Failed stream source:', fn); throw new Error('Atlant.js: follow stream function is not provided!') };
 
-            var streamName = ('string' === typeof stream ) ? stream : stream.id; // Bacon.Bus has id
-            this.streams.get(streamName); 
+            var busName = ('string' === typeof busOrName ) ? busOrName : lodash.uniqueId(); 
+            if ('string' === typeof busOrName ) {  
+                this.streams.get(busName) // creating new bus and stream
+            } else { // Bacon.Bus() was passed
+                this.streams.put(busName, busOrName) // reusing passed bus
+            }
 
-            atlantState.busses[streamName].onValue(function(depValue){
+            atlantState.busses[busName].onValue(function(depValue){
                 if ('undefined' === typeof depValue) {
                     depValue = {};
                 }
@@ -871,10 +875,14 @@ function Atlant(){
                     depValue = Object.assign(depValue, atlantState.whenData);
                 }
 
-                var stream = fn instanceof Stream ? fn : fn( depValue ); 
+                var stream = fn( depValue ); 
 
-                if(stream instanceof Stream) stream.push( depValue );
-                else console.error('unknown return from Stream function')
+                if (stream instanceof Stream) { console.warn('Failed stream source:', fn); throw new Error('You should end the Stream. Try add more .end()\'s ') };
+                if (!stream || !(stream instanceof ReadyStream)){ console.warn('Failed stream source:', fn); throw new Error('Unknown return from Stream function') };
+
+                console.log('will push to ', busName, ' value: ', depValue);
+
+                stream.push( depValue ); // ReadyStream
 
             })
 
