@@ -500,11 +500,9 @@ export function Stream (atlantState, prefs, fn){
 
             State.state.lastDep = dep; 
             State.state.lastOp = op;
-            console.log('closeBlock:if')
 
             return this
         } else {
-            console.log('closeBlock:else')
             return new ReadyStream(streamState, root, this);
         }
 
@@ -537,8 +535,7 @@ export function Stream (atlantState, prefs, fn){
 
             var closeThisBlock = closeBlock.bind(this, renderOperation, viewName );
             
-            console.log('attaching render:', viewName, renderOperation)
-            if(renderOperation === types.RenderOperation.nope) { console.log('will close'); var that = closeThisBlock(); State.state.lastOp.onValue( _ => _ ); return that; } // Just close if's and stream if "nope"
+            if(renderOperation === types.RenderOperation.nope) { var that = closeThisBlock(); State.state.lastOp.onValue( _ => _ ); return that; } // Just close if's and stream if "nope"
             // ------end of check/
 
             let subscribe  = 'once' !== once ? true : false;
@@ -564,7 +561,6 @@ export function Stream (atlantState, prefs, fn){
                 })
             }
 
-            console.log('will close block')
             return closeThisBlock();
         }
     })();
