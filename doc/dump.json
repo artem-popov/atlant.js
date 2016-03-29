@@ -1,0 +1,2674 @@
+[
+  {
+    "__docId__": 0,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/atlant-build.js",
+    "memberof": null,
+    "longname": "src/atlant-build.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\n\nmodule.exports = (new Date().getTime()) \n\n"
+  },
+  {
+    "__docId__": 1,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/atlant-version.js",
+    "memberof": null,
+    "longname": "src/atlant-version.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "module.exports = '0.4.65'\n"
+  },
+  {
+    "__docId__": 2,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/inc/base-streams.js",
+    "memberof": null,
+    "longname": "src/inc/base-streams.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\n\nvar Bacon = require('baconjs');\n\nvar baseStreams = Object.create(null);\n\nvar unnamed = [];\nvar unsubs = [];\n\nbaseStreams.destructorStream = new Bacon.Bus();\n\nbaseStreams.bus = function(){\n    var bus = new Bacon.Bus();\n    unnamed.push(bus);\n    return bus;\n}\n\nbaseStreams.onValue = function(stream, f){\n    var unsub = stream.onValue(f);\n    unsubs.push(unsub);\n    return unsub;\n}\n\nbaseStreams.destroy = function() {\n    baseStreams.destructorStream.push();\n    unnamed.map(function(bus){\n        bus.end();\n    })\n    unsubs.map(function(handler){\n        handler();\n    })\n    unnamed.length = 0;\n    unsubs.length = 0;\n}\n\nexport default baseStreams;\n\n\n"
+  },
+  {
+    "__docId__": 3,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Bacon",
+    "memberof": "src/inc/base-streams.js",
+    "longname": "src/inc/base-streams.js~Bacon",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/base-streams.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 4,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "unnamed",
+    "memberof": "src/inc/base-streams.js",
+    "longname": "src/inc/base-streams.js~unnamed",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/base-streams.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 7,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 5,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "unsubs",
+    "memberof": "src/inc/base-streams.js",
+    "longname": "src/inc/base-streams.js~unsubs",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/base-streams.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 8,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 6,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "bus",
+    "memberof": "src/inc/base-streams.js",
+    "longname": "src/inc/base-streams.js~bus",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/base-streams.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 12,
+    "undocument": true,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 7,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "onValue",
+    "memberof": "src/inc/base-streams.js",
+    "longname": "src/inc/base-streams.js~onValue",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/base-streams.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 18,
+    "undocument": true,
+    "params": [
+      {
+        "name": "stream",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "f",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 8,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "destroy",
+    "memberof": "src/inc/base-streams.js",
+    "longname": "src/inc/base-streams.js~destroy",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/base-streams.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 24,
+    "undocument": true,
+    "params": [],
+    "generator": false
+  },
+  {
+    "__docId__": 9,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "baseStreams",
+    "memberof": "src/inc/base-streams.js",
+    "longname": "src/inc/base-streams.js~baseStreams",
+    "access": null,
+    "export": true,
+    "importPath": "atlant.js/src/inc/base-streams.js",
+    "importStyle": "baseStreams",
+    "description": null,
+    "lineNumber": 5,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 10,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/inc/clientFuncs.js",
+    "memberof": null,
+    "longname": "src/inc/clientFuncs.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\n\nvar s = require('utils/lib')\n        ,_ = require('lodash')\n        ,Promise = require('promise')\n        ,Bacon = require('baconjs')\n\nimport console from 'utils/log';\n\nvar catchError;\n\nvar convertPromiseD = s.curry(function(promiseProvider, upstream) {\n    var promise = promiseProvider( upstream );\n    if ( s.isPromise( promise ) ){\n        promise = promise\n            .catch( function(e) {  \n                if (e.stack) { \n                    catchError(e);\n                }\n                return Promise.reject(e)\n            })\n        return Bacon.fromPromise( promise );\n    } else {\n        return Bacon.constant(promise);\n    }\n});\n\nvar applyScopeD = function(fn) {\n    return function(scope) {\n        return fn.call(this, scope)\n    }\n};\n\nvar getRefsData = function( upstream ) {\n    if ( !upstream.refs ) return {}\n\n    var fn = function(res, depName, refName) {\n        if ( 'undefined' !== refName && depName in upstream.depends ) {\n            res[refName] = upstream.depends[depName];\n            if ('function' === typeof res[refName]) { \n                res[refName] = res[refName]()\n            }\n        }\n\n        return res;\n    }\n\n    return s.reduce( fn, Object.create(null), upstream.refs)\n}\n\nvar getScopeDataFromStream = function( upstream ){\n    var scope = Object.create(null);\n    scope.refs = upstream.refs;\n    scope.depends = upstream.depends;\n    scope.injects = upstream.injects;\n    scope.params = upstream.params;\n    scope.path = upstream.path;\n    scope.route = upstream.route;\n    return s.clone(scope);\n}\n\n/**\n    * Injects depend values from upstream into object which is supplyed first.\n    */\nvar createScope = function ( upstream ) {\n    var refsData = getRefsData( upstream ); \n\n    var warning = function(inject) { console.log('inject accessor return nothing:' + inject) }\n    var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);\n    var joins = s.filter( function(inject){ return inject.hasOwnProperty('injects') }, injects);\n    injects = s.filter( function(inject){ return !inject.hasOwnProperty('injects') }, injects);\n    var injectsData = { object: void 0};\n\n    var formatInjects = function(inject) {\n        var container = ( inject.hasOwnProperty('injects') ) ? '' : '.depends.' + inject.name;\n\n        if ('string' === typeof inject.expression)\n            return container + (inject.expression ? inject.expression : '' );\n\n        if ('undefined' === typeof inject.expression)\n            return container;\n\n        if ( !inject.hasOwnProperty('injects') ) {\n            return s.baconTryD(function() {\n                return inject.expression(upstream.depends[inject.name]) \n            })\n        } else {  \n            return s.baconTryD(function() {\n                return inject.expression( s.extend( refsData, injectsData.object) ) \n            })\n        }\n    }\n\n    var takeAccessor = s.compose( s.if(s.eq(void 0), warning), s.flipDot(upstream) );\n    var takeFunction = function(fn){return fn.apply();}\n    var fullfil = s.map( s.compose( s.ifelse(s.typeOf('string'), takeAccessor, takeFunction)\n                                    , formatInjects)); \n\n    injectsData.object = fullfil( injects );\n    var data = injectsData.object;\n    var joinsData = fullfil( joins );\n\n    data = s.extend( refsData, upstream.params, data, joinsData ); \n\n    return data;\n};\n\nvar catchError = function(e) {\n    if (e && e.stack) {\n        console.error(e.message, e.stack);\n    } else {\n        console.error('Unknown error');\n    }\n    return e;\n}\n\nmodule.exports = { \n    convertPromiseD: convertPromiseD\n    ,applyScopeD: applyScopeD\n    ,createScope: createScope\n    ,getRefsData: getRefsData\n    ,catchError: catchError\n    ,getScopeDataFromStream: getScopeDataFromStream\n};\n\n"
+  },
+  {
+    "__docId__": 11,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "s",
+    "memberof": "src/inc/clientFuncs.js",
+    "longname": "src/inc/clientFuncs.js~s",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/clientFuncs.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 12,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "convertPromiseD",
+    "memberof": "src/inc/clientFuncs.js",
+    "longname": "src/inc/clientFuncs.js~convertPromiseD",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/clientFuncs.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 12,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 13,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "applyScopeD",
+    "memberof": "src/inc/clientFuncs.js",
+    "longname": "src/inc/clientFuncs.js~applyScopeD",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/clientFuncs.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 28,
+    "undocument": true,
+    "params": [
+      {
+        "name": "fn",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 14,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "getRefsData",
+    "memberof": "src/inc/clientFuncs.js",
+    "longname": "src/inc/clientFuncs.js~getRefsData",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/clientFuncs.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 34,
+    "undocument": true,
+    "params": [
+      {
+        "name": "upstream",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 15,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "getScopeDataFromStream",
+    "memberof": "src/inc/clientFuncs.js",
+    "longname": "src/inc/clientFuncs.js~getScopeDataFromStream",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/clientFuncs.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 51,
+    "undocument": true,
+    "params": [
+      {
+        "name": "upstream",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 16,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "createScope",
+    "memberof": "src/inc/clientFuncs.js",
+    "longname": "src/inc/clientFuncs.js~createScope",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/clientFuncs.js",
+    "importStyle": null,
+    "description": "Injects depend values from upstream into object which is supplyed first.",
+    "lineNumber": 65,
+    "params": [
+      {
+        "name": "upstream",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 17,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "catchError",
+    "memberof": "src/inc/clientFuncs.js",
+    "longname": "src/inc/clientFuncs.js~catchError",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/clientFuncs.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 108,
+    "undocument": true,
+    "params": [
+      {
+        "name": "e",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 18,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/inc/interfaces.js",
+    "memberof": null,
+    "longname": "src/inc/interfaces.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\n    \nvar dependsName = function() {\n    this.init = function(depName, state) {\n        if (!depName) throw new Error('Atlant.js: developer: you forgot the \"depName\"!')\n        var nameContainer = {};\n        state.lastNameContainer = nameContainer // Here we will store further names with \".name\"\n        return nameContainer;\n    }\n\n    // Add invocation when mapping stream, i.e. all data already exist\n   this.add = function(depName, nameContainer, upstream) {\n        if( !upstream.refs ) upstream.refs = {};\n        upstream.refs[nameContainer.ref] = depName;\n        upstream.ref = nameContainer.ref;\n        return upstream\n    }\n    \n    this.tailFill = function(value, state){\n        state.lastNameContainer.ref = value;\n    }\n\n    return this;\n}\n\nvar withGrabber = function() {\n    this.init = function(state) {\n        var data = {};\n        state.lastWith = data // Here we will store further injects with \".transfers\"\n        return data;\n    }\n    // Add invocation when mapping stream.\n    this.add = function(data, upstream) {\n        upstream.with = data;\n        return upstream\n    }\n    this.tail = function(data, state) {\n        if (void 0 === state.lastWith) throw new Error('Atlant.js: incompatible \"with\" provider! ')\n        state.lastWith.value = data;\n    }\n    return this;\n}\n\nvar injectsGrabber = function() {\n    this.init = function(depName, state) {\n        if (!depName) throw new Error('Atlant.js: developer: you forgot the \"depName\"!')\n        var injects = {};\n        state.lastInjects = injects // Here we will store further injects with \".inject\"\n        return injects;\n    }\n    // Add invocation when mapping stream.\n    this.add = function(depName, depValue, injects, upstream) {\n        if( !upstream.depends ) { upstream.depends = {}; } \n        upstream.depends[depName] = depValue;\n\n        if( !upstream.injects ) upstream.injects = [];\n        upstream.injects.push(injects);\n        return upstream\n    }\n    return this;\n}\n\n\nmodule.exports = { \n                injectsGrabber:injectsGrabber\n                ,dependsName: dependsName\n                ,withGrabber: withGrabber\n}\n"
+  },
+  {
+    "__docId__": 19,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "dependsName",
+    "memberof": "src/inc/interfaces.js",
+    "longname": "src/inc/interfaces.js~dependsName",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/interfaces.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 20,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "withGrabber",
+    "memberof": "src/inc/interfaces.js",
+    "longname": "src/inc/interfaces.js~withGrabber",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/interfaces.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 26,
+    "undocument": true,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 21,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "injectsGrabber",
+    "memberof": "src/inc/interfaces.js",
+    "longname": "src/inc/interfaces.js~injectsGrabber",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/interfaces.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 44,
+    "undocument": true,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 22,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/inc/performance.js",
+    "memberof": null,
+    "longname": "src/inc/performance.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\n\nvar performance =\n  window.performance ||\n  window.msPerformance ||\n  window.webkitPerformance;\n\nif (!performance || !performance.now) {\n  performance = Date;\n}\n\n\nmodule.exports = performance;\n"
+  },
+  {
+    "__docId__": 23,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "performance",
+    "memberof": "src/inc/performance.js",
+    "longname": "src/inc/performance.js~performance",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/performance.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 24,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/inc/state.js",
+    "memberof": null,
+    "longname": "src/inc/state.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\n\nvar _ = require('lodash');\n\nvar StateType = function(state) {\n    var newState = _.extend( {}, {lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0, lastStoreName: void 0 }, state);\n    return newState\n};\n\nvar StateClass = function(){\n    var states;\n\n    this.state = void 0;\n\n    this.first = function(){\n        states = [];\n        this.state = StateType();\n        states.push(this.state);\n        if('undefined' !== typeof window) window.states = states;\n    }\n\n    this.divide = function() {\n        this.state = new StateType(this.state);\n        this.state.lastDep = void 0;\n\n        states.push(this.state);\n    }\n\n    this.rollback = function() {\n        states.pop();\n        this.state = states[states.length-1];\n    }\n\n    this.print = function(message, state) {\n        //log(message, JSON.stringify([ 'W:',state.lastWhen, \"I:\",state.lastIf, 'D:',state.lastDep, 'O:',state.lastOp ]));\n    }\n\n    this.first();\n\n    return this;\n};\n\nmodule.exports = StateClass;\n"
+  },
+  {
+    "__docId__": 25,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "_",
+    "memberof": "src/inc/state.js",
+    "longname": "src/inc/state.js~_",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/state.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 26,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "StateType",
+    "memberof": "src/inc/state.js",
+    "longname": "src/inc/state.js~StateType",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/state.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 5,
+    "undocument": true,
+    "params": [
+      {
+        "name": "state",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 27,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "StateClass",
+    "memberof": "src/inc/state.js",
+    "longname": "src/inc/state.js~StateClass",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/state.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 10,
+    "undocument": true,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 28,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/inc/storage.js",
+    "memberof": null,
+    "longname": "src/inc/storage.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "var Storage = {\n    storage: localStorage,\n    listen: function(){\n        window.addEventListener('storage', this.onChange) \n    },\n    stopListen: function(){\n        window.removeEventListener('storage', this.onChange)\n    },\n    onChange: function(key, newValue, oldValue, storageArea, url){\n        console.log('storage changed',key, newValue, oldValue, storageArea, url)\n    },\n    setStorage: function(storage){\n        this.storage = storage\n    },\n    persist: function(storeName, newState){\n        if (!this.storage) return void 0;\n\n        // console.time('persist'+ storeName)\n        this.storage.setItem(storeName, JSON.stringify(newState) );\n        // console.timeEnd('persist'+ storeName)\n        return\n    },\n    load: function(storeName){\n        if (!this.storage) return void 0;\n\n        // console.time('load'+ storeName)\n        var value = JSON.parse(this.storage.getItem(storeName));\n        // console.timeEnd('load'+ storeName)\n        // console.log(storeName, 'value:', value)\n        return value\n    }\n}\nmodule.exports = Storage;\n"
+  },
+  {
+    "__docId__": 29,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Storage",
+    "memberof": "src/inc/storage.js",
+    "longname": "src/inc/storage.js~Storage",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/storage.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 1,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 30,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/inc/tools.js",
+    "memberof": null,
+    "longname": "src/inc/tools.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\n\nvar utils = require('utils/utils')\n    ,_ = require('lodash')\n    ,s = require('utils/lib')\n;\n\nvar _test = function(path, mask){\n    if ( !path || !mask ) return false;\n\n    return void 0 !== utils.matchRoute(path, mask)\n}\n\nvar _return = function(path, mask){\n    if ( !path || !mask ) return false;\n\n    return void 0 !== utils.matchRoute(path, mask) ? mask : void 0\n}\n\nvar _testAll = function(path, masks){\n    if ( !path || !masks || 0 === masks.length) return false;\n\n    return utils.addSlashes(masks)\n    .map(_test.bind(void 0, path))\n    .reduce( function(v, i) { return v || i }, false)\n}\n\nvar _returnAll = function(path, masks){\n    if ( !path || !masks || 0 === masks.length) return false;\n\n    return utils.addSlashes(masks)\n                .map(_return.bind(void 0, path))\n                .filter( function(_){ return _ })\n                .map(utils.stripLastSlash)\n                .reduce(function(acc, i){if(-1 === acc.indexOf(i)) acc.push(i); return acc}, []) // only unique elements because of stripped slash on end */ became * \n}\n\nvar _parse = function(path, mask){\n    if ( !path || !mask ) return {};\n\n    var params = utils.matchRoute(path, mask);\n    var parsed = utils.parseURL( path );\n    var searches = _.clone( utils.parseSearch(parsed.search), true); // add search params\n    return _.extend(searches, params);\n}\n\nvar _parseAll = function(path, masks){\n    if ( !path || !masks || 0 === masks.length) return {};\n\n    return utils.addSlashes(masks)\n    .map(_parse.bind(void 0, path))\n    .reduce( function(v, i) { return _.merge(v, i) }, {})\n}\n\nvar _setTitle = function(titleStore, title){\n    if (!title) return;\n\n    if( typeof document !== 'undefined' ) {\n        document.title = title;\n    } else {\n        titleStore.value = title\n    }\n\n}\n\nvar _getTitle = function(titleStore, title){\n    return titleStore.value\n}\n\nvar _blockScroll = function(){\n    return utils.blockScroll()\n}\n\nvar _unblockScroll = function(){\n    return utils.unblockScroll()\n}\n\nmodule.exports = {\n    // test :: path -> mask -> Bool\n    test: _test\n    // testAll :: path -> [mask] -> Bool\n    ,testAll: _testAll\n    ,return: _return\n    ,returnAll: _returnAll\n    // parse :: path -> mask -> {params}\n    ,parse: _parse\n    // parseAll :: path -> [mask] -> {params}\n    ,parseAll: _parseAll\n    ,setTitle: _setTitle\n    ,getTitle: _getTitle\n    ,unblockScroll: _unblockScroll\n    ,blockScroll: _blockScroll\n};\n\n"
+  },
+  {
+    "__docId__": 31,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "utils",
+    "memberof": "src/inc/tools.js",
+    "longname": "src/inc/tools.js~utils",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/tools.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 32,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "_test",
+    "memberof": "src/inc/tools.js",
+    "longname": "src/inc/tools.js~_test",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/tools.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 8,
+    "undocument": true,
+    "params": [
+      {
+        "name": "path",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "mask",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 33,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "_return",
+    "memberof": "src/inc/tools.js",
+    "longname": "src/inc/tools.js~_return",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/tools.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 14,
+    "undocument": true,
+    "params": [
+      {
+        "name": "path",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "mask",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 34,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "_testAll",
+    "memberof": "src/inc/tools.js",
+    "longname": "src/inc/tools.js~_testAll",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/tools.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 20,
+    "undocument": true,
+    "params": [
+      {
+        "name": "path",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "masks",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 35,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "_returnAll",
+    "memberof": "src/inc/tools.js",
+    "longname": "src/inc/tools.js~_returnAll",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/tools.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 28,
+    "undocument": true,
+    "params": [
+      {
+        "name": "path",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "masks",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 36,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "_parse",
+    "memberof": "src/inc/tools.js",
+    "longname": "src/inc/tools.js~_parse",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/tools.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 38,
+    "undocument": true,
+    "params": [
+      {
+        "name": "path",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "mask",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 37,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "_parseAll",
+    "memberof": "src/inc/tools.js",
+    "longname": "src/inc/tools.js~_parseAll",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/tools.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 47,
+    "undocument": true,
+    "params": [
+      {
+        "name": "path",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "masks",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 38,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "_setTitle",
+    "memberof": "src/inc/tools.js",
+    "longname": "src/inc/tools.js~_setTitle",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/tools.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 55,
+    "undocument": true,
+    "params": [
+      {
+        "name": "titleStore",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "title",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 39,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "_getTitle",
+    "memberof": "src/inc/tools.js",
+    "longname": "src/inc/tools.js~_getTitle",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/tools.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 66,
+    "undocument": true,
+    "params": [
+      {
+        "name": "titleStore",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "title",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 40,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "_blockScroll",
+    "memberof": "src/inc/tools.js",
+    "longname": "src/inc/tools.js~_blockScroll",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/tools.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 70,
+    "undocument": true,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 41,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "_unblockScroll",
+    "memberof": "src/inc/tools.js",
+    "longname": "src/inc/tools.js~_unblockScroll",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/tools.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 74,
+    "undocument": true,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 42,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/inc/types.js",
+    "memberof": null,
+    "longname": "src/inc/types.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\"; \n\nvar Symbol = Symbol;\n\nif (void 0 === Symbol) Symbol = _ => _;\n\nvar RenderOperation = {\n    render: Symbol('render')\n    ,draw: Symbol('draw')\n    ,replace: Symbol('replace')\n    ,change: Symbol('change')\n    ,clear: Symbol('clear')\n    ,redirect: Symbol('redirect')\n    ,refresh: Symbol('refresh')\n    ,move: Symbol('move')\n    ,nope: Symbol('nope')\n}\n\n// Matching enum for when.\nvar Matching = {\n    stop: _.uniqueId()\n    ,continue: _.uniqueId()\n    ,once: _.uniqueId()\n}\n\nvar WhenOrMatch = {\n    when: _.uniqueId()\n    ,match: _.uniqueId()\n}\n\n// Depends enum\nvar Depends = {\n    async: _.uniqueId()\n    ,continue: _.uniqueId()\n}\n\nvar get = _ => {\n    // _.__proto__.contructor.name\n    return ( ( (_ || {__proto__: void 0}).__proto__ || {constructor: void 0} ).constructor || {name: void 0}).name\n}\n\nmodule.exports = {\n    RenderOperation,\n    Depends,\n    WhenOrMatch,\n    Matching,\n    get\n}\n"
+  },
+  {
+    "__docId__": 43,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Symbol",
+    "memberof": "src/inc/types.js",
+    "longname": "src/inc/types.js~Symbol",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/types.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 44,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "RenderOperation",
+    "memberof": "src/inc/types.js",
+    "longname": "src/inc/types.js~RenderOperation",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/types.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 7,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 45,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Matching",
+    "memberof": "src/inc/types.js",
+    "longname": "src/inc/types.js~Matching",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/types.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 20,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 46,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "WhenOrMatch",
+    "memberof": "src/inc/types.js",
+    "longname": "src/inc/types.js~WhenOrMatch",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/types.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 26,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 47,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "Depends",
+    "memberof": "src/inc/types.js",
+    "longname": "src/inc/types.js~Depends",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/types.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 32,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 48,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "get",
+    "memberof": "src/inc/types.js",
+    "longname": "src/inc/types.js~get",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/types.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 37,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 49,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/inc/wrap-push-state.js",
+    "memberof": null,
+    "longname": "src/inc/wrap-push-state.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\n//https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent\n// Polyfill for \"new CustomEvent\"\n(function () {\n\n    if( 'undefined' === typeof window ) return;\n    if ( typeof window.CustomEvent === \"function\" ) return;\n\n    function CustomEvent ( event, params ) {\n        params = params || { bubbles: false, cancelable: false, detail: undefined };\n        var evt = document.createEvent( 'CustomEvent' );\n        evt.initCustomEvent( event, params.bubbles, params.cancelable, params.detail );\n        return evt;\n    };\n\n    CustomEvent.prototype = window.Event.prototype;\n\n    window.CustomEvent = CustomEvent;\n})();\n\n/**\n * Create fake push state\n * Use like that:\n * require('fakePushState')(window);\n * It will patch window.history to rise \"pushstate\" event when pushstate is happend.\n **/\nvar wrapPushState = function(window){\n    var pushState = window.history.pushState;\n\n    var tryState = function(params) {\n        try { \n           return pushState.apply(window.history, params); \n        } catch (e) {\n           console.error(\"Can't push state:\", e);\n           return void 0;\n        }\n    }\n\n    window.history.pushState = function(state, title, url) {\n        var eventless = state && state.eventless;\n        if ( !eventless ) {\n            var onpushstate = new CustomEvent('pushstate', { detail: { state: {url: url, referrer: window.location.pathname, scrollTop: state.scrollTop, forceRouteChange: state.forceRouteChange}, title: title, url: url} } );\n            window.dispatchEvent(onpushstate);\n        }\n\n        return tryState(arguments);\n    };\n    window.history.pushState.overloaded = true;\n\n};\n\nmodule.exports = { wrapPushState: wrapPushState };\n"
+  },
+  {
+    "__docId__": 50,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "wrapPushState",
+    "memberof": "src/inc/wrap-push-state.js",
+    "longname": "src/inc/wrap-push-state.js~wrapPushState",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/inc/wrap-push-state.js",
+    "importStyle": null,
+    "description": "Create fake push state\nUse like that:\nrequire('fakePushState')(window);\nIt will patch window.history to rise \"pushstate\" event when pushstate is happend.",
+    "lineNumber": 27,
+    "params": [
+      {
+        "name": "window",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 51,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/renders/react.js",
+    "memberof": null,
+    "longname": "src/renders/react.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\nvar s = require('utils/lib')\n     ,u = require('utils/utils')\n     ,_ = require('lodash')\n     ,Promise = require('promise')\n\nimport console from 'utils/log';\n\nvar State = function(React){\n    var wrappers = {}\n        ,views = {}\n        ,thises = {}\n        ,instances = {};\n\n        this.getOrCreate = function(name) {\n            if ( !wrappers[name] ) {\n                wrappers[name] = React.createClass({\n                    render: function(){ // name in this function is passed by value\n                        thises[name] = this;\n                        if ( !views[name] ) views[name] = React.createElement('div');\n\n                        if ( _.isArray( views[name] ) )\n                            return  views[name][0]( _.extend( {}, this.props, views[name][1] ) )\n                        else\n                            return views[name];\n                    }\n            })}\n            if ( !instances[name] ) {\n                instances[name] = React.createFactory(wrappers[name])();\n            }\n        }\n\n        this.getState = function(name) {\n            return wrappers[name];\n        }\n\n        this.getInstance = function(name) {\n            return instances[name];\n        }\n\n        this.getThis = function(name) {\n            return thises[name];\n        }\n\n        this.set = function(name, view){\n            views[name] = view;\n            return void 0;\n        }\n\n        this.list = function(){\n            if (! views ) return [];\n            return Object.keys(views);\n        }\n\n        this.destroy = function(){\n            wrappers = {};\n            views = {};\n            thises = {};\n            instances = {};\n        }\n\n        return this;\n};\n\nvar Render = function(React) {\n    var state = new State(React);\n\n    this.name = 'React';\n    var attachedViews = []; \n\n    this.render = function(viewProvider, upstream, activeStreamId, name, scope ) {\n        console.time('rendering view ' + name);\n\n        state.getOrCreate(name); // Always should be first to ensure that it is a simple div to lower influence of React.renderToStaticMarkup\n\n        if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.  \n            state.set(name, [viewProvider, scope]);  \n        }\n\n        var instance = state.getThis(name);\n\n        if( instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) { \n            instance.forceUpdate();\n        }\n\n        console.timeEnd('rendering view ' + name);\n\n        return state.getInstance(name);  \n    }\n\n    this.clear = function(viewProvider, upstream, activeStreamId, name, scope ) {\n        return this.render(function(){return React.createElement('div')}, upstream, activeStreamId, name, scope )\n    }\n\n\n    this.attach = function(name, selector) {\n        if ( typeof window === 'undefined') throw Error('AtlantJs, React render: attach not possible in browser.')\n\n        var element = document.querySelector(selector);\n        if ( !element )   throw Error(\"AtlantJs, React render: can\\'t find the selector\" + selector )\n\n        state.getOrCreate(name);\n        var root = state.getInstance(name);\n\n        try{\n            React.render(root, element)\n            attachedViews.push(name); \n        } catch(e) {\n            console.error(e.message, e.stack)\n            React.unmountComponentAtNode(element);\n        }\n    }\n\n    /* Return ready string representation\n     * options parameter can be used to control what you will get.\n     * */\n    this.stringify = function(name, options) {\n        if ( options && options.static)\n            return React.renderToStaticMarkup(state.getInstance(name));\n        else\n            return React.renderToString(state.getInstance(name));\n    }\n\n    /* Can return inner view representation. For React.js it means React component */\n    this.get = function(name, options) {\n        state.getOrCreate(name);\n        return state.getState(name);\n    }\n\n    this.list = function(){\n        return state.list();\n    }\n\n    this.put = function(name, component){\n        state.set(name, component);\n        state.getOrCreate(name);        \n        return state.getThis(name);\n    }\n\n    /**\n     * InnerView component. Can be used inside parent (for example 'root') to render named inner views.\n     */\n    this.innerView = React.createClass({\n        render: function() {\n            return React.createElement('div');\n        }\n    })\n\n    this.destroy = function(){\n        attachedViews = [];\n        state.destroy()\n    }\n}\n\nmodule.exports = Render;\n"
+  },
+  {
+    "__docId__": 52,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "s",
+    "memberof": "src/renders/react.js",
+    "longname": "src/renders/react.js~s",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/renders/react.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 2,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 53,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "State",
+    "memberof": "src/renders/react.js",
+    "longname": "src/renders/react.js~State",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/renders/react.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 9,
+    "undocument": true,
+    "params": [
+      {
+        "name": "React",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 54,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "Render",
+    "memberof": "src/renders/react.js",
+    "longname": "src/renders/react.js~Render",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/renders/react.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 65,
+    "undocument": true,
+    "params": [
+      {
+        "name": "React",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 55,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/renders/simple.js",
+    "memberof": null,
+    "longname": "src/renders/simple.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "/*\n * Very simple render. uses viewName as attribute name of attribute and installs string inside \n */\nvar simpleRender = {\n    render: function(viewProvider, name, scope) {\n        var fragment = document.createDocumentFragment();\n        var viewPromise = viewProvider(scope);\n        return viewPromise.then(fragment.appendChild).then(function() {\n            var element = document.querySelector('#' + name );\n            element.appendChild(fragment);\n        });\n    }\n    ,clear: function() {\n        var element = document.querySelector('#' + name ).innerHTML = '';\n        return s.promise('');\n    }\n}\n\nmodule.exports = { \n    name: 'simple'\n    ,render: simpleRender.render\n    ,clear: simpleRender.clear \n}\n\n"
+  },
+  {
+    "__docId__": 56,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "simpleRender",
+    "memberof": "src/renders/simple.js",
+    "longname": "src/renders/simple.js~simpleRender",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/renders/simple.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 4,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 57,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/utils/lib.js",
+    "memberof": null,
+    "longname": "src/utils/lib.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\n\nvar container = Object.create(null);\n\nimport console from \"utils/log\";\n\nvar s = (function(){\n\n    var _ = require('lodash')\n        ,Promise = require('promise')\n        ,Bacon = require('baconjs')\n\n    var that = this;\n    this.id = function(value) { return value; }\n    this.nop = function() { return void 0; }\n\n    this.pass = function() { return function(promise) { return promise; } }\n    this.inject = function(data) { return function() { return data; } }\n    /**\n     *\n     * @param fn - promise callback\n     * @param fn2 - reject callback\n     * @returns {Function}\n     */\n    this.then = function(fn, fn2) { return function(promise) { return promise.then(fn, fn2); }; }\n\n    /**\n     * Decorator that accept resolving of promise to let free the blocking of function it decorates.\n     * The blocking is exported as reference to variable in context.\n     * @TODO only export the blocking variable, use closure to serve real blocking reference.\n     * @param obj\n     * @param item\n     * @returns {Function}\n     */\n    this.sync = function(obj, item) {\n\n        var resolvePromise = function() {\n            obj[item] = false;\n            return arguments[0];\n        }\n        var blockPromise = function(fn) {\n            return function() {\n                if ( ! obj[item] ) {\n                    obj[item] = true;\n                    return fn.apply(this, arguments);\n                } else {\n                    return Promise.reject();\n                }\n            }\n        }\n\n        return function(fn) {\n            return _.compose( that.then(resolvePromise), blockPromise(fn));\n        }\n    }\n\n    /**\n     * Depreated\n     *\n     * */\n    /**\n     * Deprecated. Use sync\n     * @param obj\n     * @param item\n     * @param fn\n     * @returns {Function}\n     */\n    this.guardWithTrue = function(obj, item, fn) {\n        return function() {\n            if ( ! obj[item] ) {\n                obj[item] = true;\n                return fn.apply(this, arguments);\n            } else {\n                return void 0;\n            }\n        }\n    }\n\n    /**\n     * Deprecated. Use sync\n     * @param obj\n     * @param item\n     * @param fn\n     * @returns {*}\n     */\n    this.resolveGuard = function(obj, item, fn) {\n        if (fn) {\n            return function() {\n                fn.apply(this, arguments);\n                obj[item] = false;\n                return arguments;\n            }\n        } else {\n            obj[item] = false;\n            return arguments;\n        }\n    }\n\n    /**\n     * Deprecated. Use streams instead.\n     * @constructor\n     */\n    this.Herald = function() {\n        this.listeners = {};\n\n        this.listen = function( what, listener) {\n            if ( ! this.listeners[what] ) this.listeners[what] = [];\n            this.listeners[what].push(listener);\n        }.bind(this);\n\n        this.emit = function(what) {\n            var params = [].slice.call(arguments, 1);\n            this.listeners[what].map(function(listener){ listener.apply(null, params); })\n        }.bind(this);\n    }\n\n    // Convert arguments into array.\n    this.a2a = function(args) {\n        return Array.prototype.slice.apply( args );\n    }\n\n    this.unary = function(fn) {\n        return function(val) {\n            return fn.call(this, val);\n        }\n    }\n\n    /**\n     * Accepts collection.\n     * it pass obj value and object name to fn (temporary 2 args)\n     * @type {Function}\n     */\n    this.map = _.curry( function(fn, obj) {\n        if ( ! obj ) return [];\n        if (obj && obj.map) return obj.map(that.unary(fn));\n\n        var mapped = {};\n\n        for( var name in obj ) {\n            mapped[name] = fn(obj[name]);\n        }\n\n        return mapped;\n\n    });\n\n    // @TODO create mapKeys\n\n\n    this.fmap = _.curry( function(fn, obj) {\n        return obj.fmap(fn);\n    });\n    \n    // @TODO check immutability/mutability\n    this.filter = _.curry( function(fn, obj) {\n        if ( ! obj ) return [];\n        if (obj && obj.map) return obj.filter(that.unary(fn));\n\n        var filtered = {};\n\n        for( var name in obj ) {\n            if ( fn(obj[name]) ) { \n                filtered[name] = obj[name];\n            }\n        }\n\n        return filtered;\n\n    });\n\n    this.filterKeys = _.curry( function(fn, obj) {\n        if ( ! obj ) return obj;\n\n        var filtered = {};\n\n        for( var name in obj ) {\n            if ( fn(name) ) { \n                filtered[name] = obj[name];\n            }\n        }\n\n        return filtered;\n\n    });\n\n    this.reduce = _.curry( function(fn, startValue, obj) {\n        if ( !obj ) return startValue;\n        if (obj && obj.reduce) Array.prototype.reduce.call(obj, fn, startValue);\n\n        var reduced = {};\n\n        for( var name in obj ) {\n            reduced = fn(reduced, obj[name], name);\n        }\n\n        return reduced;\n    });\n\n    this.concat = _.curry( function(a, b) {\n        return b.concat(a);\n    });\n\n    this.flatMap = function(arr) {\n        return Array.prototype.concat.apply([], arr);\n    }\n\n    this.last = function(arr) {\n        if (arr) {\n            return arr[arr.length-1];\n        } else {\n            return void 0;\n        }\n    };\n    this.head = function(arr) {\n        if (arr) {\n            return arr[0];\n        } else {\n            return void 0;\n        }\n    };\n\n    this.diff = function(a, b) {\n        a = a.slice();\n        b.forEach(function(_){\n            var index = a.indexOf(_);\n            if( -1 !==  index) a.splice(index, 1);\n        })\n        return a;\n    };\n\n    this.negate = function(obj) {\n        return !obj;\n    }\n\n    this.eq = _.curry( function(obj, obj2) {\n        return obj === obj2\n    });\n\n    this.notEq = _.curry( function(obj, obj2) {\n        return obj !== obj2\n    });\n\n    this.empty = function(obj) {\n        return obj === null || obj === void 0 || obj === '' || ( (obj instanceof Array) && 0 === obj.length ) || ('object' === typeof obj && 0 === Object.keys(obj).length);\n    }\n    this.notEmpty = _.compose( this.negate, this.empty );\n\n    this.simpleDot = function(expression, obj) {\n        if ( obj ) {\n            return obj[expression];\n        } else {\n            return void 0;\n        }\n    }\n\n    this.flipSimpleDot = function(obj, expression) {\n        if ( obj ) {\n            return obj[expression];\n        } else {\n            return void 0;\n        }\n    }\n\n    // expression is \".something\" or \".something.something\"\n    this.dot = _.curry( function(expression, obj) {\n        return expression.split('.').filter(that.notEmpty).reduce(that.flipSimpleDot, obj);\n    });\n\n    // expression is \".something\" or \".something.something\"\n    this.flipDot = _.curry( function(obj, expression) {\n        return that.dot(expression, obj);\n    });\n\n    this.set = _.curry( function(item, obj, value) {\n        if(item) {\n            obj[item] = value;\n            return obj;\n        } else {\n            return value;\n        }\n    });\n\n    this.plus = _.curry( function(item1, item2) {\n        return item1 + item2;\n    });\n\n    this.trim = function(string) {\n        return string.trim();\n    }\n\n    this.flip = function(fn) {\n        return _.curry(function() {\n            return fn.apply(this, that.a2a(arguments).reverse());\n        }, fn.length);\n    };\n\n    this.replace = _.curry( function(where, replacer, obj) {\n        return obj.replace(where, replacer);\n    });\n\n    this.push = function( item, obj ) {\n        if ( ! obj ) {\n            return function(obj) { return obj.push(item); };\n        } else {\n            return obj.push(item);\n        }\n    };\n\n    this.split = _.curry( function( char, obj ) {\n        return obj.split(char);\n    });\n\n    this.log = function(what) {\n        console.log(what);\n        return what;\n    }\n\n    this.logIt = function() {\n        var args = that.a2a(arguments);\n        return function(what) {\n            console.log.apply(console, args.concat(what) );\n            return what;\n        }\n    };\n\n    this.side = function(fn) {\n        var args = that.a2a(arguments);\n        return function(param) {\n            if (args.length > 1) {\n                fn = _.compose.apply(this,args);\n            }\n            fn.call(this, param);\n            return param;\n        }\n    }\n\n    this.instanceOf = function( type, object ) {\n        return object instanceof type;\n    }\n\n    this.typeOf = _.curry(function( type, object ) {\n        return type === typeof object;\n    });\n    \n\n    this.mapD = function(fn) {\n        return function() {\n            return that.map(fn, that.a2a(arguments))\n        }\n    }\n\n    // Promises\n    this.promise = function(value) {\n        return new Promise( function(fullfill, reject ) { \n             fullfill(value);\n        });\n    }\n\n    this.promiseD = function(promiseProvider) {\n        return function() {\n            var result = promiseProvider.apply(this, arguments );\n            if ( 'Promise' === result.constructor.name){\n                return result;\n            } else {\n                return that.promise(result);\n            }\n        }\n    }\n\n    //memoize.js - by @addyosmani, @philogb, @mathias\n    // with a few useful tweaks from @DmitryBaranovsk\n    this.memoize = function( fn ) {\n        return function () {\n            var args = Array.prototype.slice.call(arguments),\n                hash = \"\",\n                i  = args.length;\n            var currentArg = null;\n            while(i--){\n                currentArg = args[i];\n                hash += (currentArg === Object(currentArg)) ? JSON.stringify(currentArg) : currentArg;\n                fn.memoize || (fn.memoize = {});\n            }\n            return (hash in fn.memoize) ? fn.memoize[hash] :\n                fn.memoize[hash] = fn.apply( this , args );\n        };\n    }\n\n    this.Perf = function() {\n        var time;\n        this.count = 0;\n        this.begin = function() {\n            time = Date.now();\n        }\n        this.end = function() {\n            this.count += Date.now() - time;\n        }\n    }\n\n    this.extend = _.curry(_.extend, 2);\n    this.merge = _.curry(_.merge, 2);\n\n    this.ifelse = _.curry( function(condition, then, _else, value){\n        if( condition( value ) ) return then(value);\n        else return _else(value)\n    });\n\n    this.if = _.curry( function(condition, then, value){\n        if( condition( value ) ) return then(value);\n        else return value;\n    });\n\n    this.type = function(item, type) {\n        \n        if ( type !== typeof item && item ) {\n            var error = new Error('Type Error: ' + item + ' should be ' + type);\n            console.error(error.message, error.stack)\n            throw error;\n        }\n    }\n\n    this.simpleType = function(data, key) {\n        return 'string' === typeof data[key] || 'number' === typeof data[key] || 'boolean' === typeof data[key]\n    }\n\n    this.isPromise = function(promise) {\n        if ( promise && 'function' === typeof promise.then ) return true;\n        else return false;\n    }\n\n    this.tryF = function(fallbackValue, fn){\n        return function() {\n            try {\n                return fn.apply(this, arguments)\n            } catch(e) {\n                return fallbackValue\n            }\n        }\n    }\n\n    this.tryD = function(fn, errorCallback){\n        return function() {\n            try {\n                return fn.apply(this, arguments);\n            } catch(e) {\n                console.error(e.message, e.stack);\n                if( errorCallback) return errorCallback(e);\n            }\n        }\n    };\n\n    this.baconTryD = function(fn) {\n        return that.tryD(fn, function(e) { return Bacon.Error(e) })\n    }\n\n    this.promiseTryD = function(fn) {\n        return that.tryD(fn, function(e) { return Promise.reject(e) })\n    }\n\n    this.apply = function(doProvider, value) {\n        if ('function' === typeof doProvider) {\n            return doProvider(value);\n        } else {\n            return doProvider;\n        }\n    }\n\n   this.maybe = function(nothing, fn){\n       return function(){\n           try {\n               return fn.apply(this, that.a2a(arguments))\n           } catch (e) {\n               return nothing\n           }\n       }\n   }\n\n   // This function creates copy of the object.\n   this.copy = function(o){\n       return JSON.parse(JSON.stringify(o))\n   }\n\n   this.clone = function(obj) {\n       return _.cloneDeep(obj, function(value) {\n           if (_.isFunction(value) || !_.isPlainObject(value)) {\n               return value;\n           }\n       })\n    }\n\n   this.maybeS = this.maybe.bind(this, '')\n   this.maybeV = this.maybe.bind(this, void 0)\n\n   this.compose      = _.compose;\n   this.curry        = _.curry;\n\n   return this;\n\n}.bind(container))();\n\nmodule.exports = s;\n"
+  },
+  {
+    "__docId__": 58,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "container",
+    "memberof": "src/utils/lib.js",
+    "longname": "src/utils/lib.js~container",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/lib.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 59,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "s",
+    "memberof": "src/utils/lib.js",
+    "longname": "src/utils/lib.js~s",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/lib.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 7,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 60,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/utils/log.js",
+    "memberof": null,
+    "longname": "src/utils/log.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\n\nvar s = require('utils/lib');\n\nvar Log = function Log(){\n    var on = false;\n    var atlantPrefix = 'Atlant.js: ';\n\n    Object.defineProperty(this, 'verbose', { \n        get: _ => on \n        ,set: _ => { on = _; return on }\n    });\n    \n    this.log = function(...args) {\n        if (!on) return;\n        \n        console.log(atlantPrefix, ...args)\n    }\n\n    this.warn = function(...args) {\n        if (!on) return;\n        \n        console.warn(atlantPrefix, ...args)\n    }\n\n    this.error = function(...args) {\n        if (!on) return;\n        \n        console.error(atlantPrefix, ...args)\n    }\n\n    this.time = function(name) {\n        if (!on) return;\n        if (console.time) {\n            return console.time(atlantPrefix + name)\n        }\n    } \n\n    this.timeEnd = function(name) {\n        if (!on) return;\n        if (console.timeEnd) {\n            return console.timeEnd(atlantPrefix + name)\n        }\n    }\n    return this;\n}\n\nvar instance = new Log();\n\nexport default instance;\n"
+  },
+  {
+    "__docId__": 61,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "s",
+    "memberof": "src/utils/log.js",
+    "longname": "src/utils/log.js~s",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/log.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 62,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "Log",
+    "memberof": "src/utils/log.js",
+    "longname": "src/utils/log.js~Log",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/log.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 5,
+    "undocument": true,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 63,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/utils/utils.js",
+    "memberof": null,
+    "longname": "src/utils/utils.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "\"use strict\";\n\nvar s = require('utils/lib')\n    ,_ = require('lodash')\n;\n\nvar utils = function() {\n    return {\n        /**\n         * @returns interpolation of the redirect path with the parametrs\n         */\n        interpolate: function(template, params) {\n            var result = [];\n            template.split(':').map( function(segment, i) {\n                if (i == 0) {\n                    result.push(segment);\n                } else {\n                    var segmentMatch = segment.match(/(\\w+)(.*)/);\n                    var key = segmentMatch[1];\n                    result.push(params[key]);\n                    result.push(segmentMatch[2] || '');\n                    delete params[key];\n                }\n            });\n            return result.join('');\n        }\n        ,getPossiblePath: function (route) {\n            return (route[route.length-1] == '/')\n                ? route.substr(0, route.length-1)\n                : route +'/';\n        }\n        ,parseURL: s.memoize( function(url) {\n            if (!url) return void 0;\n\n            var q = url.indexOf('?');\n            var and = url.indexOf('&');\n\n            if (-1 === q) q = Infinity;\n            if (-1 === and) and = Infinity;\n            q = (q > and) ? and : q;\n\n            return { \n                pathname: url.substring(0, q).trim()\n                ,search: url.substring(q+1).trim() \n            }\n        })\n        /**\n         *  URL query parser for old links to post and story\n         * */\n        ,parseSearch: s.memoize( function(search){\n            return search\n                        .replace('?', '&')\n                        .split('&')\n                        .reduce( function(obj, pair) { \n                            pair = pair.split('=');\n                            if (pair[0]) obj[pair[0]] = pair[1]; \n                            return obj; \n                        }, {});\n        })\n        ,getLocation: function() {\n            return window.location.pathname + window.location.search;\n        }\n        ,rebuildURL: function(path) {\n            path = this.parseURL( path ); \n            if(path) { \n                path = path.pathname + ( path.search ? '?' + path.search : ''); \n                if( '/' === path[path.length - 1] && 1 !== path.length ) path = path.slice(0, path.length - 1);\n            }\n\n            return path\n        }\n        ,parseURLDeprecated: function(url) {\n            var urlParseRE = /^(((([^:\\/#\\?]+:)?(?:(\\/\\/)((?:(([^:@\\/#\\?]+)(?:\\:([^:@\\/#\\?]+))?)@)?(([^:\\/#\\?\\]\\[]+|\\[[^\\/\\]@#?]+\\])(?:\\:([0-9]+))?))?)?)?((\\/?(?:[^\\/\\?#]+\\/+)*)([^\\?#]*)))?(\\?[^#]+)?)(#.*)?/;\n            var matches = urlParseRE.exec(url);\n            return {\n                protocol: matches[4] ? matches[4].slice(0, matches[4].length-1) : ''\n                ,host: matches[10] || ''\n                ,hostname: matches[11] || ''\n                ,port: matches[12] || ''\n                ,pathname: matches[13] || ''\n                ,search: matches[16] || '' \n                ,hashes: matches[17] || ''\n            };\n        }\n        ,getReferrer: function(){\n            if( 'undefined' !== typeof window) {\n                if (!window.document.referrer) return void 0;\n                else return \"/\" + window.document.referrer.split('/').slice(3).join('/');\n            }\n            return void 0;\n        }\n       \n    };\n}();\n\nutils.isIE = function()\n{\n    var isIE11 = navigator.userAgent.indexOf(\".NET\") > -1;      \n    var isIELess11 = navigator.appVersion.indexOf(\"MSIE\") > -1;\n    var isMobileIE = navigator.userAgent.indexOf('IEMobile') > -1\n    return isIE11 || isIELess11 || isMobileIE;\n     \n}\n\n/**\n * Redirect to the other path using $location\n * @param upstream\n * @returns {*}\n */\nutils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO scrollTop should be not 0, but from preferences\n\n    if ('undefined' === typeof window) return;\n    if ( !redirectForce && (window.location.origin + url) === window.location.href )  return;\n\n    if ('undefined' !== typeof awaitLoadForce) awaitLoad = awaitLoadForce;\n\n    if(!awaitLoad) {\n        if (utils.isIE()) {\n          window.document.execCommand('Stop');\n        } else {\n          window.stop();\n        }\n    }\n\n    var state = { url: url, scrollTop: 0, referrer: window.location.href, forceRouteChange: redirectForce };\n\n    setTimeout( _ => history.pushState(state, null, url), 0 ) // setTimeout turns on safari optimizations and we didn't see the crazy jumps.\n    \n}\n\n\nutils.newPage = true;\n\nutils.saveType = function(field){\n    window.history.replaceState({[field]: true, ...window.history.state}, null);\n}\n\nutils.clearState = function(){\n    var state = { ...window.history.state };\n    delete state.scrollTop;\n    delete state.forceRouteChange;\n    delete state.referrer;\n    delete state.url;\n    window.history.replaceState(state, null);\n}\n\nutils.saveScroll = _.debounce(function(event){\n    var state = { ...history.state, scrollTop: window.pageYOffset};\n\n    window.history.replaceState(state, null);\n}, 50)\n\nutils.body = document.querySelector('body');\nutils.html = document.documentElement;\n\nutils.getPageHeight = function height(_) {\n    return Math.max(utils.body.scrollHeight, utils.body.offsetHeight, utils.html.clientHeight, utils.html.scrollHeight, utils.html.offsetHeight);\n}\n\n\n/**\n * Redirect to the other path using $location\n * @param upstream\n * @returns {*}\n */\nutils.replace = function(url) {\n\n    if ('undefined' === typeof window) return;\n    if ( (window.location.origin + url) === window.location.href)  return;\n\n    setTimeout( history.replaceState.bind(history, null, null, url), 0);\n}\n\n/**\n * Redirect to the other path using $location\n * @param upstream\n * @returns {*}\n */\nutils.change = function(url) {\n\n    if ('undefined' === typeof window) return;\n    if ( (window.location.origin + url) === window.location.href) return;\n\n    setTimeout( history.pushState.bind(history, { eventless: true }, null, url), 0);\n\n}\n\nutils.getPattern = function(masks) {\n    return s.head(masks.filter(function(mask){ return '*' !== mask}));\n}\n\nutils.attachGuardToLinks = function() {\n    \n    var linkDefender = function(event){\n        if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which ) return;\n        var element = event.target;\n        var awaitLoad = void 0;\n\n        while ( 'a' !== element.nodeName.toLowerCase() ){\n            if (element === document || ! (element = element.parentNode) ) return; \n        }\n\n        var loc = element.getAttribute('href'); \n        if ( !loc ) return;\n\n        if ( event instanceof KeyboardEvent && 13 !== event.keyCode) return;\n\n        if(element.getAttribute('target')) return;\n\n        var linkProps = element.getAttribute('data-atlant');\n        if (linkProps && 'ignore' === linkProps) return;\n        if (linkProps && 'await' === linkProps) awaitLoad = true;\n\n        if ( (window.location.origin + loc ) === window.location.href) {\n            event.preventDefault();\n            return;\n        } \n\n        // In case of it is the same link with hash - do not involve the atlant, just scroll to id. \n        // @TODO? don't prevent default and understand that route not changed at routeChanged state?\n        if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {\n\n            var elem;\n            var begin = loc.indexOf('#');  \n            var id = loc.slice( -1 === begin ? 1 : begin + 1, loc.length );\n            if( '' !== id) elem = document.getElementById(id)\n            if(elem) elem.scrollIntoView();\n\n            event.preventDefault();\n            return false;\n        }\n\n        if ( loc && element.host === location.host ) {\n            event.preventDefault();\n            event.stopPropagation();\n            utils.goTo( loc, awaitLoad);\n        }\n    }\n    document.addEventListener('click', linkDefender );\n    document.addEventListener('keydown', linkDefender );\n}\n\n\n/**\n * Pure Matching function\n * @param on - current locatin url\n * @param when - compare mask\n * @returns (*)\n */\nutils.matchRoute = _.curry( s.memoize( function(path, mask){ \n    // TODO(i): this code is convoluted and inefficient, we should construct the route matching\n    //   regex only once and then reuse it\n    var negate = '!' === mask[0];\n    if (negate) {\n        mask = mask.slice(1, mask.length-1);\n    }\n\n    var parsed = utils.parseURL( path );\n    path = parsed.pathname;\n    path = decodeURIComponent(path);\n    path = utils.stripLastSlash(path).replace(/\\/\\/+/g, '/'); // remove slash on end on string and replace multiple slashes with one\n\n    // Successefully find *\n    if ( '*' === mask[0] ) return {};\n\n    // Escape regexp special characters.\n    var when = '^' + mask.replace(/[-\\/\\\\^$*+?.()|[\\]{}]/g, \"\\\\$&\") + '$';\n    var regex = '',\n        params = [],\n        dst = {};\n\n    var re = /:(\\w+)/g,\n        paramMatch,\n        lastMatchedIndex = 0;\n\n    while ((paramMatch = re.exec(when)) !== null) {\n        // Find each :param in `when` and replace it with a capturing group.\n        // Append all other sections of when unchanged.\n        regex += when.slice(lastMatchedIndex, paramMatch.index);\n        regex += '([^\\\\/]*)';\n        params.push(paramMatch[1]);\n        lastMatchedIndex = re.lastIndex;\n    }\n    // Append trailing path part.\n    regex += when.substr(lastMatchedIndex);\n\n    var isMatched = false;\n    var match = path.match(new RegExp(regex));\n    if (match) {\n        isMatched = true;\n        params.map(function(name, index) {\n            dst[name] = match[index + 1];\n        });\n        var searches = _.clone( utils.parseSearch(parsed.search), true); // add search params\n        dst = _.extend(searches, dst);\n    } else if( negate ) {\n        dst = {}\n        isMatched = true;\n    }\n\n    return isMatched ? dst  : void 0;\n}));\n\n// Utility function\n// Adding slashes at the end, i.e. ['/story'] became [['/story/', '/story']]\n// addSlashes :: [mask] -> [mask]\nutils.addSlashes = function(masks){\n    return masks\n        .map(function(i){ \n            return [i, ('/' !== i[i.length-1]) ? i + '/' : i.slice(0, i.length-1)];  \n        })\n        .reduce(function(v, i) { return v.concat(i); }, [])\n}\n\nutils.stripLastSlash = function(_){ if( 1 !== _.length && '/' === _[_.length-1] ) return _.substring(0, _.length - 1 ); else return _ }\n\nutils.sanitizeUrl = function(url){\n    if (!url || '' === url) throw new Error('Atlant.js: url cannot be empty')\n        var escapedRoute = url\n    .toLowerCase()\n    .replace(/\\/+$/, \"\");  // replacing last /\n    if ('' === escapedRoute) escapedRoute = '/';\n    return escapedRoute;\n}\n\nutils.blockScroll = function(titleStore, title){// freezing view;\n    var scrollPosition = window.scrollY;\n    if (utils.body && !('scrollRestoration' in history)) { \n        utils.body.style.position = 'fixed'; \n        utils.body.style.width = '100%'; \n        utils.body.style.marginTop = - scrollPosition + 'px';\n        return true;\n    }\n    return false\n}\n\nutils.unblockScroll = function(titleStore, title){\n    if (utils.body && !('scrollRestoration' in history)) { \n        utils.body.style.position = null; \n        utils.body.style.width = null;\n        utils.body.style.marginTop = null; \n        return true\n    }\n    return false\n}\n\nmodule.exports = utils;\n"
+  },
+  {
+    "__docId__": 64,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "s",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~s",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 65,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "utils",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~utils",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 7,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 66,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "isIE",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~isIE",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 96,
+    "undocument": true,
+    "params": [],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 67,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "goTo",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~goTo",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": "Redirect to the other path using $location",
+    "lineNumber": 110,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{*}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "*"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "upstream",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "*"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 68,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "saveType",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~saveType",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 134,
+    "undocument": true,
+    "params": [
+      {
+        "name": "field",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "generator": false
+  },
+  {
+    "__docId__": 69,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "clearState",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~clearState",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 138,
+    "undocument": true,
+    "params": [],
+    "generator": false
+  },
+  {
+    "__docId__": 70,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "getPageHeight",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~getPageHeight",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 156,
+    "undocument": true,
+    "params": [
+      {
+        "name": "_",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 71,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "replace",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~replace",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": "Redirect to the other path using $location",
+    "lineNumber": 166,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{*}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "*"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "upstream",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "*"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 72,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "change",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~change",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": "Redirect to the other path using $location",
+    "lineNumber": 179,
+    "unknown": [
+      {
+        "tagName": "@returns",
+        "tagValue": "{*}"
+      }
+    ],
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "*"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "upstream",
+        "description": ""
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "*"
+      ],
+      "spread": false,
+      "description": ""
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 73,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "getPattern",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~getPattern",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 188,
+    "undocument": true,
+    "params": [
+      {
+        "name": "masks",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 74,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "attachGuardToLinks",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~attachGuardToLinks",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 192,
+    "undocument": true,
+    "params": [],
+    "generator": false
+  },
+  {
+    "__docId__": 75,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "addSlashes",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~addSlashes",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 307,
+    "undocument": true,
+    "params": [
+      {
+        "name": "masks",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 76,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "stripLastSlash",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~stripLastSlash",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 315,
+    "undocument": true,
+    "params": [
+      {
+        "name": "_",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 77,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "sanitizeUrl",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~sanitizeUrl",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 317,
+    "undocument": true,
+    "params": [
+      {
+        "name": "url",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "*"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 78,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "blockScroll",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~blockScroll",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 326,
+    "undocument": true,
+    "params": [
+      {
+        "name": "titleStore",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "title",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "boolean"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 79,
+    "kind": "function",
+    "static": true,
+    "variation": null,
+    "name": "unblockScroll",
+    "memberof": "src/utils/utils.js",
+    "longname": "src/utils/utils.js~unblockScroll",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/utils/utils.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 337,
+    "undocument": true,
+    "params": [
+      {
+        "name": "titleStore",
+        "types": [
+          "*"
+        ]
+      },
+      {
+        "name": "title",
+        "types": [
+          "*"
+        ]
+      }
+    ],
+    "return": {
+      "types": [
+        "boolean"
+      ]
+    },
+    "generator": false
+  },
+  {
+    "__docId__": 80,
+    "kind": "file",
+    "static": true,
+    "variation": null,
+    "name": "src/views/views.js",
+    "memberof": null,
+    "longname": "src/views/views.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1,
+    "content": "var s = require('utils/lib');\n\nvar unsubscribeView = s.curry(function(atlantState, viewName){\n    try{\n        // turn off all subscriptions of selects for this view\n        if( atlantState.viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;\n            atlantState.viewSubscriptionsUnsubscribe[viewName]()\n        } \n    } catch(e){\n        console.error('unsubscribe error', e.stack)\n    }\n});\n\nexport default unsubscribeView;\n\n"
+  },
+  {
+    "__docId__": 81,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "s",
+    "memberof": "src/views/views.js",
+    "longname": "src/views/views.js~s",
+    "access": null,
+    "export": false,
+    "importPath": "atlant.js/src/views/views.js",
+    "importStyle": null,
+    "description": null,
+    "lineNumber": 1,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 82,
+    "kind": "variable",
+    "static": true,
+    "variation": null,
+    "name": "unsubscribeView",
+    "memberof": "src/views/views.js",
+    "longname": "src/views/views.js~unsubscribeView",
+    "access": null,
+    "export": true,
+    "importPath": "atlant.js/src/views/views.js",
+    "importStyle": "unsubscribeView",
+    "description": null,
+    "lineNumber": 3,
+    "undocument": true,
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 84,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Infinity",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Infinity",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Infinity",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 85,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "NaN",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~NaN",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 86,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "undefined",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/undefined",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~undefined",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 87,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "null",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/null",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~null",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 88,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Object",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 89,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~object",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 90,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Function",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 91,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~function",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 92,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Boolean",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 93,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~boolean",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 94,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Symbol",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Symbol",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 95,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Error",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Error",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 96,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "EvalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/EvalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~EvalError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 97,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "InternalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/InternalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~InternalError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 98,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "RangeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RangeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RangeError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 99,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "ReferenceError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ReferenceError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ReferenceError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 100,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "SyntaxError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~SyntaxError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 101,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "TypeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~TypeError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 102,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "URIError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/URIError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~URIError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 103,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Number",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 104,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~number",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 105,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Date",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Date",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 106,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "String",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~String",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 107,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "string",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~string",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 108,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "RegExp",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RegExp",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 109,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 110,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int8Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 111,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 112,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint8ClampedArray",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8ClampedArray",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 113,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int16Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 114,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint16Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 115,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Int32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 116,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Uint32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 117,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Float32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 118,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Float64Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float64Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float64Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 119,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Map",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Map",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 120,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Set",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Set",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 121,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "WeakMap",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakMap",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 122,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "WeakSet",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakSet",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakSet",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 123,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "ArrayBuffer",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ArrayBuffer",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 124,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "DataView",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~DataView",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 125,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "JSON",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~JSON",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 126,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Promise",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Promise",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 127,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Generator",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Generator",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 128,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "GeneratorFunction",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~GeneratorFunction",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 129,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Reflect",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Reflect",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Reflect",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 130,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Proxy",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Proxy",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 132,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "CanvasRenderingContext2D",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~CanvasRenderingContext2D",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 133,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "DocumentFragment",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~DocumentFragment",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 134,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Element",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Element",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Element",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 135,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Event",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Event",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Event",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 136,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "Node",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Node",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~Node",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 137,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "NodeList",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/NodeList",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~NodeList",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 138,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "XMLHttpRequest",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~XMLHttpRequest",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 139,
+    "kind": "external",
+    "static": true,
+    "variation": null,
+    "name": "AudioContext",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/AudioContext",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "longname": "BuiltinExternal/WebAPIExternal.js~AudioContext",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  }
+]

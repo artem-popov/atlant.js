@@ -46,24 +46,17 @@ use a attribute data-atlant="ignore" to skip this.
 
 ```js
 atlant 
-    .when('/')   
-        .render(<Home/>)  
-    .when('login')  
-        .render(<Login/>)  
-    .when('profile')  
-        .depends($.get('/api/something'))  
-            .inject('something', '.a.b[10].c{id=10}.d')  
-        .and($.get('/api/posts'))  
-            .inject('posts')  
-            .if( u => !u.length )  
-                .redirect('/404')  
-            .if( u => u.length )  
-                .depends(u => $get('/api/post/'+ u.posts.unshift().id))  
-                    .inject('post')  
-                        .render(<PostsList/>)  
-    .all()  
-        .fail()  
-            .render(<500/>, 'notificationArea')  
+    .when('/', _ => atlant.stream().render(<Home/>).end() )
+    .when('/login', _ => atlant.stream().render(<Login/>).end() )
+    .when('/@:profileName', _ => atlant.stream()  
+                            .select('profile').from('Profiles').where( _ => _.params.profileName )
+                            .draw(<Profile/>, 'profileView')
+                            .depends(_ => $.get(`/api/profiles/${_}`)).where( _ => _.params.profileName).as('profileFromBE')
+                            .update('PROFILE').with(_ => _.profileFromBE)
+                            .subscribe('warn')
+                            .end()
+    )
+    .action('warn', _ => { console.log('Data Arrived!'); return Promise.resolve() )
 ```
 
 Awesome isn't it?

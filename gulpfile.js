@@ -14,7 +14,6 @@ var browserify = require('browserify')
     ,rename = require('gulp-rename')
     ,flow = require('flowcheck')
     ,argv = require('yargs').argv // there is also minimist package
-    ,documentation = require('gulp-documentation')
 
 var output = 'lib/';
 
@@ -142,21 +141,5 @@ gulp.task('browserifyWatcher', function() {
     return browserifyIt(true)
 });
 
-
-gulp.task('documentation', function () {
-
-  gulp.src('src/utils.js')
-    .pipe(documentation({ format: 'md' }))
-    .pipe(gulp.dest('documentation.md'));
-
-  // gulp.src('./index.js')
-  //   .pipe(documentation({ format: 'html' }))
-  //   .pipe(gulp.dest('html-documentation'));
-  //
-  // gulp.src('./index.js')
-  //   .pipe(documentation({ format: 'json' }))
-  //   .pipe(gulp.dest('json-documentation'));
-
-});
 
 gulp.task('default', ['browserifyWatcher']);

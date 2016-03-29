@@ -32,11 +32,11 @@
     "watchify": "0.8.1",
     "yargs": "^3.27.0"
   },
-  "scripts": {
-    "doc": "./node_modules/.bin/esdoc -c esdoc.json"
-  },
   "devDependencies": {
-    "esdoc": "^0.4.6",
-    "esdoc-es7-plugin": "0.0.3"
+    "gulp-documentation": "^2.2.0"
+  },
+  "scripts":{
+      "doc": "./node_modules/.bin/esdoc -c esdoc.json"
   }
+  
 }

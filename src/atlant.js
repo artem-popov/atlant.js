@@ -1,11 +1,10 @@
 "use strict";
-/**
- *
- * @TODO: fast switching generate console.error.
- * @TODO: #hashes are ignored
- * @TODO: check(true) to check only this view params (by specifically set fields or somehow)
- * @TODO: depCache to check only this dep params (by specifically set fields or somehow)
- */
+
+ // @TODO: fast switching generate console.error.
+ // @TODO: #hashes are ignored
+ // @TODO: check(true) to check only this view params (by specifically set fields or somehow)
+ // @TODO: depCache to check only this dep params (by specifically set fields or somehow)
+ 
 
 function Atlant(){
     var atlant = this;
@@ -320,12 +319,10 @@ function Atlant(){
         }))
 
 
-    /* Base */
+    // Base 
 
+    // When
 
-    /**
-     * When
-     */
     var _when = function(){
 
         return function(masks, fn, matchingBehaviour, whenType) {
@@ -443,23 +440,19 @@ function Atlant(){
 
     };
 
-    /* Not ordered commands */
+    // Not ordered commands 
 
-    /**
-     * Function: skip
-     * Skip: Sets the list of route masks which should be skipped by Atlant.
-     * @param path
-     * @returns atlant
-     * @private
-     */
+    // Function: skip
+    // Skip: Sets the list of route masks which should be skipped by Atlant.
+    // @param path
+    // @returns atlant
+    // @private
     var _skip = function (...paths){
         s.map( _ => prefs.skipRoutes.push(_), paths);
         return this
     }
 
-    /**
-     *  Use this method to publish routes when
-     */
+    //  Use this method to publish routes when
     var _publish = function(path){
         if (path) s.type(path, 'string');
         atlantState.devStreams.publishStream.push({published:true, path:path});
@@ -665,23 +658,18 @@ function Atlant(){
         atlantState.devStreams.onDestroyStream.push();
     }
 
-    /**
-     * Atlant API
-     *
-     */
+    // Atlant API
 
-    /**
-     * Creates route stream by route expression
-     * @param mask - route expression /endpoint/:param1/:param2/endpoint2
-     */
+    // Creates route stream by route expression
+     // @param mask - route expression /endpoint/:param1/:param2/endpoint2
+     //
     this.when = function(masks, fn) { return _when.bind(this)( masks, fn, types.Matching.continue, types.WhenOrMatch.when ); }
 
     this.pre = _pre.bind(this);
 
-    /**
-     * Creates route stream by route expression which will prevent other matches after.
-     * @param mask - route expression /endpoint/:param1/:param2/endpoint2
-     */
+    //
+    // Creates route stream by route expression which will prevent other matches after.
+    // @param mask - route expression /endpoint/:param1/:param2/endpoint2
     this.lastWhen = function(masks, fn) { return _when.bind(this)( masks, fn, types.Matching.stop, types.WhenOrMatch.when ); }
 
     // Match declare a route which will be ignored by .otherwise()
@@ -710,9 +698,7 @@ function Atlant(){
     // side-effect
     this.interceptor = _interceptor;
 
-    /**
-     * Stores!
-     */
+    // Stores!
     // Store registration
     this.store = _store;
     // Register key-based dispatcher
@@ -728,12 +714,10 @@ function Atlant(){
     // When's property. Means, should scroll to top on this route.
     this.scrollToTop = _scrollToTop;
 
-    /**
-     * Setups
-     */
-    /* If true then view will be re-rendered only when injects are changed. Accepts boolean. Default true */
+    // Setups
+    // If true then view will be re-rendered only when injects are changed. Accepts boolean. Default true 
     this.check = _check;
-    /* wait or not for resources loading when going to next route when link tapped */
+    // wait or not for resources loading when going to next route when link tapped 
     this.await = _await;
     // Display all internal messages.
     this.verbose = _verbose;
@@ -751,15 +735,11 @@ function Atlant(){
     this.defaultScrollToTop = _defaultScrollToTop;
 
 
-    /**
-     * Commands!
-     */
+    // Commands!
     // Use this when you finished declaring routes and want to start routing. Can be used for drawing another route at current route without redirect (accepts url).
     this.publish =  _publish;
 
-    /**
-     * Commands allows perform manipulations of atlant immediatelly.
-     */
+    // Commands allows perform manipulations of atlant immediatelly.
 
     // Here you can manipulate views.
     this.views = Object.create(null);
@@ -783,16 +763,14 @@ function Atlant(){
         return prefs.render.list();
     }
 
-    /**
-     * Plugins!
-     */
+    //Plugins!
+
     // Contains available renders
     this.renders =  { react :  reactRender, simple :  simpleRender };
 
 
-    /**
-     * Events!
-     */
+    // Events!
+
     // Called everytime when route/action is rendered.
     this.onRenderEnd =  _onRenderEnd;
     // Called when destroy initiated.
@@ -808,11 +786,10 @@ function Atlant(){
 
 
 
-    /**
-     * Utils
-     * These commands doesn't return "this".
-     */
+     // Utils
+     // These commands doesn't return "this".
     // Returns atlant.js version
+
     this.version = require('atlant-version');
     // Returns timestamp of the creation time
     this.build = require('atlant-build');
