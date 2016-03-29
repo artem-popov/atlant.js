@@ -599,17 +599,12 @@ function Atlant(){
         return this;
     }
 
-    var _updater = function(updaterName, updater){
-        var storeName = TopState.state.lastStoreName;
-
-        if (!storeName) { throw new Error('.updater() should be after .store()') }
-        if ( 'function' !== typeof atlantState.stores[storeName]._constructor ) { throw new Error("Constructor not implemented in store ", storeName)}
+    var setUpdater = function(storeName, updaterName, updater){
         if ( updaterName in atlantState.stores[storeName].updaters ) { throw new Error("Cannot reimplement updater ", updaterName, " in store ", storeName)}
-
-        atlantState.stores[storeName].updaters[updaterName] = updater;
-
         if( !(updaterName in atlantState.emitStreams ) ) atlantState.emitStreams[updaterName] = baseStreams.bus();
         
+        atlantState.stores[storeName].updaters[updaterName] = updater;
+
         baseStreams.onValue(atlantState.emitStreams[updaterName], function(storeName, updater, updaterName, scope){ // scope is the value of .update().with(scope) what was pushed in
             atlantState.stores[storeName].changes.push( function(scope, updater, storeName, updaterName, state){  // state is the value which passed through atom
                 try {
@@ -620,6 +615,17 @@ function Atlant(){
                 }
             }.bind(void 0, scope, updater, storeName, updaterName))
         }.bind(void 0, storeName, updater, updaterName));
+    }
+
+    var _updater = function(updaterNames, updater){
+        var storeName = TopState.state.lastStoreName;
+
+        if (!storeName) { throw new Error('.updater() should be after .store()') }
+        if ( 'function' !== typeof atlantState.stores[storeName]._constructor ) { throw new Error("Constructor not implemented in store ", storeName)}
+
+        updaterNames = Array.isArray(updaterNames) ? updaterNames : [updaterNames];
+
+        updaterNames.forEach( _ => setUpdater(storeName, _, updater) )
 
         return this;
     }
