@@ -56,7 +56,7 @@ atlant
                             .subscribe('warn')
                             .end()
     )
-    .action('warn', _ => { console.log('Data Arrived!'); return Promise.resolve() )
+    .action('warn', _ => { console.log('Data Arrived!'); return Promise.resolve() } )
 ```
 
 Awesome isn't it?
