@@ -68,7 +68,7 @@ var Render = function(React) {
     this.name = 'React';
     var attachedViews = []; 
 
-    this.render = function(viewProvider, upstream, activeStreamId, name, scope ) {
+    this.render = function(viewProvider, upstream, activeStreamId, name, scope, errorStream ) {
         console.time('rendering view ' + name);
 
         state.getOrCreate(name); // Always should be first to ensure that it is a simple div to lower influence of React.renderToStaticMarkup
@@ -80,7 +80,7 @@ var Render = function(React) {
         var instance = state.getThis(name);
 
         if( instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) { 
-            instance.forceUpdate();
+            try { instance.forceUpdate(); } catch(e){ errorStream.push(e) }
         }
 
         console.timeEnd('rendering view ' + name);
@@ -88,8 +88,8 @@ var Render = function(React) {
         return state.getInstance(name);  
     }
 
-    this.clear = function(viewProvider, upstream, activeStreamId, name, scope ) {
-        return this.render(function(){return React.createElement('div')}, upstream, activeStreamId, name, scope )
+    this.clear = function(viewProvider, upstream, activeStreamId, name, scope, errorStream ) {
+        return this.render(function(){return React.createElement('div')}, upstream, activeStreamId, name, scope, errorStream )
     }
 
 

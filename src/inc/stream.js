@@ -59,7 +59,7 @@ export function Stream (atlantState, prefs, fn){
 
         let renderIntoView = function(viewProvider, upstream, viewName, render, scope) {
             var renderD = s.promiseD( render ); // decorating with promise 
-            return renderD(viewProvider, upstream, atlantState.activeStreamId, viewName, scope)
+            return renderD(viewProvider, upstream, atlantState.activeStreamId, viewName, scope, atlantState.devStreams.errorStream)
                 .then(function(_){
                     // @TODO make it better
                     // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
