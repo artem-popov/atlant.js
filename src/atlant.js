@@ -287,14 +287,16 @@ function Atlant(){
                 // Storing here the data for actions.
                 atlantState.lastMask = whenData.route.masks;
 
-                var depData = Object.assign({
+                var depData = {
                     location: upstream.path
                     ,mask: whenData.mask 
                     ,pattern: whenData.mask 
                     ,masks: whenData.route.masks
                     ,referrer: upstream.referrer
                     ,history: upstream.history
-                }, whenData.params);
+                    ,params: whenData.params
+                };
+                depData = { ...depData, ...whenData.params }; 
                 atlantState.whenData = depData;
 
                 if (whenData.when.type === types.WhenOrMatch.when && ('function' === typeof whenData.scrollToTop.value ? whenData.scrollToTop.value(depData) : whenData.scrollToTop.value) && 'undefined' !== typeof window) {
@@ -855,7 +857,7 @@ function Atlant(){
                     depValue = {};
                 }
                 if ('object' === typeof depValue) {
-                    depValue = Object.assign(depValue, atlantState.whenData);
+                    depValue = { ...{params: atlantState.whenData}, ...depValue }; 
                 }
 
                 var stream = fn( depValue ); 
