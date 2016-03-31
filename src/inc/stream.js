@@ -59,7 +59,7 @@ export function Stream (atlantState, prefs, fn){
 
         let renderIntoView = function(viewProvider, upstream, viewName, render, scope) {
             var renderD = s.promiseD( render ); // decorating with promise 
-            return renderD(viewProvider, upstream, atlantState.activeStreamId, viewName, scope, atlantState.devStreams.errorStream)
+            return renderD(viewProvider, upstream, atlantState.activeStreamId, viewName, scope)
                 .then(function(_){
                     // @TODO make it better
                     // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
@@ -77,7 +77,6 @@ export function Stream (atlantState, prefs, fn){
                     }
                     return stream 
                 })
-                .catch( clientFuncs.catchError )
         }
 
         let subscribeView = function(viewName, doRenderIntoView, scope, upstream){
@@ -188,18 +187,22 @@ export function Stream (atlantState, prefs, fn){
                             }
 
                             var doRenderIntoView = renderIntoView.bind(void 0, viewProvider, upstream, viewName, render);
+
                             atlantState.viewData[viewName] = scope;
 
                             unsubscribeView(viewName);
 
-                            var renderResult = doRenderIntoView(scope); // sync operation 
+                            var renderResult = doRenderIntoView(scope).then( () => {
+                                if (upstream.render.subscribe && types.RenderOperation.clear !== upstream.render.renderOperation )  // Subscriber only after real render - Bacon evaluates subscriber immediately
+                                    subscribeView(viewName, doRenderIntoView, scope, upstream)
+
+                                upstream.render.component = renderResult;
+                                return upstream;
+                            })
+                            .catch( _ => atlantState.devStreams.errorStream.push() )
 
 
-                            if (upstream.render.subscribe && types.RenderOperation.clear !== upstream.render.renderOperation )  // Subscriber only after real render - Bacon evaluates subscriber immediately
-                                subscribeView(viewName, doRenderIntoView, scope, upstream)
-
-                            upstream.render.component = renderResult;
-                            return upstream;
+                            return renderResult;
  
                         }
 
@@ -561,12 +564,12 @@ export function Stream (atlantState, prefs, fn){
             var renderId = _.uniqueId();
 
             
-            var renderStream = State.state.lastOp.map( function(upstream){
+            var renderStream = State.state.lastOp.flatMap( function(upstream){
                 if (!upstream.isAction && upstream.id !== atlantState.activeStreamId.value) return Bacon.never(); // Obsolete streams invoked on previous route.
 
                 upstream.render = { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: renderOperation, subscribe: subscribe, parent: State.state.lastOpId };
             
-                return renderView(upstream)
+                return Bacon.fromPromise(renderView(upstream))
             })
 
             if (renderOperation === types.RenderOperation.draw){ 

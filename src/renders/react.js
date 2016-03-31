@@ -66,9 +66,9 @@ var Render = function(React) {
     var state = new State(React);
 
     this.name = 'React';
-    var attachedViews = []; 
+    var selectors = {}; 
 
-    this.render = function(viewProvider, upstream, activeStreamId, name, scope, errorStream ) {
+    this.render = function(viewProvider, upstream, activeStreamId, name, scope) {
         console.time('rendering view ' + name);
 
         state.getOrCreate(name); // Always should be first to ensure that it is a simple div to lower influence of React.renderToStaticMarkup
@@ -79,17 +79,36 @@ var Render = function(React) {
 
         var instance = state.getThis(name);
 
-        if( instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) { 
-            try { instance.forceUpdate(); } catch(e){ console.error(e.stack); errorStream.push(e) }
+        let error = false;
+           
+        let update = () => { 
+            try {
+                instance.forceUpdate(); 
+            } catch(e){
+                console.error(e.stack); 
+                state.set(name, [_ => <div></div>, {}]);  
+                let root = document.querySelector(selectors.root);
+                if (root) {
+                    while (root.firstChild) {
+                        root.removeChild(root.firstChild);
+                    }
+                    this.attach('root', selectors['root']);
+                }
+                error = true;
+            }
+        }
+
+        if( !error && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) { 
+            update()
         }
 
         console.timeEnd('rendering view ' + name);
 
-        return state.getInstance(name);  
+        return error ? Promise.reject() : Promise.resolve(state.getInstance(name));  
     }
 
-    this.clear = function(viewProvider, upstream, activeStreamId, name, scope, errorStream ) {
-        return this.render(function(){return React.createElement('div')}, upstream, activeStreamId, name, scope, errorStream )
+    this.clear = function(viewProvider, upstream, activeStreamId, name, scope) {
+        return this.render(function(){return React.createElement('div')}, upstream, activeStreamId, name, scope)
     }
 
 
@@ -104,7 +123,7 @@ var Render = function(React) {
 
         try{
             React.render(root, element)
-            attachedViews.push(name); 
+            selectors[name] = selector; 
         } catch(e) {
             console.error(e.message, e.stack)
             React.unmountComponentAtNode(element);
@@ -147,7 +166,7 @@ var Render = function(React) {
     })
 
     this.destroy = function(){
-        attachedViews = [];
+        selectors = [];
         state.destroy()
     }
 }
