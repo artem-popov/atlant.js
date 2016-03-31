@@ -199,7 +199,7 @@ export function Stream (atlantState, prefs, fn){
                                 upstream.render.component = renderResult;
                                 return upstream;
                             })
-                            .catch( _ => atlantState.devStreams.errorStream.push() )
+                            .catch( _ => { atlantState.devStreams.errorStream.push(); return Bacon.End() } )
 
 
                             return renderResult;
