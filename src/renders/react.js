@@ -80,7 +80,7 @@ var Render = function(React) {
         var instance = state.getThis(name);
 
         if( instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) { 
-            try { instance.forceUpdate(); } catch(e){ errorStream.push(e) }
+            try { instance.forceUpdate(); } catch(e){ console.error(e.stack); errorStream.push(e) }
         }
 
         console.timeEnd('rendering view ' + name);
