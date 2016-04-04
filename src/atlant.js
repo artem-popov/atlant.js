@@ -99,7 +99,7 @@ function Atlant(){
         utils.attachGuardToLinks();
     }
 
-    // can be removed, just imformational
+    // can be removed, just informational
     baseStreams.onValue(atlantState.devStreams.renderEndStream, s.baconTryD(_ => console.log('render end:', _)));
 
     var injectsGrabber = new interfaces.injectsGrabber();
@@ -602,10 +602,6 @@ function Atlant(){
     var _setTimeout = s.setTimeout;
 
     var _destroy = function(){
-        // Object.keys(viewSubscriptionsUnsubscribe).forEach(function(viewName){ // Removing atom subscriptions
-        //     viewSubscriptionsUnsubscribe[viewName]();
-        //     console.log('atom: unsubscribe', viewName)
-        // })
         Object.keys(atlantState.viewData).forEach(function(viewName){ // Destroying view scopes cache
             atlantState.viewData[viewName] = void 0
             console.log('clear view cache', viewName)
@@ -658,7 +654,18 @@ function Atlant(){
     // this.finally =  _finally; // was removed, not reimplemented yet 
 
     // side-effect
-    this.interceptor = function(fn) {  var interceptorName = uniqueId(); atlantState.interceptors.push(interceptorName); return atlant.streams.reg.call(this, interceptorName, fn, false); }
+    this.interceptor = function(fn) {  
+        var interceptorName = uniqueId();
+        atlantState.interceptors.push(interceptorName);
+
+        try{
+            atlant.streams.reg.call(this, interceptorName, fn, false); 
+        } catch(e){ 
+            delete atlantState.interceptors[atlantState.interceptors.indexOf(interceptorName)]
+        }
+
+        return this;
+    }
 
     // Stores!
     // Store registration

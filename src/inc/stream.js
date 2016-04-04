@@ -20,7 +20,7 @@ export function ReadyStream(streamState, bus, stream){
     this.push = (...args) => setTimeout( _ => bus.push(...args), 0);
     this.pushSync = _ => bus.push(_);
 
-    Object.defineProperty(this, 'canBeIntercepted', { get (){ return streamState.canBeIntercepted }, set (value){ streamState.canBeIntercepted = value; console.log('someone set canBeIntercepted:', streamState.canBeIntercepted) }});
+    Object.defineProperty(this, 'canBeIntercepted', { get (){ return streamState.canBeIntercepted }, set (value){ streamState.canBeIntercepted = value; }});
 
     this.onStart = _ => {
         bus.onValue(_)
@@ -122,8 +122,6 @@ export function Stream (atlantState, prefs, fn){
                     }
                 } 
 
-                // streamState.updates.swap(_ => _ - 1 / streamState.subscribersCount); // if there is an subscription, then always do this
-                // console.log('swapping:', streamState.updates.unwrap())
                 return upstream;
 
             }.bind(void 0, upstream, viewName, scope, doRenderIntoView ));
@@ -142,7 +140,7 @@ export function Stream (atlantState, prefs, fn){
                         if(types.RenderOperation.refresh === upstream.render.renderOperation ){
                             utils.goTo( window.location.pathname, void 0, true)
 
-                            return;
+                            return Promise.resolve(upstream);
                         }
 
                         var scope = clientFuncs.createScope(clientFuncs.getScopeDataFromStream(upstream));
@@ -156,7 +154,7 @@ export function Stream (atlantState, prefs, fn){
                                 utils.goTo(viewProvider, void 0, true)
                             }
 
-                            return;
+                            return Promise.resolve(upstream);;
                         } else if (types.RenderOperation.move === upstream.render.renderOperation){
                             if ('function' === typeof viewProvider) {
                                 window.location.assign(viewProvider(scope))
@@ -164,7 +162,7 @@ export function Stream (atlantState, prefs, fn){
                                 window.location.assign(viewProvider)
                             }
 
-                            return;
+                            return Promise.resolve(upstream);;
                         }  else if (types.RenderOperation.replace === upstream.render.renderOperation ){
 
                             var path = s.apply(viewProvider, scope);
@@ -172,7 +170,7 @@ export function Stream (atlantState, prefs, fn){
                             utils.replace(path); // just rename url
 
 
-                            return;
+                            return Promise.resolve(upstream);;
                         } else if (types.RenderOperation.change === upstream.render.renderOperation ){
                             var path = s.apply(viewProvider, scope);
                             atlantState.lastReferrer = atlantState.lastPath;
@@ -180,7 +178,7 @@ export function Stream (atlantState, prefs, fn){
                             utils.change(path); // Push url to history without atlant to react on new value.
 
 
-                            return;
+                            return Promise.resolve(upstream);;
                         } else {
 
                             if ( types.RenderOperation.render === upstream.render.renderOperation || types.RenderOperation.draw === upstream.render.renderOperation ) {
@@ -307,22 +305,20 @@ export function Stream (atlantState, prefs, fn){
                             .mapError(function(_){ console.error('Network error: status === ', _.status); return _})
                             .flatMap(function(upstream, atomParams, results){
                                 if ( 'function' === typeof results ) results = results.bind(void 0, atomParams);
-                                if(upstream.ref=='something') console.log('values:',  streamState.canBeIntercepted && s.isObject(results) &&  'status' in results);
 
                                 if ( streamState.canBeIntercepted && s.isObject(results) && 'status' in results) { // @TODO status is hardcoded here, should use promises instead
 
                                     const finish = baseStreams.bus();
-                                    var res = finish.take(1).flatMap(_ => _);
-                                    var counter = baseStreams.bus();
-                                    var scan = counter.scan(atlantState.interceptors.length, (a, b) => a - b);
-                                    scan.onValue(_ => { console.log('scan interceptor:', _, depName); if(_ === 0) {finish.push(results)} } );
+                                    const res = finish.take(1).flatMap(_ => _);
+                                    const counter = baseStreams.bus();
+                                    const scan = counter.scan(atlantState.interceptors.length - 1, (a, b) => a - b);
+                                    scan.onValue(_ => { if(_ === 0) {finish.push(results)} } );
 
                                     atlantState.interceptors
                                         .forEach( name => { 
                                             atlantState.atlant.streams.push(name, {name: upstream.ref, value: results})
-                                            var stream = atlantState.finishes[name].map(_ => { 
+                                            const stream = atlantState.finishes[name].map(_ => { 
                                                 return _.then( _ => counter.push(1) ).catch( _ => { 
-                                                    console.log('end interceptor', _, depName);
                                                     finish.push(Bacon.End()) 
                                                 })
                                             }) 
@@ -330,7 +326,6 @@ export function Stream (atlantState, prefs, fn){
                                             stream.onValue(_ => _);
                                         })
 
-                                        console.log('the res:', res, depName)
                                         res.onValue(_ => _)
                                     return res
                                 } else {
@@ -339,7 +334,6 @@ export function Stream (atlantState, prefs, fn){
 
                             }.bind(void 0, upstream, atomParams))
                             .map(function(upstream, atomParams, store, depName, isAtom, atomValue, results){
-                                console.log('results:', results, depName)
                                 if (!upstream.depends) upstream.depends = {};
                                 upstream.depends[depName] = results;
 
@@ -374,16 +368,6 @@ export function Stream (atlantState, prefs, fn){
                         if ( !( 'select' in upstream ) ) upstream.select = {};
 
                         if('undefined' !== typeof store.dependsOn && '' !== store.dependsOn && !(store.dependsOn in upstream.select )) throw new Error(`Select "${upstream.ref}"" cannot depend on unknown select: "${store.dependsOn}"`)
-
-                        // if(store.dependsOn && '' !== store.dependsOn )
-                        //     console.log('select depending ', upstream.ref, 'on', store.dependsOn)
-                        // if( store.dependsOn && '' === store.dependsOn )
-                        //     console.log('select', upstream.ref, 'is independent')
-                        // if( '' === store.dependsOn ) 
-                        //     console.log('select', 'no dependency')
-                        // if (!dependence && upstream.lastSelect && 'undefined' === typeof store.dependsOn && '' !== store.dependsOn)
-                        //     console.log('select lastSelect', upstream.ref, 'on', upstream.lastSelect )
-
 
                         var getValue = function( ref, atomParams, u ){
                             let params = atomParams.bind(this, u);
@@ -524,7 +508,7 @@ export function Stream (atlantState, prefs, fn){
         s.type(key, 'string');
         if ( ! State.state.lastDepName ) throw new Error('.inject should follow .depends');
 
-        console.warn(`Use of atlant.inject( ${key}, ${expression} ) is deprecated at ${atlantState.lastMask}`);
+        console.warn(`Use of atlant.inject( ${key}, ${expression} ) is deprecated for ${atlantState.lastMask}`);
 
         State.state.lastInjects[key] = { name: State.state.lastDepName, expression: expression };
 
@@ -535,7 +519,7 @@ export function Stream (atlantState, prefs, fn){
         s.type(key, 'string');
         State.state.lastInjects[key] = { name: State.state.lastDepName, expression: expression, injects: Array.prototype.slice.apply(State.state.lastInjects) };
 
-        console.warn(`Use of atlant.join( ${key}, ${expression} ) is deprecated at ${atlantState.lastMask}`);
+        console.warn(`Use of atlant.join( ${key}, ${expression} ) is deprecated for ${atlantState.lastMask}`);
 
         return this;
     }
@@ -656,7 +640,6 @@ export function Stream (atlantState, prefs, fn){
             return function(storeName, partName, id){
                 var value;
                 try {
-                    // console.log('executing select', partName , 'from', '<' + storeName + '>', atlantState.stores[storeName].staticValue, 'with', atlantState.stores[storeName].parts[partName], '(',id(),')', ' = ', atlantState.stores[storeName].parts[partName](atlantState.stores[storeName].staticValue, id()))
                     value = atlantState.stores[storeName].parts[partName](atlantState.stores[storeName].staticValue, id());
                 } catch(e) {
                     console.error('select', partName, 'from', storeName,'failed:', e.stack)
@@ -687,17 +670,17 @@ export function Stream (atlantState, prefs, fn){
     }
 
     var _reject = function() {
-        State.state.lastOp = State.state.lastOp.map( _ => {
+        State.state.lastOp = State.state.lastOp.flatMap( _ => {
             streamState.streamCallbacks.forEach( callback => callback(Promise.reject(_)) );
-            return _
+            return Bacon.End(_)
         });
 
         return this
     }
     var _resolve = function() {
-        State.state.lastOp = State.state.lastOp.map( _ => {
+        State.state.lastOp = State.state.lastOp.flatMap( _ => {
             streamState.streamCallbacks.forEach( callback => callback(Promise.resolve(_)) );
-            return _
+            return Bacon.End(_)
         });
 
         return this
