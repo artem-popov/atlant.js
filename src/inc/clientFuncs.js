@@ -65,7 +65,6 @@ var getScopeDataFromStream = function( upstream ){
 var createScope = function ( upstream ) {
     var refsData = getRefsData( upstream ); 
 
-    var warning = function(inject) { console.log('inject accessor return nothing:' + inject) }
     var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
     var joins = s.filter( function(inject){ return inject.hasOwnProperty('injects') }, injects);
     injects = s.filter( function(inject){ return !inject.hasOwnProperty('injects') }, injects);
@@ -91,7 +90,7 @@ var createScope = function ( upstream ) {
         }
     }
 
-    var takeAccessor = s.compose( s.if(s.eq(void 0), warning), s.flipDot(upstream) );
+    var takeAccessor = s.compose( s.flipDot(upstream) );
     var takeFunction = function(fn){return fn.apply();}
     var fullfil = s.map( s.compose( s.ifelse(s.typeOf('string'), takeAccessor, takeFunction)
                                     , formatInjects)); 

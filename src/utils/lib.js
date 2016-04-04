@@ -493,6 +493,8 @@ var s = (function(){
    this.compose      = _.compose;
    this.curry        = _.curry;
 
+    this.isObject = _ => _ === Object(_);
+
    return this;
 
 }.bind(container))();

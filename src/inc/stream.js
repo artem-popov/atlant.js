@@ -20,6 +20,8 @@ export function ReadyStream(streamState, bus, stream){
     this.push = (...args) => setTimeout( _ => bus.push(...args), 0);
     this.pushSync = _ => bus.push(_);
 
+    Object.defineProperty(this, 'canBeIntercepted', { get (){ return streamState.canBeIntercepted }, set (value){ streamState.canBeIntercepted = value; console.log('someone set canBeIntercepted:', streamState.canBeIntercepted) }});
+
     this.onStart = _ => {
         bus.onValue(_)
     }
@@ -52,7 +54,8 @@ export function Stream (atlantState, prefs, fn){
     var lastWhen;
 
     var streamState = {
-        streamCallbacks: []
+        streamCallbacks: [],
+        canBeIntercepted: true
     }
 
     var renderView = function(){
@@ -115,7 +118,7 @@ export function Stream (atlantState, prefs, fn){
                     doRenderIntoView(data); // Here we using scope updated from store!
 
                     if(streamState.resolveWhen && streamState.resolveWhen(data) && streamCallbacks.length){
-                        streamCallbacks.forEach( _ => _(data) )
+                        streamState.streamCallbacks.forEach( _ => _(data) )
                     }
                 } 
 
@@ -302,9 +305,41 @@ export function Stream (atlantState, prefs, fn){
                         var atomValue = atomParams();
                         return treatDep( dep )( atomValue )
                             .mapError(function(_){ console.error('Network error: status === ', _.status); return _})
-                            .map(function(upstream, atomParams, store, depName, isAtom, atomValue, results){
+                            .flatMap(function(upstream, atomParams, results){
                                 if ( 'function' === typeof results ) results = results.bind(void 0, atomParams);
-                                if ( !upstream.isInterceptor ) atlantState.devStreams.interceptorBus.push({upstream: upstream, scope: results}); // pushing into global depends .interceptor() 
+                                if(upstream.ref=='something') console.log('values:',  streamState.canBeIntercepted && s.isObject(results) &&  'status' in results);
+
+                                if ( streamState.canBeIntercepted && s.isObject(results) && 'status' in results) { // @TODO status is hardcoded here, should use promises instead
+
+                                    const finish = baseStreams.bus();
+                                    var res = finish.take(1).flatMap(_ => _);
+                                    var counter = baseStreams.bus();
+                                    var scan = counter.scan(atlantState.interceptors.length, (a, b) => a - b);
+                                    scan.onValue(_ => { console.log('scan interceptor:', _, depName); if(_ === 0) {finish.push(results)} } );
+
+                                    atlantState.interceptors
+                                        .forEach( name => { 
+                                            atlantState.atlant.streams.push(name, {name: upstream.ref, value: results})
+                                            var stream = atlantState.finishes[name].map(_ => { 
+                                                return _.then( _ => counter.push(1) ).catch( _ => { 
+                                                    console.log('end interceptor', _, depName);
+                                                    finish.push(Bacon.End()) 
+                                                })
+                                            }) 
+
+                                            stream.onValue(_ => _);
+                                        })
+
+                                        console.log('the res:', res, depName)
+                                        res.onValue(_ => _)
+                                    return res
+                                } else {
+                                    return results 
+                                };
+
+                            }.bind(void 0, upstream, atomParams))
+                            .map(function(upstream, atomParams, store, depName, isAtom, atomValue, results){
+                                console.log('results:', results, depName)
                                 if (!upstream.depends) upstream.depends = {};
                                 upstream.depends[depName] = results;
 
@@ -651,6 +686,24 @@ export function Stream (atlantState, prefs, fn){
         }, false, types.Depends.continue );
     }
 
+    var _reject = function() {
+        State.state.lastOp = State.state.lastOp.map( _ => {
+            streamState.streamCallbacks.forEach( callback => callback(Promise.reject(_)) );
+            return _
+        });
+
+        return this
+    }
+    var _resolve = function() {
+        State.state.lastOp = State.state.lastOp.map( _ => {
+            streamState.streamCallbacks.forEach( callback => callback(Promise.resolve(_)) );
+            return _
+        });
+
+        return this
+    }
+
+
     // Create scope for prefixed method (currently .select(), .update(), .depends())
     var _with = function(scopeProvider){
         s.type(scopeProvider, 'function');
@@ -729,6 +782,8 @@ export function Stream (atlantState, prefs, fn){
     // shortcode for .dep( _ => atlant.streams.get('streamName').push(_))
     this.push =  _push.bind(this, false);
     this.pushSync =  _push.bind(this, true);
+    this.resolve = _resolve.bind(this);
+    this.reject = _reject.bind(this);
 
     /* Renders the view. first - render provider, second - view name */
     this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'always', types.RenderOperation.render);}
@@ -754,6 +809,7 @@ export function Stream (atlantState, prefs, fn){
     this.move = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.move);}
     // render which render nothing into nowhere
     this.nope = function(){ return _render.bind(this)(void 0, void 0, 'once', types.RenderOperation.nope)}
+
 
     // This 2 methods actually not exists in stream. They can be called if streams is already declared, but then trryed to continue to configure
     this.onStart = _ => console.error('You have lost at least 1 .end() in stream declaration:', fn)
