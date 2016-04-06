@@ -86,14 +86,6 @@ var Render = function(React) {
                 instance.forceUpdate(); 
             } catch(e){
                 console.error(e.stack); 
-                state.set(name, [_ => <div></div>, {}]);  
-                let root = document.querySelector(selectors.root);
-                if (root) {
-                    while (root.firstChild) {
-                        root.removeChild(root.firstChild);
-                    }
-                    this.attach('root', selectors['root']);
-                }
                 error = true;
             }
         }
