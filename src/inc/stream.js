@@ -181,7 +181,7 @@ export function Stream (atlantState, prefs, fn){
                             return Promise.resolve(upstream);;
                         } else {
 
-                            if ( types.RenderOperation.render === upstream.render.renderOperation || types.RenderOperation.draw === upstream.render.renderOperation ) {
+                            if ( types.RenderOperation.draw === upstream.render.renderOperation ) {
                                 render = prefs.render.render.bind(prefs.render)
                             } else if ( types.RenderOperation.clear === upstream.render.renderOperation ){
                                 render = prefs.render.clear.bind(prefs.render)
@@ -560,7 +560,7 @@ export function Stream (atlantState, prefs, fn){
         return function(renderProvider, viewName, once, renderOperation){
             // /check
             if ( ! State.state.lastOp ) throw new Error('"render" should nest something');
-            if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider && renderOperation != types.RenderOperation.nope && renderOperation != types.RenderOperation.refresh ) {
+            if ( 'function' !== typeof renderProvider && 'string' !== typeof renderProvider && renderOperation != types.RenderOperation.refresh ) {
                 console.log('Atlant.js: render first param should be function or URI', renderProvider, renderOperation)
                 throw new Error('Atlant.js: render first param should be function or URI')
             }
@@ -571,12 +571,6 @@ export function Stream (atlantState, prefs, fn){
 
             var closeThisBlock = closeBlock.bind(this, renderOperation, viewName );
             
-            if(renderOperation === types.RenderOperation.nope) { // Just close if's and stream if "nope"
-                var that = closeThisBlock(); 
-                State.state.lastOp.onValue( _ => _ );
-                // if(State.state.lastDep) State.state.lastDep.onValue( _ => _ );
-                return that; 
-            } 
             // ------end of check/
 
             let subscribe  = 'once' !== once ? true : false;
@@ -752,7 +746,7 @@ export function Stream (atlantState, prefs, fn){
     this.inject =  _inject;
     // Will accept the same scope as .and(), .render(), .if()
     this.join = _join;
-    // Creates new branch if computated callback is true. Warning: the parent branch will be executed still. Render it with .nope() if no render should happend.
+    // Creates new branch if computated callback is true. Warning: the parent branch will be executed still. End it with .end().
     this.if = _if.bind(this, s.id);
     this.unless =  _if.bind(this, s.negate);
     this.end = _end;
@@ -768,16 +762,15 @@ export function Stream (atlantState, prefs, fn){
     this.resolve = _resolve.bind(this);
     this.reject = _reject.bind(this);
 
-    /* Renders the view. first - render provider, second - view name */
-    this.render = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'always', types.RenderOperation.render);}
-    /* Do not subscribe selects on view */
-    this.renderOnce = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'once', types.RenderOperation.render);}
-    /* Renders the view. first - render provider, second - view name. Not waiting for anything - draws immediatelly */
+    /* Renders the view. first - render provider, second - view name. Draws immediatelly */
     this.draw = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'always', types.RenderOperation.draw);}
+
     /* Do not subscribe selects on view */
     this.drawOnce = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'once', types.RenderOperation.draw);}
+    
     /* clears default or provided viewName */
     this.clear = function(viewName) {return _render.bind(this)(function(){}, viewName, 'once', types.RenderOperation.clear);}
+
     // Soft atlant-inside redirect.
     this.redirect = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.redirect);}
     // Soft atlant-inside refresh.
@@ -790,8 +783,6 @@ export function Stream (atlantState, prefs, fn){
     // this.force = _.force;
     // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
     this.move = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.move);}
-    // render which render nothing into nowhere
-    this.nope = function(){ return _render.bind(this)(void 0, void 0, 'once', types.RenderOperation.nope)}
 
 
     // This 2 methods actually not exists in stream. They can be called if streams is already declared, but then trryed to continue to configure

@@ -692,7 +692,7 @@ function Atlant(){
     this.verbose = _verbose;
     // This routes will be ignored by atlant even if they are declared by .when() or .match()
     this.skip =  _skip;
-    // Set view active by default (no need to mention in second parameter of .render
+    // Set view active by default (no need to mention in second parameter of .draw
     this.set = _set;
     // Roolback previous set
     this.unset = _unset;

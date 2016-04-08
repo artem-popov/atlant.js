@@ -5,15 +5,13 @@ var Symbol = Symbol;
 if (void 0 === Symbol) Symbol = _ => _;
 
 var RenderOperation = {
-    render: Symbol('render')
-    ,draw: Symbol('draw')
+    draw: Symbol('draw')
     ,replace: Symbol('replace')
     ,change: Symbol('change')
     ,clear: Symbol('clear')
     ,redirect: Symbol('redirect')
     ,refresh: Symbol('refresh')
     ,move: Symbol('move')
-    ,nope: Symbol('nope')
 }
 
 // Matching enum for when.
