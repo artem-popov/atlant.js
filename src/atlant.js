@@ -21,7 +21,7 @@ function Atlant(){
         ,clientFuncs = require('inc/clientFuncs')
         ,Storage = require('inc/storage')
         ,types = require('inc/types')
-        ,wrapPushState = require( 'inc/wrap-push-state.js').wrapPushState
+        ,wrapHistoryApi = require( 'inc/wrap-history-api.js').wrapHistoryApi
     ;
 
     import console from 'utils/log';
@@ -72,6 +72,7 @@ function Atlant(){
         ,finishes: {}
         ,interceptors: []
         ,atlant: this
+        ,scrollState: utils.getScrollState()
     }
 
     import views from "views/views";
@@ -91,9 +92,9 @@ function Atlant(){
     utils.clearState();
 
     // Browser specific actions.
-    // registering wrapPushState, attaching atlant events to links
+    // registering wrapHistoryApi, attaching atlant events to links
     if ('undefined' !== typeof window) {
-        wrapPushState(window);
+        wrapHistoryApi(window);
 
         // Subscribe to clicks and keyboard immediatelly. Document already exists.
         utils.attachGuardToLinks();
@@ -139,7 +140,6 @@ function Atlant(){
                             window.scrollTo(0, scrollTop)
 
                             finishScroll = (scrollTop => {
-                                if(window.debug)debugger;
                                 utils.body.style.minHeight = null;
                                 // utils.unblockScroll();
                                 atlant.state.scrollRestoration = false;
@@ -147,14 +147,15 @@ function Atlant(){
                                 if (!('scrollRestoration' in history)) loader.style.visibility = null;
                             }).bind(void 0, scrollTop);
 
-                            if(window && !window.history.pushState.overloaded) wrapPushState(window);
+                            if(window && !window.history.pushState.overloaded) wrapHistoryApi(window);
 
 
                     }
 
+                    var savedScrollTop = atlantState.scrollState[path];
                     if ( event instanceof PopStateEvent ) {
-                        trySetScroll(state.scrollTop)
-                    } else if ( 0 === state.scrollTop ) {
+                        trySetScroll(savedScrollTop)
+                    } else if ( 0 === savedScrollTop ) {
                         finishScroll = (scrollTop => {
                             if (!('scrollRestoration' in history)) loader.style.visibility = null;
                         })

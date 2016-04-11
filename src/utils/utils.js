@@ -4,6 +4,9 @@ var s = require('utils/lib')
     ,_ = require('lodash')
 ;
 
+// This component holds state of Scroll
+var scrollState = {};
+
 var utils = function() {
     return {
         /**
@@ -102,6 +105,10 @@ utils.isIE = function()
      
 }
 
+utils.getScrollState = function(){
+  return scrollState;
+}
+
 /**
  * Redirect to the other path using $location
  * @param upstream
@@ -122,22 +129,17 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO 
         }
     }
 
-    var state = { url: url, scrollTop: 0, referrer: window.location.href, forceRouteChange: redirectForce };
+    var state = { url: url, referrer: window.location.href, forceRouteChange: redirectForce };
+
+    scrollState[url] = 0;
 
     setTimeout( _ => history.pushState(state, null, url), 0 ) // setTimeout turns on safari optimizations and we didn't see the crazy jumps.
     
 }
 
 
-utils.newPage = true;
-
-utils.saveType = function(field){
-    window.history.replaceState({[field]: true, ...window.history.state}, null);
-}
-
 utils.clearState = function(){
     var state = { ...window.history.state };
-    delete state.scrollTop;
     delete state.forceRouteChange;
     delete state.referrer;
     delete state.url;
@@ -145,10 +147,8 @@ utils.clearState = function(){
 }
 
 utils.saveScroll = _.debounce(function(event){
-    var state = { ...history.state, scrollTop: window.pageYOffset};
-
-    window.history.replaceState(state, null);
-}, 50)
+    scrollState[window.location.pathname] = window.pageYOffset;
+}, 100)
 
 utils.body = document.querySelector('body');
 utils.html = document.documentElement;
