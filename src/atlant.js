@@ -218,7 +218,7 @@ function Atlant(){
             return stream;
         })
         .map(function(upstream) {
-            var stream = lodash.extend({}, upstream);
+            var stream = { ...upstream };
 
             // Storing here the data for actions.
             atlantState.lastPath = stream.path;

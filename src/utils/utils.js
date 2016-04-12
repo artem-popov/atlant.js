@@ -292,7 +292,7 @@ utils.matchRoute = lodash.curry( s.memoize( function(path, mask){
             dst[name] = match[index + 1];
         });
         var searches = lodash.clone( utils.parseSearch(parsed.search), true); // add search params
-        dst = lodash.extend(searches, dst);
+        dst = { ...searches, ...dst };
     } else if( negate ) {
         dst = {}
         isMatched = true;

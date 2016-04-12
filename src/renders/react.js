@@ -20,7 +20,7 @@ var State = function(React){
                         if ( !views[name] ) views[name] = React.createElement('div');
 
                         if ( lodash.isArray( views[name] ) )
-                            return  views[name][0]( lodash.extend( {}, this.props, views[name][1] ) )
+                            return  views[name][0]( { ...this.props, ...views[name][1] } )
                         else
                             return views[name];
                     }

@@ -100,7 +100,7 @@ export function Stream (atlantState, prefs, fn){
                     .map( _ => upstream.chains[_] )
                     .reduce( (acc, i) => acc.concat(i), [])
                     .reduce( (acc, i) => acc.concat(i), [])
-                    .reduce( (acc, i) => lodash.extend(acc, i()), {});
+                    .reduce( (acc, i) => ({ ...acc, ...i() }), {});
 
                 if('undefined' === typeof window.selectCount) window.selectCount = 0;
                 if('undefined' === typeof window.selectTime) window.selectTime = 0;
@@ -108,7 +108,7 @@ export function Stream (atlantState, prefs, fn){
                 window.selectCount++;
                 window.getSelectTime = () => window.selectTime/window.selectCount;
 
-                let data = lodash.extend({}, scope, value );   
+                let data = { ...scope, ...value };   
 
                 if ( !lodash.isEqual(data, atlantState.viewData[viewName] ) ) {
                     scope = data;
@@ -295,7 +295,7 @@ export function Stream (atlantState, prefs, fn){
                     .flatMap(function(store, depName, dep, isAtom, upstream) {  // Execute the dependency
                         var scope = clientFuncs.createScope(upstream);
                         var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
-                        var atomParams = ( (scope, where, updates) => where(lodash.extend({}, scope, updates)) ).bind(this, scope, where);
+                        var atomParams = ( (scope, where, updates) => where({ ...scope, ...updates }) ).bind(this, scope, where);
                         
                         var treatDep = s.compose( clientFuncs.convertPromiseD, s.promiseTryD );
                         var atomValue = atomParams();
@@ -370,7 +370,7 @@ export function Stream (atlantState, prefs, fn){
                         var getValue = function( ref, atomParams, u ){
                             let params = atomParams.bind(this, u);
                             let res = dep()(params);
-                            let result = lodash.extend({}, u, { [ref]: res });  
+                            let result = { ...u, ...{ [ref]: res } };  
                             return result
                         }.bind( void 0, upstream.ref, upstream.atomParams );
 
@@ -469,7 +469,7 @@ export function Stream (atlantState, prefs, fn){
             }.bind(void 0, ifId, fn, condition))
 
         var thisIf = commonIf
-            .map( lodash.extend.bind(lodash, {} ) ) // Copy
+            .map( _ => ({..._}) ) // Copy
             .filter( _ => boolTransform(_.check) )
             .map( function(ifId, depName, injects, upstream) {
                 delete upstream.check;
@@ -478,7 +478,7 @@ export function Stream (atlantState, prefs, fn){
             }.bind(void 0, ifId, depName, injects))
 
         var thisElse = commonIf 
-            .map( lodash.extend.bind(lodash, {} ) ) // Copy
+            .map( _ => ({..._}) ) // Copy
             .filter( _ => !boolTransform(_.check) )
             .map( function(ifId, depName, injects, upstream) {
                 delete upstream.check;
