@@ -6,7 +6,7 @@ import console from "utils/log";
 
 var s = (function(){
 
-    var _ = require('lodash')
+    var lodash = require('lodash')
         ,Promise = require('promise')
         ,Bacon = require('baconjs')
 
@@ -50,7 +50,7 @@ var s = (function(){
         }
 
         return function(fn) {
-            return _.compose( that.then(resolvePromise), blockPromise(fn));
+            return lodash.compose( that.then(resolvePromise), blockPromise(fn));
         }
     }
 
@@ -130,7 +130,7 @@ var s = (function(){
      * it pass obj value and object name to fn (temporary 2 args)
      * @type {Function}
      */
-    this.map = _.curry( function(fn, obj) {
+    this.map = lodash.curry( function(fn, obj) {
         if ( ! obj ) return [];
         if (obj && obj.map) return obj.map(that.unary(fn));
 
@@ -147,12 +147,12 @@ var s = (function(){
     // @TODO create mapKeys
 
 
-    this.fmap = _.curry( function(fn, obj) {
+    this.fmap = lodash.curry( function(fn, obj) {
         return obj.fmap(fn);
     });
     
     // @TODO check immutability/mutability
-    this.filter = _.curry( function(fn, obj) {
+    this.filter = lodash.curry( function(fn, obj) {
         if ( ! obj ) return [];
         if (obj && obj.map) return obj.filter(that.unary(fn));
 
@@ -168,7 +168,7 @@ var s = (function(){
 
     });
 
-    this.filterKeys = _.curry( function(fn, obj) {
+    this.filterKeys = lodash.curry( function(fn, obj) {
         if ( ! obj ) return obj;
 
         var filtered = {};
@@ -183,7 +183,7 @@ var s = (function(){
 
     });
 
-    this.reduce = _.curry( function(fn, startValue, obj) {
+    this.reduce = lodash.curry( function(fn, startValue, obj) {
         if ( !obj ) return startValue;
         if (obj && obj.reduce) Array.prototype.reduce.call(obj, fn, startValue);
 
@@ -196,7 +196,7 @@ var s = (function(){
         return reduced;
     });
 
-    this.concat = _.curry( function(a, b) {
+    this.concat = lodash.curry( function(a, b) {
         return b.concat(a);
     });
 
@@ -232,18 +232,18 @@ var s = (function(){
         return !obj;
     }
 
-    this.eq = _.curry( function(obj, obj2) {
+    this.eq = lodash.curry( function(obj, obj2) {
         return obj === obj2
     });
 
-    this.notEq = _.curry( function(obj, obj2) {
+    this.notEq = lodash.curry( function(obj, obj2) {
         return obj !== obj2
     });
 
     this.empty = function(obj) {
         return obj === null || obj === void 0 || obj === '' || ( (obj instanceof Array) && 0 === obj.length ) || ('object' === typeof obj && 0 === Object.keys(obj).length);
     }
-    this.notEmpty = _.compose( this.negate, this.empty );
+    this.notEmpty = lodash.compose( this.negate, this.empty );
 
     this.simpleDot = function(expression, obj) {
         if ( obj ) {
@@ -262,16 +262,16 @@ var s = (function(){
     }
 
     // expression is ".something" or ".something.something"
-    this.dot = _.curry( function(expression, obj) {
+    this.dot = lodash.curry( function(expression, obj) {
         return expression.split('.').filter(that.notEmpty).reduce(that.flipSimpleDot, obj);
     });
 
     // expression is ".something" or ".something.something"
-    this.flipDot = _.curry( function(obj, expression) {
+    this.flipDot = lodash.curry( function(obj, expression) {
         return that.dot(expression, obj);
     });
 
-    this.set = _.curry( function(item, obj, value) {
+    this.set = lodash.curry( function(item, obj, value) {
         if(item) {
             obj[item] = value;
             return obj;
@@ -280,7 +280,7 @@ var s = (function(){
         }
     });
 
-    this.plus = _.curry( function(item1, item2) {
+    this.plus = lodash.curry( function(item1, item2) {
         return item1 + item2;
     });
 
@@ -289,12 +289,12 @@ var s = (function(){
     }
 
     this.flip = function(fn) {
-        return _.curry(function() {
+        return lodash.curry(function() {
             return fn.apply(this, that.a2a(arguments).reverse());
         }, fn.length);
     };
 
-    this.replace = _.curry( function(where, replacer, obj) {
+    this.replace = lodash.curry( function(where, replacer, obj) {
         return obj.replace(where, replacer);
     });
 
@@ -306,7 +306,7 @@ var s = (function(){
         }
     };
 
-    this.split = _.curry( function( char, obj ) {
+    this.split = lodash.curry( function( char, obj ) {
         return obj.split(char);
     });
 
@@ -327,7 +327,7 @@ var s = (function(){
         var args = that.a2a(arguments);
         return function(param) {
             if (args.length > 1) {
-                fn = _.compose.apply(this,args);
+                fn = lodash.compose.apply(this,args);
             }
             fn.call(this, param);
             return param;
@@ -338,7 +338,7 @@ var s = (function(){
         return object instanceof type;
     }
 
-    this.typeOf = _.curry(function( type, object ) {
+    this.typeOf = lodash.curry(function( type, object ) {
         return type === typeof object;
     });
     
@@ -396,15 +396,15 @@ var s = (function(){
         }
     }
 
-    this.extend = _.curry(_.extend, 2);
-    this.merge = _.curry(_.merge, 2);
+    this.extend = lodash.curry(lodash.extend, 2);
+    this.merge = lodash.curry(lodash.merge, 2);
 
-    this.ifelse = _.curry( function(condition, then, _else, value){
+    this.ifelse = lodash.curry( function(condition, then, _else, value){
         if( condition( value ) ) return then(value);
         else return _else(value)
     });
 
-    this.if = _.curry( function(condition, then, value){
+    this.if = lodash.curry( function(condition, then, value){
         if( condition( value ) ) return then(value);
         else return value;
     });
@@ -480,8 +480,8 @@ var s = (function(){
    }
 
    this.clone = function(obj) {
-       return _.cloneDeep(obj, function(value) {
-           if (_.isFunction(value) || !_.isPlainObject(value)) {
+       return lodash.cloneDeep(obj, function(value) {
+           if (lodash.isFunction(value) || !lodash.isPlainObject(value)) {
                return value;
            }
        })
@@ -490,8 +490,8 @@ var s = (function(){
    this.maybeS = this.maybe.bind(this, '')
    this.maybeV = this.maybe.bind(this, void 0)
 
-   this.compose      = _.compose;
-   this.curry        = _.curry;
+   this.compose      = lodash.compose;
+   this.curry        = lodash.curry;
 
     this.isObject = _ => _ === Object(_);
 

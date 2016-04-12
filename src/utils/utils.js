@@ -1,7 +1,7 @@
 "use strict";
 
 var s = require('utils/lib')
-    ,_ = require('lodash')
+    ,lodash = require('lodash')
 ;
 
 // This component holds state of Scroll
@@ -133,7 +133,7 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO 
 
     scrollState[url] = 0;
 
-    setTimeout( _ => history.pushState(state, null, url), 0 ) // setTimeout turns on safari optimizations and we didn't see the crazy jumps.
+    setTimeout( () => history.pushState(state, null, url), 0 ) // setTimeout turns on safari optimizations and we didn't see the crazy jumps.
     
 }
 
@@ -146,14 +146,14 @@ utils.clearState = function(){
     window.history.replaceState(state, null);
 }
 
-utils.saveScroll = _.debounce(function(event){
+utils.saveScroll = lodash.debounce(function(event){
     scrollState[window.location.pathname] = window.pageYOffset;
 }, 100)
 
 utils.body = document.querySelector('body');
 utils.html = document.documentElement;
 
-utils.getPageHeight = function height(_) {
+utils.getPageHeight = function height() {
     return Math.max(utils.body.scrollHeight, utils.body.offsetHeight, utils.html.clientHeight, utils.html.scrollHeight, utils.html.offsetHeight);
 }
 
@@ -247,7 +247,7 @@ utils.attachGuardToLinks = function() {
  * @param when - compare mask
  * @returns (*)
  */
-utils.matchRoute = _.curry( s.memoize( function(path, mask){ 
+utils.matchRoute = lodash.curry( s.memoize( function(path, mask){ 
     // TODO(i): this code is convoluted and inefficient, we should construct the route matching
     //   regex only once and then reuse it
     var negate = '!' === mask[0];
@@ -291,8 +291,8 @@ utils.matchRoute = _.curry( s.memoize( function(path, mask){
         params.map(function(name, index) {
             dst[name] = match[index + 1];
         });
-        var searches = _.clone( utils.parseSearch(parsed.search), true); // add search params
-        dst = _.extend(searches, dst);
+        var searches = lodash.clone( utils.parseSearch(parsed.search), true); // add search params
+        dst = lodash.extend(searches, dst);
     } else if( negate ) {
         dst = {}
         isMatched = true;

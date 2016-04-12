@@ -1,6 +1,7 @@
 "use strict"; 
 
 var Symbol = Symbol;
+var lodash = require('lodash');
 
 if (void 0 === Symbol) Symbol = _ => _;
 
@@ -16,20 +17,20 @@ var RenderOperation = {
 
 // Matching enum for when.
 var Matching = {
-    stop: _.uniqueId()
-    ,continue: _.uniqueId()
-    ,once: _.uniqueId()
+    stop: lodash.uniqueId()
+    ,continue: lodash.uniqueId()
+    ,once: lodash.uniqueId()
 }
 
 var WhenOrMatch = {
-    when: _.uniqueId()
-    ,match: _.uniqueId()
+    when: lodash.uniqueId()
+    ,match: lodash.uniqueId()
 }
 
 // Depends enum
 var Depends = {
-    async: _.uniqueId()
-    ,continue: _.uniqueId()
+    async: lodash.uniqueId()
+    ,continue: lodash.uniqueId()
 }
 
 var get = _ => {

@@ -7,7 +7,7 @@ var Log = function Log(){
     var atlantPrefix = 'Atlant.js: ';
 
     Object.defineProperty(this, 'verbose', { 
-        get: _ => on 
+        get: () => on 
         ,set: _ => { on = _; return on }
     });
     

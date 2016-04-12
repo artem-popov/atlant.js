@@ -1,7 +1,7 @@
 "use strict";
 var s = require('utils/lib')
      ,u = require('utils/utils')
-     ,_ = require('lodash')
+     ,lodash = require('lodash')
      ,Promise = require('promise')
 
 import console from 'utils/log';
@@ -19,8 +19,8 @@ var State = function(React){
                         thises[name] = this;
                         if ( !views[name] ) views[name] = React.createElement('div');
 
-                        if ( _.isArray( views[name] ) )
-                            return  views[name][0]( _.extend( {}, this.props, views[name][1] ) )
+                        if ( lodash.isArray( views[name] ) )
+                            return  views[name][0]( lodash.extend( {}, this.props, views[name][1] ) )
                         else
                             return views[name];
                     }

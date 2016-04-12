@@ -1,7 +1,7 @@
 "use strict";
 
 var utils = require('utils/utils')
-    ,_ = require('lodash')
+    ,lodash = require('lodash')
     ,s = require('utils/lib')
 ;
 
@@ -40,8 +40,8 @@ var _parse = function(path, mask){
 
     var params = utils.matchRoute(path, mask);
     var parsed = utils.parseURL( path );
-    var searches = _.clone( utils.parseSearch(parsed.search), true); // add search params
-    return _.extend(searches, params);
+    var searches = lodash.clone( utils.parseSearch(parsed.search), true); // add search params
+    return lodash.extend(searches, params);
 }
 
 var _parseAll = function(path, masks){
@@ -49,7 +49,7 @@ var _parseAll = function(path, masks){
 
     return utils.addSlashes(masks)
     .map(_parse.bind(void 0, path))
-    .reduce( function(v, i) { return _.merge(v, i) }, {})
+    .reduce( function(v, i) { return lodash.merge(v, i) }, {})
 }
 
 var _setTitle = function(titleStore, title){

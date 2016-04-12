@@ -17,7 +17,7 @@ export function ReadyStream(streamState, bus, stream){
 
     if(stream instanceof Stream) Object.keys(stream).forEach( __ => this[__] = _ => console.error('This stream is ready! You can only .push(data) or subscribe: .onValue(), onStart(). The "' + __ + '" is wrong here!') )
 
-    this.push = (...args) => setTimeout( _ => bus.push(...args), 0);
+    this.push = (...args) => setTimeout( () => bus.push(...args), 0);
     this.pushSync = _ => bus.push(_);
 
     Object.defineProperty(this, 'canBeIntercepted', { get (){ return streamState.canBeIntercepted }, set (value){ streamState.canBeIntercepted = value; }});
@@ -44,7 +44,7 @@ export function Stream (atlantState, prefs, fn){
     var injectsGrabber = new interfaces.injectsGrabber();
     var dependsName = new interfaces.dependsName();
     var withGrabber = new interfaces.withGrabber();
-    var id = _.uniqueId();
+    var id = lodash.uniqueId();
     
     var root = baseStreams.bus();
 
@@ -100,19 +100,17 @@ export function Stream (atlantState, prefs, fn){
                     .map( _ => upstream.chains[_] )
                     .reduce( (acc, i) => acc.concat(i), [])
                     .reduce( (acc, i) => acc.concat(i), [])
-                    .reduce( (acc, i) => _.extend(acc, i()), {});
-
-                // value = _(upstream.chains).map(o=> _(o).map(_=>_).flatten().value() ).flatten().reduce( (acc, i) => _.extend(acc, i()), {}); // Actually it is slower :(
+                    .reduce( (acc, i) => lodash.extend(acc, i()), {});
 
                 if('undefined' === typeof window.selectCount) window.selectCount = 0;
                 if('undefined' === typeof window.selectTime) window.selectTime = 0;
                 window.selectTime = window.selectTime + performance.now() - start;
                 window.selectCount++;
-                window.getSelectTime = _ => window.selectTime/window.selectCount;
+                window.getSelectTime = () => window.selectTime/window.selectCount;
 
-                let data = _.extend({}, scope, value );   
+                let data = lodash.extend({}, scope, value );   
 
-                if ( !_.isEqual(data, atlantState.viewData[viewName] ) ) {
+                if ( !lodash.isEqual(data, atlantState.viewData[viewName] ) ) {
                     scope = data;
                     atlantState.viewData[viewName] = data;
                     doRenderIntoView(data); // Here we using scope updated from store!
@@ -200,7 +198,7 @@ export function Stream (atlantState, prefs, fn){
                                 upstream.render.component = renderResult;
                                 return upstream;
                             })
-                            .catch( _ => { atlantState.devStreams.errorStream.push(); return Bacon.End() } )
+                            .catch( () => { atlantState.devStreams.errorStream.push(); return Bacon.End() } )
 
 
                             return renderResult;
@@ -222,8 +220,8 @@ export function Stream (atlantState, prefs, fn){
         TopState.first();
         State.first();
 
-        var whenId = _.uniqueId();
-        var depName = _.uniqueId();
+        var whenId = lodash.uniqueId();
+        var depName = lodash.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
         var nameContainer = dependsName.init(depName, State.state);
         var stats = TopState.state.stats;
@@ -252,7 +250,7 @@ export function Stream (atlantState, prefs, fn){
                 stream.stats = stats;
                 stream.whenId = whenId;
                 stream.id = atlantState.activeStreamId.value;
-                // stream.id = _.uniqueId(); // Should it be so at error?
+                // stream.id = lodash.uniqueId(); // Should it be so at error?
 
                 return stream;
             }.bind(void 0, depName, injects, nameContainer, stats, whenId))
@@ -297,7 +295,7 @@ export function Stream (atlantState, prefs, fn){
                     .flatMap(function(store, depName, dep, isAtom, upstream) {  // Execute the dependency
                         var scope = clientFuncs.createScope(upstream);
                         var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
-                        var atomParams = ( (scope, where, updates) => where(_.extend({}, scope, updates)) ).bind(this, scope, where);
+                        var atomParams = ( (scope, where, updates) => where(lodash.extend({}, scope, updates)) ).bind(this, scope, where);
                         
                         var treatDep = s.compose( clientFuncs.convertPromiseD, s.promiseTryD );
                         var atomValue = atomParams();
@@ -372,7 +370,7 @@ export function Stream (atlantState, prefs, fn){
                         var getValue = function( ref, atomParams, u ){
                             let params = atomParams.bind(this, u);
                             let res = dep()(params);
-                            let result = _.extend({}, u, { [ref]: res });  
+                            let result = lodash.extend({}, u, { [ref]: res });  
                             return result
                         }.bind( void 0, upstream.ref, upstream.atomParams );
 
@@ -408,8 +406,8 @@ export function Stream (atlantState, prefs, fn){
             if ( ! State.state.lastWhen ) throw new Error('"depends" should nest "when"');
 
             var prefix = (dependsBehaviour === types.Depends.continue) ? '_and_' : '_';
-            var opId = _.uniqueId();
-            var depName = (State.state.lastDepName ? State.state.lastDepName + prefix : 'depend_') + _.uniqueId();
+            var opId = lodash.uniqueId();
+            var depName = (State.state.lastDepName ? State.state.lastDepName + prefix : 'depend_') + lodash.uniqueId();
 
             var lastOp = State.state.lastOp;
             // if (dependsBehaviour === types.Depends.async && State.state.lastBeforeAsync) {
@@ -457,9 +455,9 @@ export function Stream (atlantState, prefs, fn){
         if ( ! State.state.lastOp ) { throw new Error('"if" should nest something.'); }
 
         State.divide();
-        var ifId = _.uniqueId();
+        var ifId = lodash.uniqueId();
 
-        var depName = 'if_' + _.uniqueId();
+        var depName = 'if_' + lodash.uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
 
         var commonIf = State.state.lastOp
@@ -471,7 +469,7 @@ export function Stream (atlantState, prefs, fn){
             }.bind(void 0, ifId, fn, condition))
 
         var thisIf = commonIf
-            .map( _.extend.bind(_, {} ) ) // Copy
+            .map( lodash.extend.bind(lodash, {} ) ) // Copy
             .filter( _ => boolTransform(_.check) )
             .map( function(ifId, depName, injects, upstream) {
                 delete upstream.check;
@@ -480,7 +478,7 @@ export function Stream (atlantState, prefs, fn){
             }.bind(void 0, ifId, depName, injects))
 
         var thisElse = commonIf 
-            .map( _.extend.bind(_, {} ) ) // Copy
+            .map( lodash.extend.bind(lodash, {} ) ) // Copy
             .filter( _ => !boolTransform(_.check) )
             .map( function(ifId, depName, injects, upstream) {
                 delete upstream.check;
@@ -574,7 +572,7 @@ export function Stream (atlantState, prefs, fn){
             // ------end of check/
 
             let subscribe  = 'once' !== once ? true : false;
-            var renderId = _.uniqueId();
+            var renderId = lodash.uniqueId();
 
             
             var renderStream = State.state.lastOp.flatMap( function(upstream){
@@ -613,8 +611,6 @@ export function Stream (atlantState, prefs, fn){
     var _update = function( dependsBehaviour, key ) {
         if ( ! State.state.lastOp ) throw new Error('"update" should nest something');
         s.type(key, 'string');
-
-        // streamState.updates.swap(_ => _ + 1);
 
         return _depends.bind(this)( function(key, id){
             if ( key in atlantState.emitStreams ) atlantState.emitStreams[key].push(id);
@@ -786,7 +782,7 @@ export function Stream (atlantState, prefs, fn){
 
 
     // This 2 methods actually not exists in stream. They can be called if streams is already declared, but then trryed to continue to configure
-    this.onStart = _ => console.error('You have lost at least 1 .end() in stream declaration:', fn)
+    this.onStart = () => console.error('You have lost at least 1 .end() in stream declaration:', fn)
     this.onValue = this.onStart;
 
 

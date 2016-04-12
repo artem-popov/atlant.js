@@ -1,9 +1,9 @@
 "use strict";
 
-var _ = require('lodash');
+var lodash = require('lodash');
 
 var StateType = function(state) {
-    var newState = _.extend( {}, {lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0, lastStoreName: void 0 }, state);
+    var newState = lodash.extend( {}, {lastIf: void 0, lastDep: void 0, lastName: void 0, lastDepName: void 0, lastInjects: void 0, lastStoreName: void 0 }, state);
     return newState
 };
 
