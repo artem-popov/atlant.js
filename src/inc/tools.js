@@ -48,8 +48,8 @@ var _parseAll = function(path, masks){
     if ( !path || !masks || 0 === masks.length) return {};
 
     return utils.addSlashes(masks)
-    .map(_parse.bind(void 0, path))
-    .reduce( function(v, i) { return lodash.merge(v, i) }, {})
+        .map(_parse.bind(void 0, path))
+        .reduce((acc, i) => ({ ...v, ...i }), {}) 
 }
 
 var _setTitle = function(titleStore, title){

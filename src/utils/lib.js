@@ -396,8 +396,6 @@ var s = (function(){
         }
     }
 
-    this.merge = lodash.curry(lodash.merge, 2);
-
     this.ifelse = lodash.curry( function(condition, then, _else, value){
         if( condition( value ) ) return then(value);
         else return _else(value)
