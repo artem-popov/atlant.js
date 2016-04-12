@@ -356,17 +356,6 @@ var s = (function(){
         };
     }
 
-    this.Perf = function() {
-        var time;
-        this.count = 0;
-        this.begin = function() {
-            time = Date.now();
-        }
-        this.end = function() {
-            this.count += Date.now() - time;
-        }
-    }
-
     this.ifelse = lodash.curry( function(condition, then, _else, value){
         if( condition( value ) ) return then(value);
         else return _else(value)
@@ -447,6 +436,26 @@ var s = (function(){
        return JSON.parse(JSON.stringify(o))
    }
 
+  /**
+   * Deep merge two objects.
+   * @param target
+   * @param source
+   */
+  this.mergeDeep = function(target, source) {
+    if (this.isObject(target) && isObject(source)) {
+      Object.keys(source).forEach(key => {
+        if (isObject(source[key])) {
+          if (!target[key]) Object.assign(target, { [key]: {} });
+          mergeDeep(target[key], source[key]);
+        } else {
+          Object.assign(target, { [key]: source[key] });
+        }
+      });
+    }
+    return target;
+  }
+
+
    this.clone = function(obj) {
        return lodash.cloneDeep(obj, function(value) {
            if (lodash.isFunction(value) || !lodash.isPlainObject(value)) {
@@ -461,7 +470,7 @@ var s = (function(){
    this.compose      = lodash.compose;
    this.curry        = lodash.curry;
 
-    this.isObject = _ => _ === Object(_);
+   this.isObject = _ => _ === Object(_);
 
    return this;
 

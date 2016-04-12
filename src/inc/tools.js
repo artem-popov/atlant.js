@@ -40,7 +40,7 @@ var _parse = function(path, mask){
 
     var params = utils.matchRoute(path, mask);
     var parsed = utils.parseURL( path );
-    var searches = lodash.clone( utils.parseSearch(parsed.search), true); // add search params
+    var searches = utils.parseSearch(parsed.search)
     return { ...searches, ...params };
 }
 

@@ -291,7 +291,7 @@ utils.matchRoute = lodash.curry( s.memoize( function(path, mask){
         params.map(function(name, index) {
             dst[name] = match[index + 1];
         });
-        var searches = lodash.clone( utils.parseSearch(parsed.search), true); // add search params
+        var searches = utils.parseSearch(parsed.search); // add search params
         dst = { ...searches, ...dst };
     } else if( negate ) {
         dst = {}

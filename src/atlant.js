@@ -28,6 +28,9 @@ function Atlant(){
     import { Stream, ReadyStream } from 'inc/stream';
     import baseStreams from "inc/base-streams";
     import { uniqueId } from 'lodash';
+    import objectAssign from 'object-assign';
+
+    if(!Object.assign) Object.assign = objectAssign; // Set polyfill for Object.assign
 
     // Preferences set by user
     var prefs = {

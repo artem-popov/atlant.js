@@ -65,7 +65,7 @@ export function Stream (atlantState, prefs, fn){
             return renderD(viewProvider, upstream, atlantState.activeStreamId, viewName, scope)
                 .then(function(_){
                     // @TODO make it better
-                    // using copy of upstream otherwise the glitches occur. The finallyStream is circular structure, so it should be avoided on copy
+                    // using copy of upstream otherwise the glitches occur. 
                     var selects = upstream.selects;
                     upstream.selects = void 0;
 
