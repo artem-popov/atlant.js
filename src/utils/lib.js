@@ -114,11 +114,6 @@ var s = (function(){
         }.bind(this);
     }
 
-    // Convert arguments into array.
-    this.a2a = function(args) {
-        return Array.prototype.slice.apply( args );
-    }
-
     this.unary = function(fn) {
         return function(val) {
             return fn.call(this, val);
@@ -288,12 +283,6 @@ var s = (function(){
         return string.trim();
     }
 
-    this.flip = function(fn) {
-        return lodash.curry(function() {
-            return fn.apply(this, that.a2a(arguments).reverse());
-        }, fn.length);
-    };
-
     this.replace = lodash.curry( function(where, replacer, obj) {
         return obj.replace(where, replacer);
     });
@@ -315,24 +304,12 @@ var s = (function(){
         return what;
     }
 
-    this.logIt = function() {
-        var args = that.a2a(arguments);
+    this.logIt = function(...args) {
         return function(what) {
             console.log.apply(console, args.concat(what) );
             return what;
         }
     };
-
-    this.side = function(fn) {
-        var args = that.a2a(arguments);
-        return function(param) {
-            if (args.length > 1) {
-                fn = lodash.compose.apply(this,args);
-            }
-            fn.call(this, param);
-            return param;
-        }
-    }
 
     this.instanceOf = function( type, object ) {
         return object instanceof type;
@@ -342,12 +319,6 @@ var s = (function(){
         return type === typeof object;
     });
     
-
-    this.mapD = function(fn) {
-        return function() {
-            return that.map(fn, that.a2a(arguments))
-        }
-    }
 
     // Promises
     this.promise = function(value) {
@@ -462,9 +433,9 @@ var s = (function(){
     }
 
    this.maybe = function(nothing, fn){
-       return function(){
+       return function(...args){
            try {
-               return fn.apply(this, that.a2a(arguments))
+               return fn.apply(this, args)
            } catch (e) {
                return nothing
            }
