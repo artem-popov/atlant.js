@@ -1,6 +1,6 @@
 "use strict";
 
-var s = require('utils/lib');
+var s = require('./lib');
 
 var Log = function Log(){
     var on = false;

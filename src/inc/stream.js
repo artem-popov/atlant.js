@@ -1,19 +1,19 @@
 "use strict";
 
-var baseStreams = require('inc/base-streams')
-        ,s = require('utils/lib')
-        ,StateClass = require('inc/state')
-        ,types = require('inc/types')
-        ,interfaces = require('inc/interfaces')
-        ,clientFuncs = require('inc/clientFuncs')
-        ,utils = require('utils/utils')
-        ,performance = require('inc/performance')
+var baseStreams = require('./base-streams')
+        ,s = require('../utils/lib')
+        ,StateClass = require('./state')
+        ,types = require('./types')
+        ,interfaces = require('./interfaces')
+        ,clientFuncs = require('./clientFuncs')
+        ,utils = require('../utils/utils')
+        ,performance = require('./performance')
         ,lodash = require('lodash')
     ;
 
-import views from "views/views";
-import console from 'utils/log';
-import { uniqueId } from 'utils/lib';
+import views from "../views/views";
+import console from '../utils/log';
+import { uniqueId } from '../utils/lib';
 
 export function ReadyStream(streamState, bus, stream){
 

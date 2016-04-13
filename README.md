@@ -33,6 +33,15 @@ add to you index.html:
 <script src="atlant.js" type="text/javascipt"></script>
 ```
 
+Use this to get Object.assign() polyfill
+
+`npm install object-assign`
+
+and in your project:
+
+`import objectAssign from 'object-assign'`
+
+
 ## API
 
 On it's way.

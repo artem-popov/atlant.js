@@ -1,10 +1,9 @@
 "use strict";
 
-var s = require('utils/lib')
-        ,Promise = require('promise')
+var s = require('../utils/lib')
         ,Bacon = require('baconjs')
 
-import console from 'utils/log';
+import console from '../utils/log';
 
 var catchError;
 

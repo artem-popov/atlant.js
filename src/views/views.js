@@ -1,4 +1,4 @@
-var s = require('utils/lib');
+var s = require('../utils/lib');
 
 var unsubscribeView = s.curry(function(atlantState, viewName){
     try{

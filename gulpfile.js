@@ -1,6 +1,7 @@
 "use strict";
 
 var browserify = require('browserify')
+    , babel = require('gulp-babel')
     ,plumber = require('gulp-plumber')
     ,watch = require('gulp-watch')
     ,gulp = require('gulp')
@@ -133,9 +134,15 @@ var browserifyIt = function(isWatcher){
     return build(b.bundle({ standalone: 'Atlant' }));
 }
 
-gulp.task('browserify', function() {
-    return browserifyIt(false)
+gulp.task('build', function () {
+
+  return gulp.src(['./src/**/*.js'])
+        .pipe(plumber())
+        .pipe(babel({loose: 'es6.modules', blacklist: [], ast: false, compact: false, optional: ["es7.comprehensions"]}))
+        .pipe(gulp.dest('./build/'));
+
 });
+
 
 gulp.task('browserifyWatcher', function() {
     return browserifyIt(true)

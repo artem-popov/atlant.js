@@ -2,13 +2,12 @@
 
 var container = Object.create(null);
 
-import console from "utils/log";
+import console from './log';
+var lodash = require('lodash')
+    ,Bacon = require('baconjs')
 
 var s = (function(){
 
-    var lodash = require('lodash')
-        ,Promise = require('promise')
-        ,Bacon = require('baconjs')
 
     var that = this;
     this.id = function(value) { return value; }

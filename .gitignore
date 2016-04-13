@@ -4,3 +4,4 @@ bower_components
 .DS_Store
 *.vim
 npm-debug.log
+build

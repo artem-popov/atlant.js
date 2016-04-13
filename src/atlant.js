@@ -1,11 +1,25 @@
 "use strict";
 
-import console from 'utils/log';
-import { Stream, ReadyStream } from 'inc/stream';
-import baseStreams from "inc/base-streams";
-import { uniqueId } from 'utils/lib';
-import objectAssign from 'object-assign';
-import views from "views/views";
+import console from './utils/log';
+import { Stream, ReadyStream } from './inc/stream';
+import baseStreams from "./inc/base-streams";
+import { uniqueId } from './utils/lib';
+import views from "./views/views";
+let build = require('./atlant-build');
+let version = require('./atlant-version');
+let s = require('./utils/lib')
+let utils = require('./utils/utils')
+let simpleRender = require('./renders/simple')
+let reactRender = require('./renders/react')
+let Bacon = require('baconjs')
+let lodash = require('lodash')
+let interfaces = require('./inc/interfaces')
+let StateClass = require('./inc/state')
+let clientFuncs = require('./inc/clientFuncs')
+let Storage = require('./inc/storage')
+let types = require('./inc/types')
+let wrapHistoryApi = require( './inc/wrap-history-api.js').wrapHistoryApi
+let tools = require('./inc/tools');
 
  // @TODO: fast switching generate console.error.
  // @TODO: #hashes are ignored
@@ -16,20 +30,6 @@ import views from "views/views";
 function Atlant(){
     var atlant = this;
 
-    // Imports
-    var s = require('utils/lib')
-        ,utils = require('utils/utils')
-        ,simpleRender = require('renders/simple')
-        ,reactRender = require('renders/react')
-        ,Bacon = require('baconjs')
-        ,lodash = require('lodash')
-        ,interfaces = require('inc/interfaces')
-        ,StateClass = require('inc/state')
-        ,clientFuncs = require('inc/clientFuncs')
-        ,Storage = require('inc/storage')
-        ,types = require('inc/types')
-        ,wrapHistoryApi = require( 'inc/wrap-history-api.js').wrapHistoryApi
-    ;
 
 
     if(!Object.assign) Object.assign = objectAssign; // Set polyfill for Object.assign
@@ -764,15 +764,15 @@ function Atlant(){
      // These commands doesn't return "this".
     // Returns atlant.js version
 
-    this.version = require('atlant-version');
+    this.version = version; 
     // Returns timestamp of the creation time
-    this.build = require('atlant-build');
+    this.build = build; 
 
     this.destroy = _destroy;
     this.isServer = function(){ return 'undefined' === typeof window }
     this.isBrowser = function(){ return 'undefined' !== typeof window }
 
-    this.utils = require('inc/tools'); // @TODO: rename to 'tools'
+    this.utils = tools; // @TODO: rename to 'tools'
     this.utils.setTitle = this.utils.setTitle.bind(void 0, atlantState.titleStore);
     this.utils.getTitle = this.utils.getTitle.bind(void 0, atlantState.titleStore);
     // Needed only for browsers not supporting canceling history.scrollRestoration
