@@ -89,10 +89,9 @@ var createScope = function ( upstream ) {
         }
     }
 
-    var takeAccessor = s.compose( s.flipDot(upstream) );
+    var takeAccessor = s.flipDot(upstream);
     var takeFunction = function(fn){return fn.apply();}
-    var fullfil = s.map( s.compose( s.ifelse(s.typeOf('string'), takeAccessor, takeFunction)
-                                    , formatInjects)); 
+    var fullfil = s.map( s.compose( s.ifelse(s.typeOf('string'), takeAccessor, takeFunction), formatInjects)); 
 
     injectsData.object = fullfil( injects );
     var data = injectsData.object;

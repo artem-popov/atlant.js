@@ -1,5 +1,12 @@
 "use strict";
 
+import console from 'utils/log';
+import { Stream, ReadyStream } from 'inc/stream';
+import baseStreams from "inc/base-streams";
+import { uniqueId } from 'lodash';
+import objectAssign from 'object-assign';
+import views from "views/views";
+
  // @TODO: fast switching generate console.error.
  // @TODO: #hashes are ignored
  // @TODO: check(true) to check only this view params (by specifically set fields or somehow)
@@ -24,11 +31,6 @@ function Atlant(){
         ,wrapHistoryApi = require( 'inc/wrap-history-api.js').wrapHistoryApi
     ;
 
-    import console from 'utils/log';
-    import { Stream, ReadyStream } from 'inc/stream';
-    import baseStreams from "inc/base-streams";
-    import { uniqueId } from 'lodash';
-    import objectAssign from 'object-assign';
 
     if(!Object.assign) Object.assign = objectAssign; // Set polyfill for Object.assign
 
@@ -78,7 +80,6 @@ function Atlant(){
         ,scrollState: utils.getScrollState()
     }
 
-    import views from "views/views";
     let unsubscribeView = views(atlantState);
 
     // Patching goTo for further use

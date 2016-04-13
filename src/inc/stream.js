@@ -11,6 +11,7 @@ var baseStreams = require('inc/base-streams')
         ,lodash = require('lodash')
     ;
 
+import views from "views/views";
 import console from 'utils/log';
 
 export function ReadyStream(streamState, bus, stream){
@@ -48,7 +49,6 @@ export function Stream (atlantState, prefs, fn){
     
     var root = baseStreams.bus();
 
-    import views from "views/views";
     let unsubscribeView = views(atlantState);
 
     var lastWhen;
