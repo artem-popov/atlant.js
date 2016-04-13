@@ -436,41 +436,39 @@ var s = (function(){
        return JSON.parse(JSON.stringify(o))
    }
 
-  /**
-   * Deep merge two objects.
-   * @param target
-   * @param source
-   */
-  this.mergeDeep = function(target, source) {
-    if (this.isObject(target) && isObject(source)) {
-      Object.keys(source).forEach(key => {
-        if (isObject(source[key])) {
-          if (!target[key]) Object.assign(target, { [key]: {} });
-          mergeDeep(target[key], source[key]);
-        } else {
-          Object.assign(target, { [key]: source[key] });
-        }
-      });
-    }
-    return target;
-  }
+   this.isObject = _ => _ === Object(_);
 
+   this.isPlainObject = _ => Object(_) === _ && (Object.getPrototypeOf(_) === Object.prototype || null === Object.getPrototypeOf(_));
+   
 
-   this.clone = function(obj) {
-       return lodash.cloneDeep(obj, function(value) {
-           if (lodash.isFunction(value) || !lodash.isPlainObject(value)) {
-               return value;
-           }
-       })
-    }
+   /**
+    * Deep merge two objects.
+    * @param target
+    * @param source
+    */
+   this.mergeDeep = (target, source) => {
+     if (this.isPlainObject(target) && this.isPlainObject(source)) {
+       Object.keys(source).forEach(key => {
+         if (this.isPlainObject(source[key])) {
+
+           if (!target[key]) Object.assign(target, { [key]: {} });
+           this.mergeDeep(target[key], source[key]);
+         } else {
+           Object.assign(target, { [key]: source[key] });
+         }
+       });
+     }
+     return target;
+   }
+
+   this.clone = _ => this.mergeDeep({}, _);
+
 
    this.maybeS = this.maybe.bind(this, '')
    this.maybeV = this.maybe.bind(this, void 0)
 
    this.compose      = lodash.compose;
    this.curry        = lodash.curry;
-
-   this.isObject = _ => _ === Object(_);
 
    return this;
 

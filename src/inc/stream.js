@@ -198,7 +198,7 @@ export function Stream (atlantState, prefs, fn){
                                 upstream.render.component = renderResult;
                                 return upstream;
                             })
-                            .catch( () => { atlantState.devStreams.errorStream.push(); return Bacon.End() } )
+                            .catch( (e) => { console.error(e.stack); atlantState.devStreams.errorStream.push(); return Bacon.End() } )
 
 
                             return renderResult;
@@ -245,7 +245,7 @@ export function Stream (atlantState, prefs, fn){
 
                 var stream = injectsGrabber.add(depName, depValue, injects, {});
                 stream = dependsName.add( depName, nameContainer, stream); 
-                stream.params = s.extend({}, depValue);
+                stream.params = { ...depValue };
 
                 stream.stats = stats;
                 stream.whenId = whenId;
@@ -397,7 +397,7 @@ export function Stream (atlantState, prefs, fn){
          * Join 2 streams into 1
          */
         var zippersJoin = function(prevDepName, currDepName, x, y) {
-            x.depends = s.extend( {}, x.depends, y.depends );
+            x.depends = { ...x.depends, ...y.depends };
             x.injects = x.injects.concat(y.injects);
             return x;
         };

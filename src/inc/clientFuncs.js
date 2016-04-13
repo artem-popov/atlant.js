@@ -64,7 +64,7 @@ var getScopeDataFromStream = function( upstream ){
 var createScope = function ( upstream ) {
     var refsData = getRefsData( upstream ); 
 
-    var injects = s.compose( s.reduce(s.extend, {}), s.dot('injects') )(upstream);
+    var injects = s.compose( s.reduce((acc,_) => ({...acc, ..._}), {}), s.dot('injects') )(upstream);
     var joins = s.filter( function(inject){ return inject.hasOwnProperty('injects') }, injects);
     injects = s.filter( function(inject){ return !inject.hasOwnProperty('injects') }, injects);
     var injectsData = { object: void 0};
@@ -84,7 +84,7 @@ var createScope = function ( upstream ) {
             })
         } else {  
             return s.baconTryD(function() {
-                return inject.expression( s.extend( refsData, injectsData.object) ) 
+                return inject.expression( { ...refsData, ...injectsData.object } ) 
             })
         }
     }
@@ -98,7 +98,7 @@ var createScope = function ( upstream ) {
     var data = injectsData.object;
     var joinsData = fullfil( joins );
 
-    data = s.extend( refsData, upstream.params, data, joinsData ); 
+    data = { ...refsData, ...upstream.params, ...data, ...joinsData }; 
 
     return data;
 };
