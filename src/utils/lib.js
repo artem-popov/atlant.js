@@ -24,101 +24,19 @@ var s = (function(){
      */
     this.then = function(fn, fn2) { return function(promise) { return promise.then(fn, fn2); }; }
 
-    /**
-     * Decorator that accept resolving of promise to let free the blocking of function it decorates.
-     * The blocking is exported as reference to variable in context.
-     * @TODO only export the blocking variable, use closure to serve real blocking reference.
-     * @param obj
-     * @param item
-     * @returns {Function}
-     */
-    this.sync = function(obj, item) {
-
-        var resolvePromise = function() {
-            obj[item] = false;
-            return arguments[0];
-        }
-        var blockPromise = function(fn) {
-            return function() {
-                if ( ! obj[item] ) {
-                    obj[item] = true;
-                    return fn.apply(this, arguments);
-                } else {
-                    return Promise.reject();
-                }
-            }
-        }
-
-        return function(fn) {
-            return lodash.compose( that.then(resolvePromise), blockPromise(fn));
-        }
-    }
-
-    /**
-     * Depreated
-     *
-     * */
-    /**
-     * Deprecated. Use sync
-     * @param obj
-     * @param item
-     * @param fn
-     * @returns {Function}
-     */
-    this.guardWithTrue = function(obj, item, fn) {
-        return function() {
-            if ( ! obj[item] ) {
-                obj[item] = true;
-                return fn.apply(this, arguments);
-            } else {
-                return void 0;
-            }
-        }
-    }
-
-    /**
-     * Deprecated. Use sync
-     * @param obj
-     * @param item
-     * @param fn
-     * @returns {*}
-     */
-    this.resolveGuard = function(obj, item, fn) {
-        if (fn) {
-            return function() {
-                fn.apply(this, arguments);
-                obj[item] = false;
-                return arguments;
-            }
-        } else {
-            obj[item] = false;
-            return arguments;
-        }
-    }
-
-    /**
-     * Deprecated. Use streams instead.
-     * @constructor
-     */
-    this.Herald = function() {
-        this.listeners = {};
-
-        this.listen = function( what, listener) {
-            if ( ! this.listeners[what] ) this.listeners[what] = [];
-            this.listeners[what].push(listener);
-        }.bind(this);
-
-        this.emit = function(what) {
-            var params = [].slice.call(arguments, 1);
-            this.listeners[what].map(function(listener){ listener.apply(null, params); })
-        }.bind(this);
-    }
-
     this.unary = function(fn) {
         return function(val) {
             return fn.call(this, val);
         }
     }
+
+   this.compose = function (...fns) {
+
+     return function (value) {
+       return fns.reduceRight((acc, fn) => fn(acc), value )
+     };
+   };
+
 
     /**
      * Accepts collection.
@@ -238,7 +156,7 @@ var s = (function(){
     this.empty = function(obj) {
         return obj === null || obj === void 0 || obj === '' || ( (obj instanceof Array) && 0 === obj.length ) || ('object' === typeof obj && 0 === Object.keys(obj).length);
     }
-    this.notEmpty = lodash.compose( this.negate, this.empty );
+    this.notEmpty = this.compose( this.negate, this.empty );
 
     this.simpleDot = function(expression, obj) {
         if ( obj ) {
@@ -467,7 +385,6 @@ var s = (function(){
    this.maybeS = this.maybe.bind(this, '')
    this.maybeV = this.maybe.bind(this, void 0)
 
-   this.compose      = lodash.compose;
    this.curry        = lodash.curry;
 
    return this;
