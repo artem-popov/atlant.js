@@ -13,6 +13,7 @@ var baseStreams = require('inc/base-streams')
 
 import views from "views/views";
 import console from 'utils/log';
+import { uniqueId } from 'utils/lib';
 
 export function ReadyStream(streamState, bus, stream){
 
@@ -45,7 +46,7 @@ export function Stream (atlantState, prefs, fn){
     var injectsGrabber = new interfaces.injectsGrabber();
     var dependsName = new interfaces.dependsName();
     var withGrabber = new interfaces.withGrabber();
-    var id = lodash.uniqueId();
+    var id = uniqueId();
     
     var root = baseStreams.bus();
 
@@ -220,8 +221,8 @@ export function Stream (atlantState, prefs, fn){
         TopState.first();
         State.first();
 
-        var whenId = lodash.uniqueId();
-        var depName = lodash.uniqueId();
+        var whenId = uniqueId();
+        var depName = uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
         var nameContainer = dependsName.init(depName, State.state);
         var stats = TopState.state.stats;
@@ -250,7 +251,7 @@ export function Stream (atlantState, prefs, fn){
                 stream.stats = stats;
                 stream.whenId = whenId;
                 stream.id = atlantState.activeStreamId.value;
-                // stream.id = lodash.uniqueId(); // Should it be so at error?
+                // stream.id = uniqueId(); // Should it be so at error?
 
                 return stream;
             }.bind(void 0, depName, injects, nameContainer, stats, whenId))
@@ -406,8 +407,8 @@ export function Stream (atlantState, prefs, fn){
             if ( ! State.state.lastWhen ) throw new Error('"depends" should nest "when"');
 
             var prefix = (dependsBehaviour === types.Depends.continue) ? '_and_' : '_';
-            var opId = lodash.uniqueId();
-            var depName = (State.state.lastDepName ? State.state.lastDepName + prefix : 'depend_') + lodash.uniqueId();
+            var opId = uniqueId();
+            var depName = (State.state.lastDepName ? State.state.lastDepName + prefix : 'depend_') + uniqueId();
 
             var lastOp = State.state.lastOp;
             // if (dependsBehaviour === types.Depends.async && State.state.lastBeforeAsync) {
@@ -455,9 +456,9 @@ export function Stream (atlantState, prefs, fn){
         if ( ! State.state.lastOp ) { throw new Error('"if" should nest something.'); }
 
         State.divide();
-        var ifId = lodash.uniqueId();
+        var ifId = uniqueId();
 
-        var depName = 'if_' + lodash.uniqueId();
+        var depName = 'if_' + uniqueId();
         var injects = injectsGrabber.init(depName, State.state);
 
         var commonIf = State.state.lastOp
@@ -572,7 +573,7 @@ export function Stream (atlantState, prefs, fn){
             // ------end of check/
 
             let subscribe  = 'once' !== once ? true : false;
-            var renderId = lodash.uniqueId();
+            var renderId = uniqueId();
 
             
             var renderStream = State.state.lastOp.flatMap( function(upstream){

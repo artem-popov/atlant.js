@@ -17,20 +17,20 @@ var RenderOperation = {
 
 // Matching enum for when.
 var Matching = {
-    stop: lodash.uniqueId()
-    ,continue: lodash.uniqueId()
-    ,once: lodash.uniqueId()
+    stop: Symbol('stop')
+    ,continue: Symbol('continue')
+    ,once: Symbol('once')
 }
 
 var WhenOrMatch = {
-    when: lodash.uniqueId()
-    ,match: lodash.uniqueId()
+    when: Symbol('when')
+    ,match: Symbol('match')
 }
 
 // Depends enum
 var Depends = {
-    async: lodash.uniqueId()
-    ,continue: lodash.uniqueId()
+    async: Symbol('async')
+    ,continue: Symbol('continue')
 }
 
 var get = _ => {

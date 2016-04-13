@@ -37,6 +37,13 @@ var s = (function(){
      };
    };
 
+   this.uniqueId = (function(){
+     let counter = 0;
+     return function(){
+       return counter++;
+     }
+   })()
+
 
     /**
      * Accepts collection.

@@ -3,7 +3,7 @@
 import console from 'utils/log';
 import { Stream, ReadyStream } from 'inc/stream';
 import baseStreams from "inc/base-streams";
-import { uniqueId } from 'lodash';
+import { uniqueId } from 'utils/lib';
 import objectAssign from 'object-assign';
 import views from "views/views";
 
