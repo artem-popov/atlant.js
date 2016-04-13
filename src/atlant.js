@@ -819,7 +819,7 @@ function Atlant(){
             return atlantState.streams[name];
         },
         reg: function(busOrName, fn, canBeIntercepted){
-            if('string' !== typeof busOrName && !(busOrName instanceof Bacon.Bus)) throw new Error('Provide either Bacon.Bus() either Stream name.')
+            // if('string' !== typeof busOrName && !(busOrName instanceof Bacon.Bus)) throw new Error('Provide either Bacon.Bus() either Stream name.')
 
             if (!busOrName) { console.warn('Failed stream source:', fn); throw new Error('Atlant.js Bacon.Bus() stream or stream name is not provided!') };
             if (!fn || 'function' !== typeof fn) { console.warn('Failed stream source:', fn); throw new Error('Atlant.js: follow stream function is not provided!') };
