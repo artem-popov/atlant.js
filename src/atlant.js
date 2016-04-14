@@ -128,6 +128,7 @@ function Atlant(){
                     path = utils.rebuildURL(path);
 
                     let finishScroll;
+                    var minHeightBody;
                     var loader = document.querySelector('.root-loader');
                     var trySetScroll = function(scrollTop){
                             if ('number' !== typeof scrollTop) return;
@@ -138,18 +139,22 @@ function Atlant(){
                             if (!('scrollRestoration' in history)) loader.style.visibility = 'visible';
 
                             if (bodyHeight < scrollTop) {
-                                utils.body.style.minHeight = (scrollTop + window.innerHeight) + 'px';
+                                utils.body.style.minHeight = minHeightBody = (scrollTop + window.innerHeight) + 'px';
                             }
 
                             window.scrollTo(0, scrollTop)
 
-                            finishScroll = (scrollTop => {
-                                utils.body.style.minHeight = null;
+                            finishScroll = ((scrollTop, installedHeight) => {
                                 // utils.unblockScroll();
                                 atlant.state.scrollRestoration = false;
                                 window.scrollTo(0, scrollTop);
                                 if (!('scrollRestoration' in history)) loader.style.visibility = null;
-                            }).bind(void 0, scrollTop);
+                                window.setTimeout(() => {
+                                    if (utils.body.style.minHeight === installedHeight) {
+                                        utils.body.style.minHeight = null;
+                                    }
+                                }, 100);
+                            }).bind(void 0, scrollTop, minHeightBody);
 
                             if(window && !window.history.pushState.overloaded) wrapHistoryApi(window);
 

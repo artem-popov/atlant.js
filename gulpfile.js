@@ -16,7 +16,7 @@ var browserify = require('browserify')
     ,flow = require('flowcheck')
     ,argv = require('yargs').argv // there is also minimist package
 
-const changed = require('gulp-changed');
+var changed = require('gulp-changed');
 
 var output = 'lib/';
 
@@ -160,4 +160,4 @@ gulp.task('babel-watch', function(){
     return gulp.watch('./src/**/*.js', ['compile-changed']);
 })
 
-gulp.task('default', ['babel-watch']);
+gulp.task('default', ['babel-watch', 'browserifyWatcher']);
