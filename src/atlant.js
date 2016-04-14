@@ -143,7 +143,6 @@ function Atlant(){
                                 utils.body.style.minHeight = minHeightBody = (scrollTop + window.innerHeight) + 'px';
                             }
 
-                            window.scrollTo(0, scrollTop)
 
                             finishScroll = ((scrollTop, installedHeight) => {
                                 // utils.unblockScroll();
@@ -166,7 +165,7 @@ function Atlant(){
                     if ( event instanceof PopStateEvent ) {
                         trySetScroll(savedScrollTop)
                     } else if ( 0 === savedScrollTop ) {
-                        finishScroll = (scrollTop => {
+                        finishScroll = (() => {
                             if (!('scrollRestoration' in history)) loader.style.visibility = null;
                         })
                     }
@@ -253,7 +252,6 @@ function Atlant(){
 
         atlantState.rootStream
             .onValue( s.tryD(function(upstream) {
-
             const skipRoutes = prefs.skipRoutes.map( _ => utils.matchRoute(upstream.path, _) || utils.matchRoute(utils.getPossiblePath(upstream.path), _) ).filter( _ => !!_ );
             if(skipRoutes.length) {
                 atlantState.devStreams.renderEndStream.push({ httpStatus: 404, httpMessage: 'Resource is forbidden' });
@@ -314,7 +312,7 @@ function Atlant(){
 
                 if (whenData.when.type === types.WhenOrMatch.when && ('function' === typeof whenData.scrollToTop.value ? whenData.scrollToTop.value(depData) : whenData.scrollToTop.value) && 'undefined' !== typeof window) {
                     window.scrollTo(0, 0);
-                } 
+                }
 
                 var stream = whenData.route.fn instanceof Stream ? whenData.route.fn : whenData.route.fn(); // @TODO should be a Stream.
 
@@ -323,7 +321,11 @@ function Atlant(){
 
                 if(whenData.when.type === types.WhenOrMatch.when) stream.onValue( _ => atlantState.devStreams.renderEndStream.push(_) )
 
-                stream.push( depData );
+                if ("pushSync" in stream) {
+                    stream.pushSync(depData);
+                } else {
+                    stream.push(depData);
+                }
             });
 
             if ( !_whens.items.length || !_whens.found ) {  // Only matches or nothing at all
