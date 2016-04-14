@@ -1,7 +1,6 @@
 "use strict";
 
 var utils = require('../utils/utils')
-    ,lodash = require('lodash')
     ,s = require('../utils/lib')
 ;
 

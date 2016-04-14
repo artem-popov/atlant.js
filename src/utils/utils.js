@@ -1,8 +1,8 @@
 "use strict";
 
-var s = require('./lib')
-    ,lodash = require('lodash')
-;
+import { memoize, head  } from './lib';
+import debounce from 'lodash/debounce';
+import curry from 'lodash/curry';
 
 // This component holds state of Scroll
 var scrollState = {};
@@ -32,7 +32,7 @@ var utils = function() {
                 ? route.substr(0, route.length-1)
                 : route +'/';
         }
-        ,parseURL: s.memoize( function(url) {
+        ,parseURL: memoize( function(url) {
             if (!url) return void 0;
 
             var q = url.indexOf('?');
@@ -50,7 +50,7 @@ var utils = function() {
         /**
          *  URL query parser for old links to post and story
          * */
-        ,parseSearch: s.memoize( function(search){
+        ,parseSearch: memoize( function(search){
             return search
                         .replace('?', '&')
                         .split('&')
@@ -146,7 +146,7 @@ utils.clearState = function(){
     window.history.replaceState(state, null);
 }
 
-utils.saveScroll = lodash.debounce(function(event){
+utils.saveScroll = debounce(function(event){
     scrollState[window.location.pathname] = window.pageYOffset;
 }, 100)
 
@@ -186,7 +186,7 @@ utils.change = function(url) {
 }
 
 utils.getPattern = function(masks) {
-    return s.head(masks.filter(function(mask){ return '*' !== mask}));
+    return head(masks.filter(function(mask){ return '*' !== mask}));
 }
 
 utils.attachGuardToLinks = function() {
@@ -247,7 +247,7 @@ utils.attachGuardToLinks = function() {
  * @param when - compare mask
  * @returns (*)
  */
-utils.matchRoute = lodash.curry( s.memoize( function(path, mask){ 
+utils.matchRoute = curry( memoize( function(path, mask){ 
     // TODO(i): this code is convoluted and inefficient, we should construct the route matching
     //   regex only once and then reuse it
     var negate = '!' === mask[0];

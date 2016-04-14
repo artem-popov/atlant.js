@@ -3,11 +3,12 @@
 var s = require('../utils/lib')
         ,Bacon = require('baconjs')
 
+import curry from 'lodash/curry';
 import console from '../utils/log';
 
 var catchError;
 
-var convertPromiseD = s.curry(function(promiseProvider, upstream) {
+var convertPromiseD = curry(function(promiseProvider, upstream) {
     var promise = promiseProvider( upstream );
     if ( s.isPromise( promise ) ){
         promise = promise

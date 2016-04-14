@@ -1,7 +1,6 @@
 "use strict";
 var s = require('../utils/lib')
      ,u = require('../utils/utils')
-     ,lodash = require('lodash')
 
 import console from '../utils/log';
 
@@ -18,7 +17,7 @@ var State = function(React){
                         thises[name] = this;
                         if ( !views[name] ) views[name] = React.createElement('div');
 
-                        if ( lodash.isArray( views[name] ) )
+                        if ( Array.isArray( views[name] ) )
                             return  views[name][0]( { ...this.props, ...views[name][1] } )
                         else
                             return views[name];

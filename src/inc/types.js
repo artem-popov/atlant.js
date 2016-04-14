@@ -1,7 +1,6 @@
 "use strict"; 
 
 var Symbol = Symbol;
-var lodash = require('lodash');
 
 if (void 0 === Symbol) Symbol = _ => _;
 

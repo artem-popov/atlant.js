@@ -3,8 +3,9 @@
 var container = Object.create(null);
 
 import console from './log';
-var lodash = require('lodash')
-    ,Bacon = require('baconjs')
+import curry from 'lodash/curry';
+
+const Bacon = require('baconjs');
 
 var s = (function(){
 
@@ -49,7 +50,7 @@ var s = (function(){
      * it pass obj value and object name to fn (temporary 2 args)
      * @type {Function}
      */
-    this.map = lodash.curry( function(fn, obj) {
+    this.map = curry( function(fn, obj) {
         if ( ! obj ) return [];
         if (obj && obj.map) return obj.map(that.unary(fn));
 
@@ -66,12 +67,12 @@ var s = (function(){
     // @TODO create mapKeys
 
 
-    this.fmap = lodash.curry( function(fn, obj) {
+    this.fmap = curry( function(fn, obj) {
         return obj.fmap(fn);
     });
     
     // @TODO check immutability/mutability
-    this.filter = lodash.curry( function(fn, obj) {
+    this.filter = curry( function(fn, obj) {
         if ( ! obj ) return [];
         if (obj && obj.map) return obj.filter(that.unary(fn));
 
@@ -87,7 +88,7 @@ var s = (function(){
 
     });
 
-    this.filterKeys = lodash.curry( function(fn, obj) {
+    this.filterKeys = curry( function(fn, obj) {
         if ( ! obj ) return obj;
 
         var filtered = {};
@@ -102,7 +103,7 @@ var s = (function(){
 
     });
 
-    this.reduce = lodash.curry( function(fn, startValue, obj) {
+    this.reduce = curry( function(fn, startValue, obj) {
         if ( !obj ) return startValue;
         if (obj && obj.reduce) Array.prototype.reduce.call(obj, fn, startValue);
 
@@ -115,7 +116,7 @@ var s = (function(){
         return reduced;
     });
 
-    this.concat = lodash.curry( function(a, b) {
+    this.concat = curry( function(a, b) {
         return b.concat(a);
     });
 
@@ -151,11 +152,11 @@ var s = (function(){
         return !obj;
     }
 
-    this.eq = lodash.curry( function(obj, obj2) {
+    this.eq = curry( function(obj, obj2) {
         return obj === obj2
     });
 
-    this.notEq = lodash.curry( function(obj, obj2) {
+    this.notEq = curry( function(obj, obj2) {
         return obj !== obj2
     });
 
@@ -181,16 +182,16 @@ var s = (function(){
     }
 
     // expression is ".something" or ".something.something"
-    this.dot = lodash.curry( function(expression, obj) {
+    this.dot = curry( function(expression, obj) {
         return expression.split('.').filter(that.notEmpty).reduce(that.flipSimpleDot, obj);
     });
 
     // expression is ".something" or ".something.something"
-    this.flipDot = lodash.curry( function(obj, expression) {
+    this.flipDot = curry( function(obj, expression) {
         return that.dot(expression, obj);
     });
 
-    this.set = lodash.curry( function(item, obj, value) {
+    this.set = curry( function(item, obj, value) {
         if(item) {
             obj[item] = value;
             return obj;
@@ -199,7 +200,7 @@ var s = (function(){
         }
     });
 
-    this.plus = lodash.curry( function(item1, item2) {
+    this.plus = curry( function(item1, item2) {
         return item1 + item2;
     });
 
@@ -207,7 +208,7 @@ var s = (function(){
         return string.trim();
     }
 
-    this.replace = lodash.curry( function(where, replacer, obj) {
+    this.replace = curry( function(where, replacer, obj) {
         return obj.replace(where, replacer);
     });
 
@@ -219,7 +220,7 @@ var s = (function(){
         }
     };
 
-    this.split = lodash.curry( function( char, obj ) {
+    this.split = curry( function( char, obj ) {
         return obj.split(char);
     });
 
@@ -239,7 +240,7 @@ var s = (function(){
         return object instanceof type;
     }
 
-    this.typeOf = lodash.curry(function( type, object ) {
+    this.typeOf = curry(function( type, object ) {
         return type === typeof object;
     });
     
@@ -280,12 +281,12 @@ var s = (function(){
         };
     }
 
-    this.ifelse = lodash.curry( function(condition, then, _else, value){
+    this.ifelse = curry( function(condition, then, _else, value){
         if( condition( value ) ) return then(value);
         else return _else(value)
     });
 
-    this.if = lodash.curry( function(condition, then, value){
+    this.if = curry( function(condition, then, value){
         if( condition( value ) ) return then(value);
         else return value;
     });
@@ -390,8 +391,6 @@ var s = (function(){
 
    this.maybeS = this.maybe.bind(this, '')
    this.maybeV = this.maybe.bind(this, void 0)
-
-   this.curry        = lodash.curry;
 
    return this;
 

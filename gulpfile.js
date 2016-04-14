@@ -77,10 +77,13 @@ var browserifyOptions = {
 }
 
 var literalifyConfig = {
-    react: 'window.React'
-    ,lodash: 'window._'
-    ,baconjs: 'window.Bacon'
-    ,promise: 'window.Promise'
+    react: 'window.React',
+    baconjs: 'window.Bacon',
+    promise: 'window.Promise',
+    'lodash/uniq': 'window._.uniq', 
+    'lodash/isEqual': 'window._.isEqual', 
+    'lodash/curry': 'window._.curry', 
+    'lodash/debounce': 'window._.debounce' 
 }
 
 var build = function(bundle){
@@ -146,6 +149,7 @@ gulp.task('build', function () {
 gulp.task('compile-changed', function () {
     return gulp.src('./src/**/*.js')
       .pipe(changed('./build/'))
+      .pipe(plumber())
       .pipe(babel({loose: 'es6.modules', blacklist: [], ast: false, compact: false, optional: ["es7.comprehensions"]}))
       .pipe(gulp.dest('./build/'));
 

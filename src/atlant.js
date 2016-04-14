@@ -5,6 +5,8 @@ import { Stream, ReadyStream } from './inc/stream';
 import baseStreams from "./inc/base-streams";
 import { uniqueId } from './utils/lib';
 import views from "./views/views";
+import uniq from 'lodash/uniq';
+
 let build = require('./atlant-build');
 let version = require('./atlant-version');
 let s = require('./utils/lib')
@@ -12,7 +14,6 @@ let utils = require('./utils/utils')
 let simpleRender = require('./renders/simple')
 let reactRender = require('./renders/react')
 let Bacon = require('baconjs')
-let lodash = require('lodash')
 let interfaces = require('./inc/interfaces')
 let StateClass = require('./inc/state')
 let clientFuncs = require('./inc/clientFuncs')
@@ -787,10 +788,7 @@ function Atlant(){
     this.state = {}
 
     this.data = {
-        get routes() { return lodash(atlantState.routes) 
-            .uniq() // @TODO better not to double it for info :)  
-            .value() 
-        }    
+        get routes() { return uniq(atlantState.routes) }    // @TODO better not to double it for info :)  
     }
     // This command will immediatelly redirect to param url
     this.goTo = _redirectTo;

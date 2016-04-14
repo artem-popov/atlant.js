@@ -8,10 +8,10 @@ var baseStreams = require('./base-streams')
         ,clientFuncs = require('./clientFuncs')
         ,utils = require('../utils/utils')
         ,performance = require('./performance')
-        ,lodash = require('lodash')
     ;
 var Bacon = require('baconjs');
 
+import isEqual from 'lodash/isEqual';
 import views from "../views/views";
 import console from '../utils/log';
 import { uniqueId } from '../utils/lib';
@@ -112,7 +112,7 @@ export function Stream (atlantState, prefs, fn){
 
                 let data = { ...scope, ...value };   
 
-                if ( !lodash.isEqual(data, atlantState.viewData[viewName] ) ) {
+                if ( !isEqual(data, atlantState.viewData[viewName] ) ) {
                     scope = data;
                     atlantState.viewData[viewName] = data;
                     doRenderIntoView(data); // Here we using scope updated from store!
