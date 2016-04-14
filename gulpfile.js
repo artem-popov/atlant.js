@@ -16,6 +16,8 @@ var browserify = require('browserify')
     ,flow = require('flowcheck')
     ,argv = require('yargs').argv // there is also minimist package
 
+const changed = require('gulp-changed');
+
 var output = 'lib/';
 
 var source = 'source' in argv ? argv.source : 'atlant.js';
@@ -135,11 +137,17 @@ var browserifyIt = function(isWatcher){
 }
 
 gulp.task('build', function () {
-
   return gulp.src(['./src/**/*.js'])
         .pipe(plumber())
         .pipe(babel({loose: 'es6.modules', blacklist: [], ast: false, compact: false, optional: ["es7.comprehensions"]}))
         .pipe(gulp.dest('./build/'));
+});
+
+gulp.task('compile-changed', function () {
+    return gulp.src('./src/**/*.js')
+      .pipe(changed('./build/'))
+      .pipe(babel({loose: 'es6.modules', blacklist: [], ast: false, compact: false, optional: ["es7.comprehensions"]}))
+      .pipe(gulp.dest('./build/'));
 
 });
 
@@ -148,5 +156,8 @@ gulp.task('browserifyWatcher', function() {
     return browserifyIt(true)
 });
 
+gulp.task('babel-watch', function(){
+    return gulp.watch('./src/**/*.js', ['compile-changed']);
+})
 
-gulp.task('default', ['browserifyWatcher']);
+gulp.task('default', ['babel-watch']);
