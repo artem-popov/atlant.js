@@ -10,6 +10,7 @@ var baseStreams = require('./base-streams')
         ,performance = require('./performance')
         ,lodash = require('lodash')
     ;
+var Bacon = require('baconjs');
 
 import views from "../views/views";
 import console from '../utils/log';
