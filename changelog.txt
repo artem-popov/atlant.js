@@ -1,3 +1,4 @@
+0.4.69-0.4.73 fix back button, npm compatibility
 0.4.68 restart route if cannot do replaceState, pushState, save scrollTop in
 own height instead of history state
 0.4.67 several fixes, refer to docs, main - callbacks for when's and actions
