@@ -56,7 +56,6 @@ gulp.task('watch', function() {
                     react: 'window.React'
                     ,lodash: 'window._'
                     ,baconjs: 'window.Bacon'
-                    ,promise: 'window.Promise'
                 }));
 
                 b.bundle({ standalone: 'Atlant' }).pipe(sourceStream('./' + source))

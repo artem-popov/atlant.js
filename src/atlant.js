@@ -45,7 +45,6 @@ function Atlant(){
             ,scrollElement: function(){ return 'undefined' !== typeof document ? utils.body : void 0 }
             ,defaultScrollToTop: true
             ,pre: void 0
-            ,onDrawEndCallbacks:[]
     }
 
     // Contains state shared across atlant
@@ -444,12 +443,6 @@ function Atlant(){
         if ( prefs.viewState.length > 1 ) prefs.viewState.pop();
         return this;
     }
-
-    var _onDrawEnd = function(callback) {
-        prefs.onDrawEndCallbacks.push(s.tryD(callback));
-        return this;
-    }
-
 
     var _onRenderEnd = function(callback) { // Use this to get early callback for server render
         baseStreams.onValue(atlantState.devStreams.renderEndStream, s.baconTryD(callback));

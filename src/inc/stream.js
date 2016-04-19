@@ -588,14 +588,7 @@ export function Stream (atlantState, prefs, fn){
             if (renderOperation === types.RenderOperation.draw){ 
                 State.state.lastOp = renderStream;
                 State.state.lastOpId = renderId;
-            } else {
-                renderStream.onValue( _ => {
-                    if ( renderOperation === types.RenderOperation.draw )  { 
-                        prefs.onDrawEndCallbacks.forEach( _ => _() ) // process user onDrawEnd signal
-                    }
-                })
-                // if(State.state.lastDep) State.state.lastDep.onValue( _ => _ ); 
-            }
+            } 
 
             return closeThisBlock();
         }
