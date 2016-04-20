@@ -22,18 +22,14 @@ let types = require('./inc/types')
 let wrapHistoryApi = require( './inc/wrap-history-api.js').wrapHistoryApi
 let tools = require('./inc/tools');
 
- // @TODO: fast switching generate console.error.
- // @TODO: #hashes are ignored
- // @TODO: check(true) to check only this view params (by specifically set fields or somehow)
- // @TODO: depCache to check only this dep params (by specifically set fields or somehow)
+// @TODO: fast switching generate console.error.
+// @TODO: #hashes are ignored
+// @TODO: check(true) to check only this view params (by specifically set fields or somehow)
+// @TODO: depCache to check only this dep params (by specifically set fields or somehow)
  
 
 function Atlant(){
     var atlant = this;
-
-
-
-    if(!Object.assign) Object.assign = objectAssign; // Set polyfill for Object.assign
 
     // Preferences set by user
     var prefs = {
@@ -74,6 +70,7 @@ function Atlant(){
         ,viewSubscriptions: {}
         ,streams: {}
         ,busses: {}
+        ,fns: {}
         ,finishes: {}
         ,interceptors: []
         ,atlant: this
@@ -571,6 +568,7 @@ function Atlant(){
                 try {
                     return updater( state, scope );
                 } catch(e) {
+                    console.warn('source', updater);
                     console.error('Warning: updater "' + updaterName + '" failed on store "' + storeName + '"', e)
                     return state
                 }
@@ -751,7 +749,6 @@ function Atlant(){
     // Called when destroy initiated.
     this.onDestroy =  _onDestroy;
     // Called everytime when draw renders.
-    this.onDrawEnd =  _onDrawEnd;
     // Accepts element. After publish and first render the contents will be attached to this element.
     this.attach =  s.tryD(_attach);
     // After publish and first render the contents will be transferet to callback (first parameter).
@@ -808,6 +805,7 @@ function Atlant(){
         },
         put: (name, bus) => {  // @deprecated because sets Bacon.Bus() into atlant streams cache. Bacon.Bus() should be avoided.
             atlantState.busses[name] = bus
+            atlantState.fns[name] = void 0;
         },
         push: (name, value) => {
             if (!atlantState.busses[name]) throw new Error('Wrong stream name provided:' + name);
@@ -823,13 +821,14 @@ function Atlant(){
             if (!fn || 'function' !== typeof fn) { console.warn('Failed stream source:', fn); throw new Error('Atlant.js: follow stream function is not provided!') };
 
             var busName = ('string' === typeof busOrName ) ? busOrName : uniqueId(); 
-            if(busName in atlantState.busses) { console.warn('source:', fn); throw new Error('Several actions with 1 name is not supported now. ' + busName + ' is not unique.') }
+            if('string' === typeof busOrName && busName in atlantState.busses && busName in atlantState.fns && atlantState.fns[busName]) { console.warn('source:', fn); throw new Error('Several actions with 1 name is not supported now. ' + busName + ' is not unique.') }
 
             if ('string' === typeof busOrName ) {  
                 this.streams.get(busName) // creating new bus and stream
             } else { // Bacon.Bus() was passed
                 this.streams.put(busName, busOrName) // reusing passed bus
             }
+            atlantState.fns[name] = fn;
 
             atlantState.finishes[busName] = baseStreams.bus();
 
