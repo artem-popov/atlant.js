@@ -40,7 +40,7 @@ var s = (function(){
    this.uniqueId = (function(){
      let counter = 0;
      return function(){
-       return counter++;
+       return Number(counter++).toString();
      }
    })()
 
@@ -70,7 +70,7 @@ var s = (function(){
     this.fmap = curry( function(fn, obj) {
         return obj.fmap(fn);
     });
-    
+
     // @TODO check immutability/mutability
     this.filter = curry( function(fn, obj) {
         if ( ! obj ) return [];
@@ -79,7 +79,7 @@ var s = (function(){
         var filtered = {};
 
         for( var name in obj ) {
-            if ( fn(obj[name]) ) { 
+            if ( fn(obj[name]) ) {
                 filtered[name] = obj[name];
             }
         }
@@ -94,7 +94,7 @@ var s = (function(){
         var filtered = {};
 
         for( var name in obj ) {
-            if ( fn(name) ) { 
+            if ( fn(name) ) {
                 filtered[name] = obj[name];
             }
         }
@@ -243,11 +243,11 @@ var s = (function(){
     this.typeOf = curry(function( type, object ) {
         return type === typeof object;
     });
-    
+
 
     // Promises
     this.promise = function(value) {
-        return new Promise( function(fullfill, reject ) { 
+        return new Promise( function(fullfill, reject ) {
              fullfill(value);
         });
     }
@@ -292,7 +292,7 @@ var s = (function(){
     });
 
     this.type = function(item, type) {
-        
+
         if ( type !== typeof item && item ) {
             var error = new Error('Type Error: ' + item + ' should be ' + type);
             console.error(error.message, error.stack)
@@ -364,7 +364,7 @@ var s = (function(){
    this.isObject = _ => _ === Object(_);
 
    this.isPlainObject = _ => Object(_) === _ && (Object.getPrototypeOf(_) === Object.prototype || null === Object.getPrototypeOf(_));
-   
+
 
    /**
     * Deep merge two objects.
