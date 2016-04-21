@@ -26,7 +26,6 @@
   "dependencies": {
     "lodash": "~2.4.1",
     "bacon": "~0.7.18",
-    "react": "0.12.2",
-    "native-promise-only": "~0.7.5-e"
+    "react": "0.12.2"
   }
 }
