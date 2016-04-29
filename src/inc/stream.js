@@ -674,7 +674,11 @@ export function Stream (atlantState, prefs, fn){
 
     // Create scope for prefixed method (currently .select(), .update(), .depends())
     var _with = function(scopeProvider){
-        s.type(scopeProvider, 'function');
+        var scopeProvider = (typeof(scopeProvider) === 'undefined') ? _ => ({}) : scopeProvider;
+        if (typeof scopeProvider !== 'function') { 
+          console.warn('param passed:', scopeProvider);
+          throw new Error('.with should receive a function')
+        }
 
         if (State.state.lastWith && 'value' in State.state.lastWith) throw new Error('too many .with() after scope receiver')
 
