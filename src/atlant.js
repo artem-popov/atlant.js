@@ -1,7 +1,7 @@
 "use strict";
 
 import console from './utils/log';
-import { Stream, ReadyStream } from './inc/stream';
+import { AtlantStreamConstructor, AtlantStream } from './inc/stream';
 import baseStreams from "./inc/base-streams";
 import { uniqueId } from './utils/lib';
 import views from "./views/views";
@@ -69,7 +69,6 @@ function Atlant(){
         ,viewSubscriptionsUnsubscribe: {}
         ,viewSubscriptions: {}
         ,streams: {}
-        ,busses: {}
         ,fns: {}
         ,finishes: {}
         ,interceptors: []
@@ -78,6 +77,8 @@ function Atlant(){
     }
 
     let unsubscribeView = views(atlantState);
+
+    console.level = '';
 
     // Patching goTo for further use
     var safeGoToCopy = utils.goTo;
@@ -310,12 +311,12 @@ function Atlant(){
                     window.scrollTo(0, 0);
                 }
 
-                var stream = whenData.route.fn instanceof Stream ? whenData.route.fn : whenData.route.fn(); // @TODO should be a Stream.
+                var stream = whenData.route.fn instanceof AtlantStreamConstructor ? whenData.route.fn : whenData.route.fn(); // @TODO should be a AtlantStreamConstructor.
 
-                if (stream instanceof Stream) { console.warn('Failed stream source:', whenData.route.fn); throw new Error('You should end the Stream. Try add more .end()\'s ') };
-                if (!stream || !(stream instanceof ReadyStream) && !(stream instanceof Bacon.Bus)){ console.warn('Failed stream source:', whenData.route.fn); throw new Error('Unknown return from Stream function, should be atlant.stream or Bacon.Bus', whenData.route.fn) };
+                if (stream instanceof AtlantStreamConstructor) { console.warn('Failed stream source:', whenData.route.fn); throw new Error('You should end the AtlantStreamConstructor. Try add more .end()\'s ') };
+                if (!stream || !(stream instanceof AtlantStream) ){ console.warn('Failed stream source:', whenData.route.fn); throw new Error('Unknown return from AtlantStreamConstructor function, should be AtlantStream', whenData.route.fn) };
 
-                if(whenData.when.type === types.WhenOrMatch.when) stream.onValue( _ => atlantState.devStreams.renderEndStream.push(_) )
+                if(whenData.when.type === types.WhenOrMatch.when) stream.then( _ => atlantState.devStreams.renderEndStream.push(_) )
 
                 if ("pushSync" in stream) {
                     stream.pushSync(depData);
@@ -349,7 +350,7 @@ function Atlant(){
 
             if ( !masks.length ) throw new Error('At least one route mask should be specified.');
 
-            if ('function' !== typeof fn) { console.warn('Failed stream source:', fn); throw new Error('Make use "fn = _ => Stream" as second parameter of atlant.when() for ' + masks) };
+            if ('function' !== typeof fn) { console.warn('Failed stream source:', fn); throw new Error('Make use "fn = _ => AtlantStream" as second parameter of atlant.when() for ' + masks) };
 
             TopState.state.lastMasks = masks;
 
@@ -642,24 +643,25 @@ function Atlant(){
 
 
     // declare branch that will work if no routes declared by .when() are matched. Routes declared by .match() will be ignored even if they matched.
-    this.otherwise = function(fn) { return atlant.streams.reg.call(this, atlantState.devStreams.otherwiseStream, fn, true); }
+    this.otherwise = function(fn) { return atlant.streams.reg.call(this, 'otherwise', fn, true); }
 
     // Creates stream which will be called when render error is happend
-    this.error = function(fn) { return atlant.streams.reg.call(this, atlantState.devStreams.errorStream, fn, true); }
+    this.error = function(fn) { return atlant.streams.reg.call(this, 'error', fn, true); }
 
 
     // Creates stream which will be called when status!= undefined is happend @TODO change this to : when reject is happend
     // this.catch = _catch;
 
     // Creates custom stream which accepts Bacon stream
-    this.action = function(action, fn) { return atlant.streams.reg.call(this, action, fn, true); }
+    // "otherwise", "error", "interceptor-n" are reserved names
+    this.action = function(actionName, fn) { return atlant.streams.reg.call(this, actionName, fn, true); }
 
     // creates branch which can destruct all what declared by .when() or .match()
     // this.finally =  _finally; // was removed, not reimplemented yet 
 
     // side-effect
     this.interceptor = function(fn) {  
-        var interceptorName = uniqueId();
+        var interceptorName = 'interceptor-' + uniqueId();
         atlantState.interceptors.push(interceptorName);
 
         try{
@@ -791,51 +793,43 @@ function Atlant(){
 
 
     // Create stream.
-    this.stream = bus => new Stream(atlantState, prefs, bus);
+    this.stream = (name) => new AtlantStreamConstructor(name, atlantState, { ...prefs, canBeIntercepted: true });
 
-    
+    // Create stream which cannot be intercepted
+    this.interceptorStream = (name) => new AtlantStreamConstructor(name, atlantState, { ...prefs, canBeIntercepted: false });
+
     this.streams = { 
         get: name => { // @deprecated, used here only because there are many actions with Bacon.Bus()'es declared yet.
-            if (!atlantState.busses[name]) {
-                var bus = baseStreams.bus();
-                this.streams.put(name, bus)
+            if (!atlantState.streams[name]) {
+                atlantState.streams[name] = new AtlantStream(name, true);
             }
 
-            return atlantState.busses[name]
-        },
-        put: (name, bus) => {  // @deprecated because sets Bacon.Bus() into atlant streams cache. Bacon.Bus() should be avoided.
-            atlantState.busses[name] = bus
-            atlantState.fns[name] = void 0;
+            return atlantState.streams[name]
         },
         push: (name, value) => {
-            if (!atlantState.busses[name]) throw new Error('Wrong stream name provided:' + name);
+            if (!atlantState.streams[name]) throw new Error('Wrong stream name provided:' + name);
 
-            atlantState.busses[name].push(value);
+            atlantState.streams[name].push(value);
 
             return atlantState.streams[name];
         },
-        reg: function(busOrName, fn, canBeIntercepted){
-            if('string' !== typeof busOrName && !(busOrName instanceof Bacon.Bus)) { 
+        reg: function(name, fn, canBeIntercepted) {
+            if('string' !== typeof name) { 
               console.warn('Failed stream source:', fn); 
-              throw new Error('Provide either Bacon.Bus() either Stream name.')
+              throw new Error('Provide AtlantStream name.')
             }
 
-            if (!busOrName) { console.warn('Failed stream source:', fn); throw new Error('Atlant.js Bacon.Bus() stream or stream name is not provided!') };
-            if (!fn || 'function' !== typeof fn) { console.warn('Failed stream source:', fn); throw new Error('Atlant.js: follow stream function is not provided!') };
+            if (!name) { console.warn('Failed stream source:', fn); throw new Error('Atlant.js stream name is not provided!') };
+            if (!fn || 'function' !== typeof fn) { console.warn('Failed stream source:', fn); throw new Error('Atlant.js: stream constructor function is not provided!') };
 
-            var busName = ('string' === typeof busOrName ) ? busOrName : uniqueId(); 
-            if('string' === typeof busOrName && busName in atlantState.busses && busName in atlantState.fns && atlantState.fns[busName]) { console.warn('source:', fn); throw new Error('Several actions with 1 name is not supported now. ' + busName + ' is not unique.') }
+            if(name in atlantState.streams && name in atlantState.fns && atlantState.fns[name]) { console.warn('source:', fn); throw new Error('Several actions with 1 name is not supported. The ' + name + ' is not unique.') }
 
-            if ('string' === typeof busOrName ) {  
-                this.streams.get(busName) // creating new bus and stream
-            } else { // Bacon.Bus() was passed
-                this.streams.put(busName, busOrName) // reusing passed bus
-            }
+            let stream = this.streams.get(name) // look if stream already created
+
             atlantState.fns[name] = fn;
+            atlantState.finishes[name] = baseStreams.bus();
 
-            atlantState.finishes[busName] = baseStreams.bus();
-
-            atlantState.busses[busName].onValue(function(depValue){
+            stream.then(function(depValue){
                 if ('undefined' === typeof depValue) {
                     depValue = {};
                 }
@@ -843,15 +837,15 @@ function Atlant(){
                     depValue = { ...{params: atlantState.whenData}, ...depValue }; 
                 }
 
-                var stream = fn(); 
+                var userStream = fn(); 
 
-                if (stream instanceof Stream) { console.warn('Failed stream source:', fn); throw new Error('You should end the Stream. Try add more .end()\'s ') };
-                if (!stream || !(stream instanceof ReadyStream) && !(stream instanceof Bacon.Bus)){ console.warn('Failed stream source:', fn); throw new Error('Unknown return from Stream function') };
+                if (userStream instanceof AtlantStreamConstructor) { console.warn('Failed stream source:', fn); throw new Error('You should end the AtlantStreamConstructor to create AtlantStream. Try add more .end()\'s ') };
+                if (!userStream || !(userStream instanceof AtlantStream)){ console.warn('Failed stream source:', fn); throw new Error('Unknown return from passed function') };
 
-                stream.canBeIntercepted = canBeIntercepted;
-                atlantState.streams[busName] = stream; // Storing for further use
-                stream.onValue( _ => atlantState.finishes[busName].push(_) )
-                stream.push( depValue ); // ReadyStream
+                userStream.then( _ => { console.log('action2:', _); atlantState.finishes[name].push(_) } )
+                console.warn('action:', name, depValue, userStream)
+                userStream.push(depValue); // AtlantStream
+                console.warn('action: pushed:', name, depValue)
 
             })
 

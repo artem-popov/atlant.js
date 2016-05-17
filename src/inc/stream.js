@@ -16,30 +16,30 @@ import views from "../views/views";
 import console from '../utils/log';
 import { uniqueId } from '../utils/lib';
 
-export function ReadyStream(streamState, bus, stream){
+export function AtlantStream(name, light){
+    console.log('creating:', name, false)
+    if(name === 'logoutUser') debugger;
+    let bus = baseStreams.bus();
+    let resolveBus = baseStreams.bus();
 
-    if(stream instanceof Stream) Object.keys(stream).forEach( __ => this[__] = _ => console.error('This stream is ready! You can only .push(data) or subscribe: .onValue(), onStart(). The "' + __ + '" is wrong here!') )
+    let subscribers = [];
+    let then = value => subscribers.forEach(subscriber => subscriber(value));
+    let unsubscribeResolve = !light ? resolveBus.onValue(then) : _ => _; // light version not waiting for resolve
+    let unsubscribeBus = light ? bus.onValue(then) : _ => _; // it executes at once the bus is pushed
 
-    this.push = (...args) => setTimeout( () => bus.push(...args), 0);
+    let unsubscribe = () => { unsubscribeResolve(); unsubscribeBus(); subscribers = [] }
+
+    this.push = (...args) => setTimeout( ((name, bus) => { console.log('pushing:', name); bus.push(...args) }).bind(this, name, bus), 0);
     this.pushSync = _ => bus.push(_);
+    this.then = fn => (subscribers.push(fn), unsubscribe); // Register subscribers
 
-    Object.defineProperty(this, 'canBeIntercepted', { get (){ return streamState.canBeIntercepted }, set (value){ streamState.canBeIntercepted = value; }});
-
-    this.onStart = _ => {
-        bus.onValue(_)
-    }
-
-    this.onValue = _ => {  // Stream is Resolved
-        if (!streamState || !streamState.streamCallbacks)
-            console.log('not supported yet, use named action instead of Bacon.Bus()');
-        else 
-            streamState.streamCallbacks.push(_)
-    }
+    this._exportBus = () => bus; // @TODO deprecated
+    this._exportResolveBus = () => resolveBus; // @TODO deprecated
 
     return this;
 }
 
-export function Stream (atlantState, prefs, fn){
+export function AtlantStreamConstructor (name, atlantState, prefs){
 
     var TopState = new StateClass(); // State which up to when
     var State = new StateClass(); // State which up to any last conditional: when, if
@@ -49,14 +49,14 @@ export function Stream (atlantState, prefs, fn){
     var withGrabber = new interfaces.withGrabber();
     var id = uniqueId();
     
-    var root = baseStreams.bus();
+    let atlantStream = new AtlantStream(name, false);
 
     let unsubscribeView = views(atlantState);
 
-    var lastWhen;
-
-    var streamState = {
-        streamCallbacks: [],
+    let streamState = {
+        name: name,
+        root: atlantStream._exportBus(),
+        resolveBus: atlantStream._exportResolveBus(),
         canBeIntercepted: true
     }
 
@@ -117,8 +117,8 @@ export function Stream (atlantState, prefs, fn){
                     atlantState.viewData[viewName] = data;
                     doRenderIntoView(data); // Here we using scope updated from store!
 
-                    if(streamState.resolveWhen && streamState.resolveWhen(data) && streamCallbacks.length){
-                        streamState.streamCallbacks.forEach( _ => _(data) )
+                    if(streamState.resolveWhen && streamState.resolveWhen(data)){
+                        streamState.resolveBus.push(data)
                     }
                 } 
 
@@ -228,10 +228,7 @@ export function Stream (atlantState, prefs, fn){
         var nameContainer = dependsName.init(depName, State.state);
         var stats = TopState.state.stats;
 
-        // streamState.subscribersCount = 0;
-
-
-        lastWhen = root
+        State.state.lastOp = streamState.root
             .map( function(depName, injects, nameContainer, stats, whenId, depValue) {
                 if ( 'undefined' === typeof depValue ) {
                     depValue = {}
@@ -252,7 +249,6 @@ export function Stream (atlantState, prefs, fn){
                 stream.stats = stats;
                 stream.whenId = whenId;
                 stream.id = atlantState.activeStreamId.value;
-                // stream.id = uniqueId(); // Should it be so at error?
 
                 return stream;
             }.bind(void 0, depName, injects, nameContainer, stats, whenId))
@@ -261,15 +257,9 @@ export function Stream (atlantState, prefs, fn){
         State.state.lastIf = void 0;
         State.state.lastDep = void 0;
         State.state.lastDepName = depName;
-        State.state.lastWhen = lastWhen;
-        State.state.lastOp = State.state.lastWhen;
         State.state.lastOpId = whenId;
         TopState.state.lastAction = depName
 
-        // Nulling for async
-        State.state.lastAsync = void 0; 
-        State.state.lastBeforeAsync = lastWhen;
-    
     }())
 
     /* depends */
@@ -405,32 +395,16 @@ export function Stream (atlantState, prefs, fn){
         };
 
         return function(dependency, dependsBehaviour, store, isAtom ) {
-            if ( ! State.state.lastWhen ) throw new Error('"depends" should nest "when"');
 
             var prefix = (dependsBehaviour === types.Depends.continue) ? '_and_' : '_';
             var opId = uniqueId();
             var depName = (State.state.lastDepName ? State.state.lastDepName + prefix : 'depend_') + uniqueId();
 
             var lastOp = State.state.lastOp;
-            // if (dependsBehaviour === types.Depends.async && State.state.lastBeforeAsync) {
-            //     lastOp = State.state.lastBeforeAsync;
-            // }
 
             injectsGrabber.init(depName, State.state);
 
             var thisOp = createDepStream(lastOp, opId, depName, dependency, State.state.lastInjects, store, isAtom);
-
-            // if( dependsBehaviour === types.Depends.async && State.state.lastDep) { // if deps was before then we need to zip all of them to be arrived simultaneously
-            //     thisOp = State.state.lastDep.zip( thisOp, zippersJoin.bind( void 0, State.state.lastDepName, depName ) );
-            // }
-
-            if( dependsBehaviour === types.Depends.async) { 
-                State.state.lastAsync = thisOp; 
-                State.state.lastBeforeAsync = lastOp // This is operation BEFORE async
-            } else { 
-                State.state.lastAsync = void 0; 
-                State.state.lastBeforeAsync = thisOp 
-            }
 
             State.state.lastDep = thisOp;
             State.state.lastDepName = depName;
@@ -496,8 +470,8 @@ export function Stream (atlantState, prefs, fn){
         State.state.lastDep = void 0
 
         // Nulling for async
-        State.state.lastAsync = void 0; 
-        State.state.lastBeforeAsync = thisIf;
+        // State.state.lastAsync = void 0; 
+        // State.state.lastBeforeAsync = thisIf;
 
         return this;
     }
@@ -539,7 +513,8 @@ export function Stream (atlantState, prefs, fn){
 
             return this
         } else {
-            return new ReadyStream(streamState, root, this);
+            // State.state.lastOp.onValue(_ => console.log('did last op'));
+            return atlantStream;
         }
 
     }
@@ -585,9 +560,12 @@ export function Stream (atlantState, prefs, fn){
                 return Bacon.fromPromise(renderView(upstream))
             })
 
+
             if (renderOperation === types.RenderOperation.draw){ 
                 State.state.lastOp = renderStream;
                 State.state.lastOpId = renderId;
+            } else {
+                renderStream.onValue(_=>_);
             } 
 
             return closeThisBlock();
@@ -598,7 +576,6 @@ export function Stream (atlantState, prefs, fn){
     var _end = function() {
 
         State.state.lastOp.onValue(_=>_); // Subscribing to last item, else this .if() will be not executed - because of Bacon lazyness
-        // if(State.state.lastDep) State.state.lastDep.onValue(_=>_); // Subscribing to last item, else this .if() will be not executed - because of Bacon lazyness
 
         return closeBlock.bind(this)();
     }
@@ -656,7 +633,7 @@ export function Stream (atlantState, prefs, fn){
 
     var _reject = function() {
         State.state.lastOp = State.state.lastOp.flatMap( _ => {
-            streamState.streamCallbacks.forEach( callback => callback(Promise.reject(_)) );
+            streamState.resolveBus.push(Promise.reject(_));
             return Bacon.End(_)
         });
 
@@ -664,7 +641,7 @@ export function Stream (atlantState, prefs, fn){
     }
     var _resolve = function() {
         State.state.lastOp = State.state.lastOp.flatMap( _ => {
-            streamState.streamCallbacks.forEach( callback => callback(Promise.resolve(_)) );
+            streamState.resolveBus.push(Promise.resolve(_));
             return Bacon.End(_)
         });
 
@@ -779,11 +756,8 @@ export function Stream (atlantState, prefs, fn){
     // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
     this.move = function(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.move);}
 
-
     // This 2 methods actually not exists in stream. They can be called if streams is already declared, but then trryed to continue to configure
-    this.onStart = () => console.error('You have lost at least 1 .end() in stream declaration:', fn)
-    this.onValue = this.onStart;
-
+    this.onValue = () => console.error('You have lost at least 1 .end() in stream declaration:', fn)
 
 }
 
