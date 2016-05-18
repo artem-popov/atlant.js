@@ -643,10 +643,10 @@ function Atlant(){
 
 
     // declare branch that will work if no routes declared by .when() are matched. Routes declared by .match() will be ignored even if they matched.
-    this.otherwise = function(fn) { return atlant.streams.reg.call(this, 'otherwise', fn, true); }
+    this.otherwise = function(fn) { atlant.streams.get.call(this, 'otherwise', fn, true); return this }
 
     // Creates stream which will be called when render error is happend
-    this.error = function(fn) { return atlant.streams.reg.call(this, 'error', fn, true); }
+    this.error = function(fn) { atlant.streams.get.call(this, 'error', fn, true); return this }
 
 
     // Creates stream which will be called when status!= undefined is happend @TODO change this to : when reject is happend
@@ -654,7 +654,7 @@ function Atlant(){
 
     // Creates custom stream which accepts Bacon stream
     // "otherwise", "error", "interceptor-n" are reserved names
-    this.action = function(actionName, fn) { return atlant.streams.reg.call(this, actionName, fn, true); }
+    this.action = function(actionName, fn) { atlant.streams.get.call(this, actionName, fn, true); return this }
 
     // creates branch which can destruct all what declared by .when() or .match()
     // this.finally =  _finally; // was removed, not reimplemented yet 
@@ -665,7 +665,7 @@ function Atlant(){
         atlantState.interceptors.push(interceptorName);
 
         try{
-            atlant.streams.reg.call(this, interceptorName, fn, false); 
+            atlant.streams.get.call(this, interceptorName, fn, false); 
         } catch(e){ 
             delete atlantState.interceptors[atlantState.interceptors.indexOf(interceptorName)]
         }
@@ -799,12 +799,34 @@ function Atlant(){
     this.interceptorStream = (name) => new AtlantStreamConstructor(name, atlantState, { ...prefs, canBeIntercepted: false });
 
     this.streams = { 
-        get: name => { // @deprecated, used here only because there are many actions with Bacon.Bus()'es declared yet.
-            if (!atlantState.streams[name]) {
-                atlantState.streams[name] = new AtlantStream(name, true);
+        get: (name, fn) => { 
+            if ('string' !== typeof name) { 
+                if(fn) console.warn('Failed stream source:', fn); 
+                throw new Error('Provide AtlantStream name.')
             }
 
-            return atlantState.streams[name]
+            if (!name) { 
+              if(fn) console.warn('Failed stream source:', fn);
+              throw new Error('Atlant.js stream name is not provided!') 
+            };
+
+            let stream = atlantState.streams[name];
+
+            if (fn && stream && stream.isAttached()) {
+                console.warn('source:', fn);
+                throw new Error('Several actions with 1 name is not supported. The ' + name + ' is not unique.') 
+            }
+            
+            if (fn && stream && !stream.isAttached()) { 
+              stream.attach(fn);
+            }
+
+            if (!stream) {
+                stream = new AtlantStream(name, fn, atlantState);
+                atlantState.streams[name] = stream;
+            }
+
+            return stream;
         },
         push: (name, value) => {
             if (!atlantState.streams[name]) throw new Error('Wrong stream name provided:' + name);
@@ -812,44 +834,6 @@ function Atlant(){
             atlantState.streams[name].push(value);
 
             return atlantState.streams[name];
-        },
-        reg: function(name, fn, canBeIntercepted) {
-            if('string' !== typeof name) { 
-              console.warn('Failed stream source:', fn); 
-              throw new Error('Provide AtlantStream name.')
-            }
-
-            if (!name) { console.warn('Failed stream source:', fn); throw new Error('Atlant.js stream name is not provided!') };
-            if (!fn || 'function' !== typeof fn) { console.warn('Failed stream source:', fn); throw new Error('Atlant.js: stream constructor function is not provided!') };
-
-            if(name in atlantState.streams && name in atlantState.fns && atlantState.fns[name]) { console.warn('source:', fn); throw new Error('Several actions with 1 name is not supported. The ' + name + ' is not unique.') }
-
-            let stream = this.streams.get(name) // look if stream already created
-
-            atlantState.fns[name] = fn;
-            atlantState.finishes[name] = baseStreams.bus();
-
-            stream.then(function(depValue){
-                if ('undefined' === typeof depValue) {
-                    depValue = {};
-                }
-                if ('object' === typeof depValue) {
-                    depValue = { ...{params: atlantState.whenData}, ...depValue }; 
-                }
-
-                var userStream = fn(); 
-
-                if (userStream instanceof AtlantStreamConstructor) { console.warn('Failed stream source:', fn); throw new Error('You should end the AtlantStreamConstructor to create AtlantStream. Try add more .end()\'s ') };
-                if (!userStream || !(userStream instanceof AtlantStream)){ console.warn('Failed stream source:', fn); throw new Error('Unknown return from passed function') };
-
-                userStream.then( _ => { console.log('action2:', _); atlantState.finishes[name].push(_) } )
-                console.warn('action:', name, depValue, userStream)
-                userStream.push(depValue); // AtlantStream
-                console.warn('action: pushed:', name, depValue)
-
-            })
-
-            return this
         }
     }
 

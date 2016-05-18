@@ -16,21 +16,59 @@ import views from "../views/views";
 import console from '../utils/log';
 import { uniqueId } from '../utils/lib';
 
-export function AtlantStream(name, light){
-    console.log('creating:', name, false)
-    if(name === 'logoutUser') debugger;
+export function AtlantStream(name, theFn, atlantState){
     let bus = baseStreams.bus();
     let resolveBus = baseStreams.bus();
+    let finishBus = baseStreams.bus();
+    let fn = theFn;
 
-    let subscribers = [];
-    let then = value => subscribers.forEach(subscriber => subscriber(value));
-    let unsubscribeResolve = !light ? resolveBus.onValue(then) : _ => _; // light version not waiting for resolve
-    let unsubscribeBus = light ? bus.onValue(then) : _ => _; // it executes at once the bus is pushed
+    let subscribers = []; // fn's which subscribed to stream.
+    let waiters = []; // here pushes which come before stream has fn attached.
+    let unsubscribe = () => subscribers = []; 
+    let worker = depValue => {
+        if ('undefined' === typeof depValue) {
+            depValue = {};
+        }
+        if ('object' === typeof depValue) {
+            depValue = { ...{params: atlantState.whenData}, ...depValue }; 
+        }
 
-    let unsubscribe = () => { unsubscribeResolve(); unsubscribeBus(); subscribers = [] }
+        var userStream = fn(); 
 
-    this.push = (...args) => setTimeout( ((name, bus) => { console.log('pushing:', name); bus.push(...args) }).bind(this, name, bus), 0);
-    this.pushSync = _ => bus.push(_);
+        if (userStream instanceof AtlantStreamConstructor) { console.warn('Failed stream source:', fn); throw new Error('You should end the AtlantStreamConstructor to create AtlantStream. Try add more .end()\'s ') };
+        if (!userStream || !(userStream instanceof AtlantStream)){ console.warn('Failed stream source:', fn); throw new Error('Constructor function should return AtlantStream.') };
+
+        userStream.then( _ => { console.log('action(resolved):', _); finishBus.push(_) } )
+        console.warn('action:', name, depValue, userStream)
+        userStream.push(depValue); // AtlantStream
+        console.warn('action: pushed:', name, depValue)
+
+    }
+
+    this.isAttached = () => !!fn;
+    let push = (isSync, args) => {  // If it is constructor stream, then it postpones pushes till fn generator will be attached.
+      let workerSync = () => worker(args);
+      let workerAsync = () => setTimeout( () => worker(args), 0);
+      let pusher = isSync ? workerSync : workerAsync; 
+      if (!this.isAttached()) { console.log('action:', name, 'is not ready!'); waiters.push(pusher); }
+      else pusher();
+    }
+
+    let pushBus = (isSync, args) => { 
+      let syncCall = () => bus.push(args);
+      let asyncCall = () => setTimeout( () => bus.push(args), 0);
+      let pusher = isSync ? syncCall : asyncCall; 
+      pusher();
+    }
+
+    this.attach = _ => { 
+      if (!this.isAttached() && _ && typeof _ === 'function') {
+        fn = _;
+        waiters.forEach(_ = _());
+      }
+    }
+    this.pushSync = !!fn ? push.bind(this, true) : pushBus.bind(this, true);
+    this.push = !!fn ? push.bind(this, false) : pushBus.bind(this, false);
     this.then = fn => (subscribers.push(fn), unsubscribe); // Register subscribers
 
     this._exportBus = () => bus; // @TODO deprecated
@@ -49,7 +87,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
     var withGrabber = new interfaces.withGrabber();
     var id = uniqueId();
     
-    let atlantStream = new AtlantStream(name, false);
+    let atlantStream = new AtlantStream(name, void 0, false, atlantState);
 
     let unsubscribeView = views(atlantState);
 
