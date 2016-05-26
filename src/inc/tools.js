@@ -48,7 +48,7 @@ var _parseAll = function(path, masks){
 
     return utils.addSlashes(masks)
         .map(_parse.bind(void 0, path))
-        .reduce((acc, i) => ({ ...v, ...i }), {}) 
+        .reduce((acc, i) => ({ ...acc, ...i }), {}) 
 }
 
 var _setTitle = function(titleStore, title){

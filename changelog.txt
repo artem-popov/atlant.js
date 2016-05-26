@@ -1,3 +1,4 @@
+0.4.77 fix utils.parseAll() parsed last mask only;
 0.4.76 better "postponed" actions
 0.4.75 better actions
 0.4.74 uniqueId should return string
