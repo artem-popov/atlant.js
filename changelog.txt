@@ -1,3 +1,5 @@
+0.4.76 better "postponed" actions
+0.4.75 better actions
 0.4.74 uniqueId should return string
 0.4.69-0.4.73 fix back button, npm compatibility
 0.4.68 restart route if cannot do replaceState, pushState, save scrollTop in
