@@ -64,7 +64,7 @@ export function AtlantStream(name, theFn, atlantState){
     this.attach = _ => { 
       if (!this.isAttached() && _ && typeof _ === 'function') {
         fn = _;
-        waiters.forEach(_ = _());
+        waiters.forEach(_ => _());
       }
     }
     this.pushSync = !!fn ? push.bind(this, true) : pushBus.bind(this, true);
