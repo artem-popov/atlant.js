@@ -1,3 +1,4 @@
+0.4.79 remove appearance of Object.assign
 0.4.78 fix mistype
 0.4.77 fix utils.parseAll() parsed last mask only;
 0.4.76 better "postponed" actions
