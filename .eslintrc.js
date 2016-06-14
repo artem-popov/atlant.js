@@ -1,16 +1,16 @@
 module.exports = {
-    env: {
-        browser: true,
-        node: true,
-        es6": true
+    "env": {
+        "browser": true,
+        "node": true,
+        "es6": true
     },
-    plugins: [
+    "plugins": [
         "react"
     ],
-    parserOptions: {
-        sourceType: 'module',
-        ecmaFeatures: {
-          experimentalObjectRestSpread: true
+    "parserOptions": {
+        "sourceType": "module",
+        "ecmaFeatures": {
+          "experimentalObjectRestSpread": true
         }
     }
 };
