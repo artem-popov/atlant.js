@@ -29,13 +29,13 @@ var wrapHistoryApi = function(window){
     var replaceState = window.history.replaceState;
 
     var tryState = function(params) {
-        try { 
-           return pushState.apply(window.history, params); 
+        try {
+           return pushState.apply(window.history, params);
         } catch (e) {
            console.error("Can't push state:", e);
-           if(params[2]) { 
+           if(params[2]) {
              window.location.assign(params[2]) // Fallback to location Api
-           } else { 
+           } else {
              console.log('url is not provided')
              window.location.replace(window.location.toString())  // Fallback to location Api
            }
@@ -55,17 +55,17 @@ var wrapHistoryApi = function(window){
     window.history.pushState.overloaded = true;
 
     window.history.replaceState = function(...params) {
-        try { 
-           return replaceState.apply(window.history, params); 
+        try {
+           return replaceState.apply(window.history, params);
         } catch (e) {
            console.error('Can\'t replace state:', e.stack, 'Fallback to location Api');
-           if(params[2]) { 
+           if(params[2]) {
              console.log('url is here:', params[2])
              window.location.replace(params[2])  // Fallback to location Api
-           } 
+           }
            else {
              window.location.replace(window.location.toString())  // Fallback to location Api
-             console.log('url is absent:', params[2]) 
+             console.log('url is absent:', params[2])
            }
            return void 0;
         }

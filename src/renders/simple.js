@@ -1,5 +1,5 @@
 /*
- * Very simple render. uses viewName as attribute name of attribute and installs string inside 
+ * Very simple render. uses viewName as attribute name of attribute and installs string inside
  */
 var simpleRender = {
     render: function(viewProvider, name, scope) {
@@ -16,9 +16,9 @@ var simpleRender = {
     }
 }
 
-module.exports = { 
+module.exports = {
     name: 'simple'
     ,render: simpleRender.render
-    ,clear: simpleRender.clear 
+    ,clear: simpleRender.clear
 }
 

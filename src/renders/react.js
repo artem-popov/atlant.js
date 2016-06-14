@@ -64,37 +64,37 @@ var Render = function(React) {
     var state = new State(React);
 
     this.name = 'React';
-    var selectors = {}; 
+    var selectors = {};
 
     this.render = function(viewProvider, upstream, activeStreamId, name, scope) {
         console.time('rendering view ' + name);
 
         state.getOrCreate(name); // Always should be first to ensure that it is a simple div to lower influence of React.renderToStaticMarkup
 
-        if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.  
-            state.set(name, [viewProvider, scope]);  
+        if( upstream.isAction || upstream.id === activeStreamId.value ) {// Checking, should we continue or this stream already obsolete.
+            state.set(name, [viewProvider, scope]);
         }
 
         var instance = state.getThis(name);
 
         let error = false;
-           
-        let update = () => { 
+
+        let update = () => {
             try {
-                instance.forceUpdate(); 
+                instance.forceUpdate();
             } catch(e){
-                console.error(e.stack); 
+                console.error(e.stack);
                 error = true;
             }
         }
 
-        if( !error && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) { 
+        if( !error && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) {
             update()
         }
 
         console.timeEnd('rendering view ' + name);
 
-        return error ? Promise.reject() : Promise.resolve(state.getInstance(name));  
+        return error ? Promise.reject() : Promise.resolve(state.getInstance(name));
     }
 
     this.clear = function(viewProvider, upstream, activeStreamId, name, scope) {
@@ -113,7 +113,7 @@ var Render = function(React) {
 
         try{
             React.render(root, element)
-            selectors[name] = selector; 
+            selectors[name] = selector;
         } catch(e) {
             console.error(e.message, e.stack)
             React.unmountComponentAtNode(element);
@@ -142,7 +142,7 @@ var Render = function(React) {
 
     this.put = function(name, component){
         state.set(name, component);
-        state.getOrCreate(name);        
+        state.getOrCreate(name);
         return state.getThis(name);
     }
 

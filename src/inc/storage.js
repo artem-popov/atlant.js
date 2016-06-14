@@ -1,7 +1,7 @@
 var Storage = {
     storage: localStorage,
     listen: function(){
-        window.addEventListener('storage', this.onChange) 
+        window.addEventListener('storage', this.onChange)
     },
     stopListen: function(){
         window.removeEventListener('storage', this.onChange)

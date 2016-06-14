@@ -1,5 +1,5 @@
 "use strict";
-    
+
 var dependsName = function() {
     this.init = function(depName, state) {
         if (!depName) throw new Error('Atlant.js: developer: you forgot the "depName"!')
@@ -15,7 +15,7 @@ var dependsName = function() {
         upstream.ref = nameContainer.ref;
         return upstream
     }
-    
+
     this.tailFill = function(value, state){
         state.lastNameContainer.ref = value;
     }
@@ -50,7 +50,7 @@ var injectsGrabber = function() {
     }
     // Add invocation when mapping stream.
     this.add = function(depName, depValue, injects, upstream) {
-        if( !upstream.depends ) { upstream.depends = {}; } 
+        if( !upstream.depends ) { upstream.depends = {}; }
         upstream.depends[depName] = depValue;
 
         if( !upstream.injects ) upstream.injects = [];
@@ -61,7 +61,7 @@ var injectsGrabber = function() {
 }
 
 
-module.exports = { 
+module.exports = {
                 injectsGrabber:injectsGrabber
                 ,dependsName: dependsName
                 ,withGrabber: withGrabber

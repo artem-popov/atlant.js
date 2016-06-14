@@ -31,7 +31,7 @@ var _returnAll = function(path, masks){
                 .map(_return.bind(void 0, path))
                 .filter( function(_){ return _ })
                 .map(utils.stripLastSlash)
-                .reduce(function(acc, i){if(-1 === acc.indexOf(i)) acc.push(i); return acc}, []) // only unique elements because of stripped slash on end */ became * 
+                .reduce(function(acc, i){if(-1 === acc.indexOf(i)) acc.push(i); return acc}, []) // only unique elements because of stripped slash on end */ became *
 }
 
 var _parse = function(path, mask){
@@ -48,7 +48,7 @@ var _parseAll = function(path, masks){
 
     return utils.addSlashes(masks)
         .map(_parse.bind(void 0, path))
-        .reduce((acc, i) => ({ ...acc, ...i }), {}) 
+        .reduce((acc, i) => ({ ...acc, ...i }), {})
 }
 
 var _setTitle = function(titleStore, title){

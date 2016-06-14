@@ -42,9 +42,9 @@ var utils = function() {
             if (-1 === and) and = Infinity;
             q = (q > and) ? and : q;
 
-            return { 
+            return {
                 pathname: url.substring(0, q).trim()
-                ,search: url.substring(q+1).trim() 
+                ,search: url.substring(q+1).trim()
             }
         })
         /**
@@ -54,19 +54,19 @@ var utils = function() {
             return search
                         .replace('?', '&')
                         .split('&')
-                        .reduce( function(obj, pair) { 
+                        .reduce( function(obj, pair) {
                             pair = pair.split('=');
-                            if (pair[0]) obj[pair[0]] = pair[1]; 
-                            return obj; 
+                            if (pair[0]) obj[pair[0]] = pair[1];
+                            return obj;
                         }, {});
         })
         ,getLocation: function() {
             return window.location.pathname + window.location.search;
         }
         ,rebuildURL: function(path) {
-            path = this.parseURL( path ); 
-            if(path) { 
-                path = path.pathname + ( path.search ? '?' + path.search : ''); 
+            path = this.parseURL( path );
+            if(path) {
+                path = path.pathname + ( path.search ? '?' + path.search : '');
                 if( '/' === path[path.length - 1] && 1 !== path.length ) path = path.slice(0, path.length - 1);
             }
 
@@ -81,7 +81,7 @@ var utils = function() {
                 ,hostname: matches[11] || ''
                 ,port: matches[12] || ''
                 ,pathname: matches[13] || ''
-                ,search: matches[16] || '' 
+                ,search: matches[16] || ''
                 ,hashes: matches[17] || ''
             };
         }
@@ -92,17 +92,17 @@ var utils = function() {
             }
             return void 0;
         }
-       
+
     };
 }();
 
 utils.isIE = function()
 {
-    var isIE11 = navigator.userAgent.indexOf(".NET") > -1;      
+    var isIE11 = navigator.userAgent.indexOf(".NET") > -1;
     var isIELess11 = navigator.appVersion.indexOf("MSIE") > -1;
     var isMobileIE = navigator.userAgent.indexOf('IEMobile') > -1
     return isIE11 || isIELess11 || isMobileIE;
-     
+
 }
 
 utils.getScrollState = function(){
@@ -134,7 +134,7 @@ utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO 
     scrollState[url] = 0;
 
     setTimeout( () => history.pushState(state, null, url), 0 ) // setTimeout turns on safari optimizations and we didn't see the crazy jumps.
-    
+
 }
 
 
@@ -190,17 +190,17 @@ utils.getPattern = function(masks) {
 }
 
 utils.attachGuardToLinks = function() {
-    
+
     var linkDefender = function(event){
         if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which ) return;
         var element = event.target;
         var awaitLoad = void 0;
 
         while ( 'a' !== element.nodeName.toLowerCase() ){
-            if (element === document || ! (element = element.parentNode) ) return; 
+            if (element === document || ! (element = element.parentNode) ) return;
         }
 
-        var loc = element.getAttribute('href'); 
+        var loc = element.getAttribute('href');
         if ( !loc ) return;
 
         if ( event instanceof KeyboardEvent && 13 !== event.keyCode) return;
@@ -214,14 +214,14 @@ utils.attachGuardToLinks = function() {
         if ( (window.location.origin + loc ) === window.location.href) {
             event.preventDefault();
             return;
-        } 
+        }
 
-        // In case of it is the same link with hash - do not involve the atlant, just scroll to id. 
+        // In case of it is the same link with hash - do not involve the atlant, just scroll to id.
         // @TODO? don't prevent default and understand that route not changed at routeChanged state?
         if ( '#' === loc[0] || ( -1 !== loc.indexOf('#') && element.baseURI === location.origin + location.pathname )) {
 
             var elem;
-            var begin = loc.indexOf('#');  
+            var begin = loc.indexOf('#');
             var id = loc.slice( -1 === begin ? 1 : begin + 1, loc.length );
             if( '' !== id) elem = document.getElementById(id)
             if(elem) elem.scrollIntoView();
@@ -247,7 +247,7 @@ utils.attachGuardToLinks = function() {
  * @param when - compare mask
  * @returns (*)
  */
-utils.matchRoute = curry( memoize( function(path, mask){ 
+utils.matchRoute = curry( memoize( function(path, mask){
     // TODO(i): this code is convoluted and inefficient, we should construct the route matching
     //   regex only once and then reuse it
     var negate = '!' === mask[0];
@@ -306,8 +306,8 @@ utils.matchRoute = curry( memoize( function(path, mask){
 // addSlashes :: [mask] -> [mask]
 utils.addSlashes = function(masks){
     return masks
-        .map(function(i){ 
-            return [i, ('/' !== i[i.length-1]) ? i + '/' : i.slice(0, i.length-1)];  
+        .map(function(i){
+            return [i, ('/' !== i[i.length-1]) ? i + '/' : i.slice(0, i.length-1)];
         })
         .reduce(function(v, i) { return v.concat(i); }, [])
 }
@@ -325,9 +325,9 @@ utils.sanitizeUrl = function(url){
 
 utils.blockScroll = function(titleStore, title){// freezing view;
     var scrollPosition = window.scrollY;
-    if (utils.body && !('scrollRestoration' in history)) { 
-        utils.body.style.position = 'fixed'; 
-        utils.body.style.width = '100%'; 
+    if (utils.body && !('scrollRestoration' in history)) {
+        utils.body.style.position = 'fixed';
+        utils.body.style.width = '100%';
         utils.body.style.marginTop = - scrollPosition + 'px';
         return true;
     }
@@ -335,10 +335,10 @@ utils.blockScroll = function(titleStore, title){// freezing view;
 }
 
 utils.unblockScroll = function(titleStore, title){
-    if (utils.body && !('scrollRestoration' in history)) { 
-        utils.body.style.position = null; 
+    if (utils.body && !('scrollRestoration' in history)) {
+        utils.body.style.position = null;
         utils.body.style.width = null;
-        utils.body.style.marginTop = null; 
+        utils.body.style.marginTop = null;
         return true
     }
     return false

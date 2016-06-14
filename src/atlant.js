@@ -26,7 +26,7 @@ let tools = require('./inc/tools');
 // @TODO: #hashes are ignored
 // @TODO: check(true) to check only this view params (by specifically set fields or somehow)
 // @TODO: depCache to check only this dep params (by specifically set fields or somehow)
- 
+
 
 function Atlant(){
     var atlant = this;
@@ -59,7 +59,7 @@ function Atlant(){
         ,routes: []  // Routes collected
         ,devStreams: {
             renderEndStream: baseStreams.bus()
-            ,otherwiseStream: baseStreams.bus() 
+            ,otherwiseStream: baseStreams.bus()
             ,publishStream: baseStreams.bus()  // Here we can put init things.
             ,errorStream: baseStreams.bus()
             ,onDestroyStream: baseStreams.bus()
@@ -172,7 +172,7 @@ function Atlant(){
                         sink({
                             path: path
                             ,referrer: atlantState.lastPath
-                            ,history: event 
+                            ,history: event
                             // ,postponed: postponedCleanup
                         });
                     }
@@ -271,23 +271,23 @@ function Atlant(){
                         when.mask = void 0;
                     }
 
-                    return when 
+                    return when
                 })
                 .filter( _ => _.params )
                 .reduce( (acc, i) => {  // filtering all when's after matched one
                     if (i.isMatch) {
-                        acc.items.push(i) 
-                    } else if(!acc.found) { 
-                        if(!acc.found) { 
+                        acc.items.push(i)
+                    } else if(!acc.found) {
+                        if(!acc.found) {
                             acc.found = true;
                             acc.items.push(i)
                         }
                     }
 
-                    return acc 
+                    return acc
                 }, {found: false, items: []})
 
-            _whens.items.forEach( whenData => { 
+            _whens.items.forEach( whenData => {
                 if(whenData.isMatch && types.Matching.once === whenData.matchingBehaviour && whenData.isDone) return;
 
                 whenData.isDone = true;
@@ -297,14 +297,14 @@ function Atlant(){
 
                 var depData = {
                     location: upstream.path
-                    ,mask: whenData.mask 
-                    ,pattern: whenData.mask 
+                    ,mask: whenData.mask
+                    ,pattern: whenData.mask
                     ,masks: whenData.route.masks
                     ,referrer: upstream.referrer
                     ,history: upstream.history
                     ,params: whenData.params
                 };
-                depData = { ...depData, ...whenData.params }; 
+                depData = { ...depData, ...whenData.params };
                 atlantState.whenData = depData;
 
                 if (whenData.when.type === types.WhenOrMatch.when && ('function' === typeof whenData.scrollToTop.value ? whenData.scrollToTop.value(depData) : whenData.scrollToTop.value) && 'undefined' !== typeof window) {
@@ -328,12 +328,12 @@ function Atlant(){
             if ( !_whens.items.length || !_whens.found ) {  // Only matches or nothing at all
                 atlantState.devStreams.otherwiseStream.push(upstream);
                 return
-            } 
+            }
 
         }))
 
 
-    // Base 
+    // Base
 
     // When
 
@@ -367,9 +367,9 @@ function Atlant(){
             TopState.state.scrollToTop = scrollToTop;
 
             if( types.WhenOrMatch.when === whenType ) // Informational thing
-                masks.forEach( _ => atlantState.routes.push( utils.stripLastSlash(_) ) ) 
+                masks.forEach( _ => atlantState.routes.push( utils.stripLastSlash(_) ) )
 
-            atlantState.whens[name] = { 
+            atlantState.whens[name] = {
                 when: { id: whenId, type: whenType},
                 route: { masks: masks, fn: fn},
                 isFinally: false,
@@ -412,7 +412,7 @@ function Atlant(){
         return this;
     }
 
-    // Not ordered commands 
+    // Not ordered commands
 
     // Function: skip
     // Skip: Sets the list of route masks which should be skipped by Atlant.
@@ -472,7 +472,7 @@ function Atlant(){
         s.type(viewName, 'string');
         s.type(selector, 'string');
 
-        prefs.render.attach(viewName, selector); 
+        prefs.render.attach(viewName, selector);
 
         return this;
     }
@@ -507,8 +507,8 @@ function Atlant(){
         TopState.first();
         TopState.state.lastStoreName = storeName;
 
-        if ( !(storeName in atlantState.stores) ) atlantState.stores[storeName] = { 
-            _constructor: void 0, 
+        if ( !(storeName in atlantState.stores) ) atlantState.stores[storeName] = {
+            _constructor: void 0,
             updater: void 0,
             value: Storage.load(storeName) || void 0,
             staticValue: Storage.load(storeName) || void 0,
@@ -539,7 +539,7 @@ function Atlant(){
         atlantState.stores[storeName]._constructor = _ => Storage.load(storeName) || constructorProvider();
         atlantState.stores[storeName].changes = baseStreams.bus();
         atlantState.stores[storeName].staticValue = atlantState.stores[storeName]._constructor();
-        atlantState.stores[storeName].bus = atlantState.stores[storeName].changes.scan(atlantState.stores[storeName].staticValue, function(storeName, state, updater){ 
+        atlantState.stores[storeName].bus = atlantState.stores[storeName].changes.scan(atlantState.stores[storeName].staticValue, function(storeName, state, updater){
             var newState = updater(s.copy(state)); // Copying here is necessary for successfull equality checks: else this checks will return always true
             atlantState.stores[storeName].staticValue = newState;
 
@@ -561,7 +561,7 @@ function Atlant(){
     var setUpdater = function(storeName, updaterName, updater){
         if ( updaterName in atlantState.stores[storeName].updaters ) { throw new Error("Cannot reimplement updater ", updaterName, " in store ", storeName)}
         if( !(updaterName in atlantState.emitStreams ) ) atlantState.emitStreams[updaterName] = baseStreams.bus();
-        
+
         atlantState.stores[storeName].updaters[updaterName] = updater;
 
         baseStreams.onValue(atlantState.emitStreams[updaterName], function(storeName, updater, updaterName, scope){ // scope is the value of .update().with(scope) what was pushed in
@@ -614,7 +614,7 @@ function Atlant(){
 
         prefs.render.destroy(); // Destroying view cache
 
-        baseStreams.destroy(); 
+        baseStreams.destroy();
 
         s = l = simpleRender = reactRender = utils = Bacon = interfaces = StateClass = clientFuncs =  safeGoToCopy = null;// @TODO more
 
@@ -657,16 +657,16 @@ function Atlant(){
     this.action = function(actionName, fn) { atlant.streams.get.call(this, actionName, fn, true); return this }
 
     // creates branch which can destruct all what declared by .when() or .match()
-    // this.finally =  _finally; // was removed, not reimplemented yet 
+    // this.finally =  _finally; // was removed, not reimplemented yet
 
     // side-effect
-    this.interceptor = function(fn) {  
+    this.interceptor = function(fn) {
         var interceptorName = 'interceptor-' + uniqueId();
         atlantState.interceptors.push(interceptorName);
 
         try{
-            atlant.streams.get.call(this, interceptorName, fn, false); 
-        } catch(e){ 
+            atlant.streams.get.call(this, interceptorName, fn, false);
+        } catch(e){
             delete atlantState.interceptors[atlantState.interceptors.indexOf(interceptorName)]
         }
 
@@ -690,9 +690,9 @@ function Atlant(){
     this.scrollToTop = _scrollToTop;
 
     // Setups
-    // If true then view will be re-rendered only when injects are changed. Accepts boolean. Default true 
+    // If true then view will be re-rendered only when injects are changed. Accepts boolean. Default true
     this.check = _check;
-    // wait or not for resources loading when going to next route when link tapped 
+    // wait or not for resources loading when going to next route when link tapped
     this.await = _await;
     // Display all internal messages.
     this.verbose = _verbose;
@@ -764,9 +764,9 @@ function Atlant(){
      // These commands doesn't return "this".
     // Returns atlant.js version
 
-    this.version = version; 
+    this.version = version;
     // Returns timestamp of the creation time
-    this.build = build; 
+    this.build = build;
 
     this.destroy = _destroy;
     this.isServer = function(){ return 'undefined' === typeof window }
@@ -782,7 +782,7 @@ function Atlant(){
     this.state = {}
 
     this.data = {
-        get routes() { return uniq(atlantState.routes) }    // @TODO better not to double it for info :)  
+        get routes() { return uniq(atlantState.routes) }    // @TODO better not to double it for info :)
     }
     // This command will immediatelly redirect to param url
     this.goTo = _redirectTo;
@@ -798,26 +798,26 @@ function Atlant(){
     // Create stream which cannot be intercepted
     this.interceptorStream = (name) => new AtlantStreamConstructor(name, atlantState, { ...prefs, canBeIntercepted: false });
 
-    this.streams = { 
-        get: (name, fn) => { 
-            if ('string' !== typeof name) { 
-                if(fn) console.warn('Failed stream source:', fn); 
+    this.streams = {
+        get: (name, fn) => {
+            if ('string' !== typeof name) {
+                if(fn) console.warn('Failed stream source:', fn);
                 throw new Error('Provide AtlantStream name.')
             }
 
-            if (!name) { 
+            if (!name) {
               if(fn) console.warn('Failed stream source:', fn);
-              throw new Error('Atlant.js stream name is not provided!') 
+              throw new Error('Atlant.js stream name is not provided!')
             };
 
             let stream = atlantState.streams[name];
 
             if (fn && stream && stream.isAttached()) {
                 console.warn('source:', fn);
-                throw new Error('Several actions with 1 name is not supported. The ' + name + ' is not unique.') 
+                throw new Error('Several actions with 1 name is not supported. The ' + name + ' is not unique.')
             }
-            
-            if (fn && stream && !stream.isAttached()) { 
+
+            if (fn && stream && !stream.isAttached()) {
               stream.attach(fn);
             }
 

@@ -7,20 +7,20 @@ var Log = function Log(){
     var level;
     var atlantPrefix = 'Atlant.js: ';
 
-    Object.defineProperty(this, 'verbose', { 
-        get: () => on 
+    Object.defineProperty(this, 'verbose', {
+        get: () => on
         ,set: _ => { on = _; return on }
     });
 
-    Object.defineProperty(this, 'level', { 
-        get: () => level 
+    Object.defineProperty(this, 'level', {
+        get: () => level
         ,set: _ => { if(_ === 'errors' || _ === 'warnings') level = _; return level }
     });
-    
+
     this.log = function(...args) {
         if (!on) return;
         if(level === 'errors' || level === 'warnings') return;
-        
+
         console.log(atlantPrefix, ...args)
     }
 
@@ -42,7 +42,7 @@ var Log = function Log(){
         if (console.time) {
             return console.time(atlantPrefix + name)
         }
-    } 
+    }
 
     this.timeEnd = function(name) {
         if (!on) return;

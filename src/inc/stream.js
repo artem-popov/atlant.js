@@ -24,16 +24,16 @@ export function AtlantStream(name, theFn, atlantState){
 
     let subscribers = []; // fn's which subscribed to stream.
     let waiters = []; // here pushes which come before stream has fn attached.
-    let unsubscribe = () => subscribers = []; 
+    let unsubscribe = () => subscribers = [];
     let worker = depValue => {
         if ('undefined' === typeof depValue) {
             depValue = {};
         }
         if ('object' === typeof depValue) {
-            depValue = { ...{params: atlantState.whenData}, ...depValue }; 
+            depValue = { ...{params: atlantState.whenData}, ...depValue };
         }
 
-        var userStream = fn(); 
+        var userStream = fn();
 
         if (userStream instanceof AtlantStreamConstructor) { console.warn('Failed stream source:', fn); throw new Error('You should end the AtlantStreamConstructor to create AtlantStream. Try add more .end()\'s ') };
         if (!userStream || !(userStream instanceof AtlantStream)){ console.warn('Failed stream source:', fn); throw new Error('Constructor function should return AtlantStream.') };
@@ -49,19 +49,19 @@ export function AtlantStream(name, theFn, atlantState){
     let push = (isSync, args) => {  // If it is constructor stream, then it postpones pushes till fn generator will be attached.
       let workerSync = () => worker(args);
       let workerAsync = () => setTimeout( () => worker(args), 0);
-      let pusher = isSync ? workerSync : workerAsync; 
+      let pusher = isSync ? workerSync : workerAsync;
       if (!this.isAttached()) { console.log('action:', name, 'is not ready!'); waiters.push(pusher); }
       else pusher();
     }
 
-    let pushBus = (isSync, args) => { 
+    let pushBus = (isSync, args) => {
       let syncCall = () => bus.push(args);
       let asyncCall = () => setTimeout( () => bus.push(args), 0);
-      let pusher = isSync ? syncCall : asyncCall; 
+      let pusher = isSync ? syncCall : asyncCall;
       pusher();
     }
 
-    this.attach = _ => { 
+    this.attach = _ => {
       if (!this.isAttached() && _ && typeof _ === 'function') {
         fn = _;
         waiters.forEach(_ => _());
@@ -86,7 +86,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
     var dependsName = new interfaces.dependsName();
     var withGrabber = new interfaces.withGrabber();
     var id = uniqueId();
-    
+
     let atlantStream = new AtlantStream(name, void 0, false, atlantState);
 
     let unsubscribeView = views(atlantState);
@@ -101,15 +101,15 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
     var renderView = function(){
 
         let renderIntoView = function(viewProvider, upstream, viewName, render, scope) {
-            var renderD = s.promiseD( render ); // decorating with promise 
+            var renderD = s.promiseD( render ); // decorating with promise
             return renderD(viewProvider, upstream, atlantState.activeStreamId, viewName, scope)
                 .then(function(_){
                     // @TODO make it better
-                    // using copy of upstream otherwise the glitches occur. 
+                    // using copy of upstream otherwise the glitches occur.
                     var selects = upstream.selects;
                     upstream.selects = void 0;
 
-                    var stream = s.clone(upstream); 
+                    var stream = s.clone(upstream);
 
                     stream.selects = selects;
                     upstream.selects = selects;
@@ -118,7 +118,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                     } else {
                         stream.render.component = _;  // pass rendered component. it stale hold before streams get zipped.
                     }
-                    return stream 
+                    return stream
                 })
         }
 
@@ -133,7 +133,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
 
             // if (upstream.render.subscribe) streamState.subscribersCount++;
 
-            atlantState.viewSubscriptionsUnsubscribe[viewName] = atlantState.viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, value){ 
+            atlantState.viewSubscriptionsUnsubscribe[viewName] = atlantState.viewSubscriptions[viewName].onValue(function(upstream, viewName, scope, doRenderIntoView, value){
                 let start = performance.now();
 
                 value =  Object.keys(upstream.chains)
@@ -148,7 +148,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                 window.selectCount++;
                 window.getSelectTime = () => window.selectTime/window.selectCount;
 
-                let data = { ...scope, ...value };   
+                let data = { ...scope, ...value };
 
                 if ( !isEqual(data, atlantState.viewData[viewName] ) ) {
                     scope = data;
@@ -158,18 +158,18 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                     if(streamState.resolveWhen && streamState.resolveWhen(data)){
                         streamState.resolveBus.push(data)
                     }
-                } 
+                }
 
                 return upstream;
 
             }.bind(void 0, upstream, viewName, scope, doRenderIntoView ));
 
-        } 
+        }
 
         return function(upstream){
-                    if( void 0 === upstream || atlantState.activeStreamId.value !== upstream.id ) return false; 
+                    if( void 0 === upstream || atlantState.activeStreamId.value !== upstream.id ) return false;
 
-                    try{ 
+                    try{
                         var viewName = s.dot('.render.viewName', upstream);
                         if (!viewName) return;
                         // Choose appropriate render.
@@ -204,7 +204,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                         }  else if (types.RenderOperation.replace === upstream.render.renderOperation ){
 
                             var path = s.apply(viewProvider, scope);
-                            atlantState.lastPath = path; 
+                            atlantState.lastPath = path;
                             utils.replace(path); // just rename url
 
 
@@ -242,7 +242,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
 
 
                             return renderResult;
- 
+
                         }
 
                     } catch (e) {
@@ -281,7 +281,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                 }
 
                 var stream = injectsGrabber.add(depName, depValue, injects, {});
-                stream = dependsName.add( depName, nameContainer, stream); 
+                stream = dependsName.add( depName, nameContainer, stream);
                 stream.params = { ...depValue };
 
                 stream.stats = stats;
@@ -313,7 +313,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
 
             if ('function' !== typeof dep) {
                 stream = stream
-                    .map( function(opId, depName, dep, upstream) { 
+                    .map( function(opId, depName, dep, upstream) {
                         if (!upstream.depends) upstream.depends = {};
                         upstream.depends[depName] = dep;
                         upstream.opId= opId;
@@ -324,9 +324,9 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                 stream = stream
                     .flatMap(function(store, depName, dep, isAtom, upstream) {  // Execute the dependency
                         var scope = clientFuncs.createScope(upstream);
-                        var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id; 
+                        var where = (upstream.with && 'value' in upstream.with) ? upstream.with.value : s.id;
                         var atomParams = ( (scope, where, updates) => where({ ...scope, ...updates }) ).bind(this, scope, where);
-                        
+
                         var treatDep = s.compose( clientFuncs.convertPromiseD, s.promiseTryD );
                         var atomValue = atomParams();
                         return treatDep( dep )( atomValue )
@@ -343,13 +343,13 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                                     scan.onValue(_ => { if(_ === 0) {finish.push(results)} } );
 
                                     atlantState.interceptors
-                                        .forEach( name => { 
+                                        .forEach( name => {
                                             atlantState.atlant.streams.push(name, {name: upstream.ref, value: results})
-                                            const stream = atlantState.finishes[name].map(_ => { 
-                                                return _.then( _ => counter.push(1) ).catch( _ => { 
-                                                    finish.push(Bacon.End()) 
+                                            const stream = atlantState.finishes[name].map(_ => {
+                                                return _.then( _ => counter.push(1) ).catch( _ => {
+                                                    finish.push(Bacon.End())
                                                 })
-                                            }) 
+                                            })
 
                                             stream.onValue(_ => _);
                                         })
@@ -357,7 +357,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                                         res.onValue(_ => _)
                                     return res
                                 } else {
-                                    return results 
+                                    return results
                                 };
 
                             }.bind(void 0, upstream, atomParams))
@@ -368,9 +368,9 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                                 if ( !upstream.atomIds ) upstream.atomIds = [];
 
                                 if ( 'undefined' !== typeof store && isAtom) {
-                                    upstream.atomParams = atomParams; 
+                                    upstream.atomParams = atomParams;
                                     upstream.atomIds.push({ ref: upstream.ref, fn: atomParams, partProvider: store.partProvider, storeData: store.storeData });
-                                } 
+                                }
 
                                 return upstream;
                             }.bind(void 0, upstream, atomParams, store, depName, isAtom, atomValue))
@@ -386,10 +386,10 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
             stream = stream // Add select subscriptions
                 .map(function(depName, store, dep, isAtom, upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
 
-                    // if( !('ref' in upstream) || 'undefined' === typeof upstream.ref || '' === upstream.ref  ) { 
+                    // if( !('ref' in upstream) || 'undefined' === typeof upstream.ref || '' === upstream.ref  ) {
                     //     throw new Error('Every select should have name.')
                     // }
- 
+
                     if ( 'undefined' !== typeof upstream.ref && 'undefined' !== typeof store && isAtom ) {
                         if ( !( 'chains' in upstream ) ) upstream.chains = {};
                         if (!(store.storeName in upstream.chains)) upstream.chains[store.storeName] = [];
@@ -400,7 +400,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                         var getValue = function( ref, atomParams, u ){
                             let params = atomParams.bind(this, u);
                             let res = dep()(params);
-                            let result = { ...u, ...{ [ref]: res } };  
+                            let result = { ...u, ...{ [ref]: res } };
                             return result
                         }.bind( void 0, upstream.ref, upstream.atomParams );
 
@@ -491,7 +491,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                 return stream;
             }.bind(void 0, ifId, depName, injects))
 
-        var thisElse = commonIf 
+        var thisElse = commonIf
             .map( _ => ({..._}) ) // Copy
             .filter( _ => !boolTransform(_.check) )
             .map( function(ifId, depName, injects, upstream) {
@@ -508,7 +508,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
         State.state.lastDep = void 0
 
         // Nulling for async
-        // State.state.lastAsync = void 0; 
+        // State.state.lastAsync = void 0;
         // State.state.lastBeforeAsync = thisIf;
 
         return this;
@@ -539,14 +539,14 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
     var closeBlock = (renderOperation, viewName) => {
         if (void 0 !== renderOperation && renderOperation === types.RenderOperation.draw) return this;
 
-        if (void 0 !== State.state.lastIf ){ 
+        if (void 0 !== State.state.lastIf ){
 
             var dep = State.state.lastDep ? State.state.lastDep.merge(State.state.lastElse) : void 0;
-            var op = State.state.lastOp.merge(State.state.lastElse); 
+            var op = State.state.lastOp.merge(State.state.lastElse);
 
-            State.rollback(); 
+            State.rollback();
 
-            State.state.lastDep = dep; 
+            State.state.lastDep = dep;
             State.state.lastOp = op;
 
             return this
@@ -583,28 +583,28 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
             if ( !viewName ) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
 
             var closeThisBlock = closeBlock.bind(this, renderOperation, viewName );
-            
+
             // ------end of check/
 
             let subscribe  = 'once' !== once ? true : false;
             var renderId = uniqueId();
 
-            
+
             var renderStream = State.state.lastOp.flatMap( function(upstream){
                 if (!upstream.isAction && upstream.id !== atlantState.activeStreamId.value) return Bacon.never(); // Obsolete streams invoked on previous route.
 
                 upstream.render = { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: renderOperation, subscribe: subscribe, parent: State.state.lastOpId };
-            
+
                 return Bacon.fromPromise(renderView(upstream))
             })
 
 
-            if (renderOperation === types.RenderOperation.draw){ 
+            if (renderOperation === types.RenderOperation.draw){
                 State.state.lastOp = renderStream;
                 State.state.lastOpId = renderId;
             } else {
                 renderStream.onValue(_=>_);
-            } 
+            }
 
             return closeThisBlock();
         }
@@ -690,7 +690,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
     // Create scope for prefixed method (currently .select(), .update(), .depends())
     var _with = function(scopeProvider){
         var scopeProvider = (typeof(scopeProvider) === 'undefined') ? _ => ({}) : scopeProvider;
-        if (typeof scopeProvider !== 'function') { 
+        if (typeof scopeProvider !== 'function') {
           console.warn('param passed:', scopeProvider);
           throw new Error('.with should receive a function')
         }
@@ -704,7 +704,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
 
 
     var _as = function(name) {
-        dependsName.tailFill(name, State.state);            
+        dependsName.tailFill(name, State.state);
         return this
     }
 
@@ -714,7 +714,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
     }
 
     /**
-     *  Asyncroniously run the dependency. 
+     *  Asyncroniously run the dependency.
      */
     this.async =  function( dependency ) { return _depends.bind(this)( dependency, types.Depends.async) };
     /*
@@ -760,7 +760,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
     this.if = _if.bind(this, s.id);
     this.unless =  _if.bind(this, s.negate);
     this.end = _end;
-    this.resolveWhen = _resolveWhen; 
+    this.resolveWhen = _resolveWhen;
     /**
      * Renders declaratins
      */
@@ -777,7 +777,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
 
     /* Do not subscribe selects on view */
     this.drawOnce = function(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'once', types.RenderOperation.draw);}
-    
+
     /* clears default or provided viewName */
     this.clear = function(viewName) {return _render.bind(this)(function(){}, viewName, 'once', types.RenderOperation.clear);}
 

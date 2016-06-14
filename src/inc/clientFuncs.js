@@ -12,8 +12,8 @@ var convertPromiseD = curry(function(promiseProvider, upstream) {
     var promise = promiseProvider( upstream );
     if ( s.isPromise( promise ) ){
         promise = promise
-            .catch( function(e) {  
-                if (e.stack) { 
+            .catch( function(e) {
+                if (e.stack) {
                     catchError(e);
                 }
                 return Promise.reject(e)
@@ -36,7 +36,7 @@ var getRefsData = function( upstream ) {
     var fn = function(res, depName, refName) {
         if ( 'undefined' !== refName && depName in upstream.depends ) {
             res[refName] = upstream.depends[depName];
-            if ('function' === typeof res[refName]) { 
+            if ('function' === typeof res[refName]) {
                 res[refName] = res[refName]()
             }
         }
@@ -62,7 +62,7 @@ var getScopeDataFromStream = function( upstream ){
     * Injects depend values from upstream into object which is supplyed first.
     */
 var createScope = function ( upstream ) {
-    var refsData = getRefsData( upstream ); 
+    var refsData = getRefsData( upstream );
 
     var injects = s.compose( s.reduce((acc,_) => ({...acc, ..._}), {}), s.dot('injects') )(upstream);
     var joins = s.filter( function(inject){ return inject.hasOwnProperty('injects') }, injects);
@@ -80,24 +80,24 @@ var createScope = function ( upstream ) {
 
         if ( !inject.hasOwnProperty('injects') ) {
             return s.baconTryD(function() {
-                return inject.expression(upstream.depends[inject.name]) 
+                return inject.expression(upstream.depends[inject.name])
             })
-        } else {  
+        } else {
             return s.baconTryD(function() {
-                return inject.expression( { ...refsData, ...injectsData.object } ) 
+                return inject.expression( { ...refsData, ...injectsData.object } )
             })
         }
     }
 
     var takeAccessor = s.flipDot(upstream);
     var takeFunction = function(fn){return fn.apply();}
-    var fullfil = s.map( s.compose( s.ifelse(s.typeOf('string'), takeAccessor, takeFunction), formatInjects)); 
+    var fullfil = s.map( s.compose( s.ifelse(s.typeOf('string'), takeAccessor, takeFunction), formatInjects));
 
     injectsData.object = fullfil( injects );
     var data = injectsData.object;
     var joinsData = fullfil( joins );
 
-    data = { ...refsData, ...upstream.params, ...data, ...joinsData }; 
+    data = { ...refsData, ...upstream.params, ...data, ...joinsData };
 
     return data;
 };
@@ -111,7 +111,7 @@ var catchError = function(e) {
     return e;
 }
 
-module.exports = { 
+module.exports = {
     convertPromiseD: convertPromiseD
     ,applyScopeD: applyScopeD
     ,createScope: createScope
