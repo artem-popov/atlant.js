@@ -376,8 +376,8 @@ var s = (function(){
        Object.keys(source).forEach(key => {
          if (this.isPlainObject(source[key])) {
 
-           if (!target[key]) target = { ...target, ...{ [key]: {} } };
-           this.mergeDeep(target[key], source[key]);
+           if (!target[key]) target = { ...target, ...{ [key]: {} }};
+           target[key] = this.mergeDeep(target[key], source[key]);
          } else {
            target = { ...target, ...{ [key]: source[key] } };
          }
