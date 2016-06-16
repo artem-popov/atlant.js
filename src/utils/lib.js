@@ -4,6 +4,7 @@ var container = Object.create(null);
 
 import console from './log';
 import curry from 'lodash/curry';
+import cloneDeep from 'lodash/cloneDeep';
 
 const Bacon = require('baconjs');
 
@@ -371,26 +372,50 @@ var s = (function(){
     * @param target
     * @param source
     */
-   this.mergeDeep = (target, source) => {
-     if (this.isPlainObject(target) && this.isPlainObject(source)) {
-       Object.keys(source).forEach(key => {
-         if (this.isPlainObject(source[key])) {
+   // this.mergeDeep = (target, source) => {
+   //
+   //   if (this.isPlainObject(target) && this.isPlainObject(source)) {
+   //     Object.keys(source).forEach(key => {
+   //       if (this.isPlainObject(source[key])) {
+   //
+   //         if (!target[key]) target = { ...target, ...{ [key]: {} }};
+   //         target[key] = this.mergeDeep(target[key], source[key]);
+   //       } else {
+   //
+   //         target = { ...target, ...{ [key]: source[key] } };
+   //       }
+   //     });
+   //   }
+   //   return target;
+   // }
 
-           if (!target[key]) target = { ...target, ...{ [key]: {} }};
-           target[key] = this.mergeDeep(target[key], source[key]);
-         } else {
-           target = { ...target, ...{ [key]: source[key] } };
-         }
-       });
-     }
-     return target;
-   }
 
-   this.clone = _ => this.mergeDeep({}, _);
 
+   // this.clone = _ => this.mergeDeep({}, _);
+
+   this.clone = function(obj) {
+       return _.cloneDeep(obj, function(value) {
+           if (_.isFunction(value) || !_.isPlainObject(value)) {
+               return value;
+           }
+       })
+    }
 
    this.maybeS = this.maybe.bind(this, '')
    this.maybeV = this.maybe.bind(this, void 0)
+
+   this.deferred = () => {
+      var resolve, reject, promise;
+      if ('undefined' !== typeof Promise) promise = new Promise(function(resolver, rejecter){ resolve = resolver; reject = rejecter });
+      return { promise, resolve, reject }
+   }
+
+   this.onNextEventLoop = (f) => {
+      let { promise, resolve, reject } = this.deferred();
+      setTimeout(() => { let value = f();
+        return value.then(resolve).catch(reject) }, 0);
+      return promise
+   }
 
    return this;
 

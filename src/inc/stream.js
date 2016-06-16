@@ -16,17 +16,19 @@ import views from "../views/views";
 import console from '../utils/log';
 import { uniqueId } from '../utils/lib';
 
-export function AtlantStream(name, theFn, atlantState){
+export function AtlantStream(name, atlantState, from = 'fromUser'){
     let bus = baseStreams.bus();
     let resolveBus = baseStreams.bus();
-    let finishBus = baseStreams.bus();
-    let fn = theFn;
+    let fn;
 
     let subscribers = []; // fn's which subscribed to stream.
     let waiters = []; // here pushes which come before stream has fn attached.
     let unsubscribe = () => subscribers = [];
     let worker = depValue => {
+        const { promise, resolve, reject } = s.deferred();
+
         if ('undefined' === typeof depValue) {
+
             depValue = {};
         }
         if ('object' === typeof depValue) {
@@ -38,37 +40,49 @@ export function AtlantStream(name, theFn, atlantState){
         if (userStream instanceof AtlantStreamConstructor) { console.warn('Failed stream source:', fn); throw new Error('You should end the AtlantStreamConstructor to create AtlantStream. Try add more .end()\'s ') };
         if (!userStream || !(userStream instanceof AtlantStream)){ console.warn('Failed stream source:', fn); throw new Error('Constructor function should return AtlantStream.') };
 
-        userStream.then( _ => { console.log('action(resolved):', _); finishBus.push(_) } )
-        console.warn('action:', name, depValue, userStream)
+        userStream.then( _ => { console.log('action(resolved):', _); resolve() } )
+        console.log('depValue:', name, depValue, atlantState.whenData)
         userStream.push(depValue); // AtlantStream
         console.warn('action: pushed:', name, depValue)
 
+        return promise
     }
 
     this.isAttached = () => !!fn;
+
     let push = (isSync, args) => {  // If it is constructor stream, then it postpones pushes till fn generator will be attached.
-      let workerSync = () => worker(args);
-      let workerAsync = () => setTimeout( () => worker(args), 0);
+      let { promise, resolve, reject } = s.deferred();
+
+      console.log('push stream args:', name, args)
+      let workerSync = () => worker(args).then(resolve).catch(reject);
+      let workerAsync = () => s.onNextEventLoop(() => worker(args)).then(resolve).catch(reject);
       let pusher = isSync ? workerSync : workerAsync;
-      if (!this.isAttached()) { console.log('action:', name, 'is not ready!'); waiters.push(pusher); }
-      else pusher();
+
+      if (!this.isAttached()) { console.log('action:', name, 'is not ready!'); waiters.push(pusher) }
+      else { console.log('Detected push to action:', name, fn); pusher() }
+
+      return promise
     }
 
     let pushBus = (isSync, args) => {
+      console.log('push bus args:', name, args)
       let syncCall = () => bus.push(args);
-      let asyncCall = () => setTimeout( () => bus.push(args), 0);
+      let asyncCall = () => setTimeout(() => bus.push(args)); // We don'y neet to return a promise here
       let pusher = isSync ? syncCall : asyncCall;
-      pusher();
+      return pusher();
     }
 
     this.attach = _ => {
       if (!this.isAttached() && _ && typeof _ === 'function') {
         fn = _;
+        console.log('And finally it get name!:', name, 'fn', fn);
         waiters.forEach(_ => _());
+        waiters = [];
       }
     }
-    this.pushSync = !!fn ? push.bind(this, true) : pushBus.bind(this, true);
-    this.push = !!fn ? push.bind(this, false) : pushBus.bind(this, false);
+
+    this.pushSync = (args) => from === 'fromUser' ? push(true, args) : pushBus(true, args);
+    this.push = (args) => from === 'fromUser' ? push(false, args) : pushBus(false, args);
     this.then = fn => (subscribers.push(fn), unsubscribe); // Register subscribers
 
     this._exportBus = () => bus; // @TODO deprecated
@@ -87,7 +101,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
     var withGrabber = new interfaces.withGrabber();
     var id = uniqueId();
 
-    let atlantStream = new AtlantStream(name, void 0, false, atlantState);
+    let atlantStream = new AtlantStream(name, false, atlantState, 'fromConstructor');
 
     let unsubscribeView = views(atlantState);
 
@@ -104,20 +118,12 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
             var renderD = s.promiseD( render ); // decorating with promise
             return renderD(viewProvider, upstream, atlantState.activeStreamId, viewName, scope)
                 .then(function(_){
-                    // @TODO make it better
-                    // using copy of upstream otherwise the glitches occur.
-                    var selects = upstream.selects;
-                    upstream.selects = void 0;
+                    var stream = { ...upstream };
 
-                    var stream = s.clone(upstream);
-
-                    stream.selects = selects;
-                    upstream.selects = selects;
-
-                    if(_.code && 'notActiveStream' === _.code){
-                    } else {
+                    if(!_.code || 'notActiveStream' !== _.code){
                         stream.render.component = _;  // pass rendered component. it stale hold before streams get zipped.
                     }
+
                     return stream
                 })
         }
@@ -344,14 +350,10 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
 
                                     atlantState.interceptors
                                         .forEach( name => {
-                                            atlantState.atlant.streams.push(name, {name: upstream.ref, value: results})
-                                            const stream = atlantState.finishes[name].map(_ => {
-                                                return _.then( _ => counter.push(1) ).catch( _ => {
-                                                    finish.push(Bacon.End())
-                                                })
+                                            let finishes = atlantState.atlant.streams.get(name).push({name: upstream.ref, value: results});
+                                            finishes.then( _ => counter.push(1) ).catch( _ => {
+                                              finish.push(Bacon.End())
                                             })
-
-                                            stream.onValue(_ => _);
                                         })
 
                                         res.onValue(_ => _)

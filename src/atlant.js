@@ -70,7 +70,6 @@ function Atlant(){
         ,viewSubscriptions: {}
         ,streams: {}
         ,fns: {}
-        ,finishes: {}
         ,interceptors: []
         ,atlant: this
         ,scrollState: utils.getScrollState()
@@ -817,23 +816,16 @@ function Atlant(){
                 throw new Error('Several actions with 1 name is not supported. The ' + name + ' is not unique.')
             }
 
+            if (!stream) {
+                stream = new AtlantStream(name, atlantState);
+                atlantState.streams[name] = stream;
+            }
+
             if (fn && stream && !stream.isAttached()) {
               stream.attach(fn);
             }
 
-            if (!stream) {
-                stream = new AtlantStream(name, fn, atlantState);
-                atlantState.streams[name] = stream;
-            }
-
             return stream;
-        },
-        push: (name, value) => {
-            if (!atlantState.streams[name]) throw new Error('Wrong stream name provided:' + name);
-
-            atlantState.streams[name].push(value);
-
-            return atlantState.streams[name];
         }
     }
 
