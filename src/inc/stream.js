@@ -517,8 +517,6 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
         s.type(key, 'string');
         if ( ! State.state.lastDepName ) throw new Error('.inject should follow .depends');
 
-        console.warn(`Use of atlant.inject( ${key}, ${expression} ) is deprecated for ${atlantState.lastMask}`);
-
         State.state.lastInjects[key] = { name: State.state.lastDepName, expression: expression };
 
         return this;
@@ -527,8 +525,6 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
     var _join = function( key, expression ) {
         s.type(key, 'string');
         State.state.lastInjects[key] = { name: State.state.lastDepName, expression: expression, injects: Array.prototype.slice.apply(State.state.lastInjects) };
-
-        console.warn(`Use of atlant.join( ${key}, ${expression} ) is deprecated for ${atlantState.lastMask}`);
 
         return this;
     }
