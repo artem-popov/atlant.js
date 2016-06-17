@@ -40,10 +40,8 @@ export function AtlantStream(name, atlantState, from = 'fromUser'){
         if (userStream instanceof AtlantStreamConstructor) { console.warn('Failed stream source:', fn); throw new Error('You should end the AtlantStreamConstructor to create AtlantStream. Try add more .end()\'s ') };
         if (!userStream || !(userStream instanceof AtlantStream)){ console.warn('Failed stream source:', fn); throw new Error('Constructor function should return AtlantStream.') };
 
-        userStream.then( _ => { console.log('action(resolved):', _); resolve() } )
-        console.log('depValue:', name, depValue, atlantState.whenData)
+        userStream.then(resolve);
         userStream.push(depValue); // AtlantStream
-        console.warn('action: pushed:', name, depValue)
 
         return promise
     }
@@ -53,19 +51,17 @@ export function AtlantStream(name, atlantState, from = 'fromUser'){
     let push = (isSync, args) => {  // If it is constructor stream, then it postpones pushes till fn generator will be attached.
       let { promise, resolve, reject } = s.deferred();
 
-      console.log('push stream args:', name, args)
       let workerSync = () => worker(args).then(resolve).catch(reject);
       let workerAsync = () => s.onNextEventLoop(() => worker(args)).then(resolve).catch(reject);
       let pusher = isSync ? workerSync : workerAsync;
 
       if (!this.isAttached()) { console.log('action:', name, 'is not ready!'); waiters.push(pusher) }
-      else { console.log('Detected push to action:', name, fn); pusher() }
+      else { pusher() }
 
       return promise
     }
 
     let pushBus = (isSync, args) => {
-      console.log('push bus args:', name, args)
       let syncCall = () => bus.push(args);
       let asyncCall = () => setTimeout(() => bus.push(args)); // We don'y neet to return a promise here
       let pusher = isSync ? syncCall : asyncCall;
@@ -75,7 +71,6 @@ export function AtlantStream(name, atlantState, from = 'fromUser'){
     this.attach = _ => {
       if (!this.isAttached() && _ && typeof _ === 'function') {
         fn = _;
-        console.log('And finally it get name!:', name, 'fn', fn);
         waiters.forEach(_ => _());
         waiters = [];
       }

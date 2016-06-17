@@ -36,7 +36,6 @@ var wrapHistoryApi = function(window){
            if(params[2]) {
              window.location.assign(params[2]) // Fallback to location Api
            } else {
-             console.log('url is not provided')
              window.location.replace(window.location.toString())  // Fallback to location Api
            }
            return void 0;
@@ -60,12 +59,10 @@ var wrapHistoryApi = function(window){
         } catch (e) {
            console.error('Can\'t replace state:', e.stack, 'Fallback to location Api');
            if(params[2]) {
-             console.log('url is here:', params[2])
              window.location.replace(params[2])  // Fallback to location Api
            }
            else {
              window.location.replace(window.location.toString())  // Fallback to location Api
-             console.log('url is absent:', params[2])
            }
            return void 0;
         }
