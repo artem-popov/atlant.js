@@ -366,36 +366,9 @@ var s = (function(){
 
    this.isPlainObject = _ => Object(_) === _ && (Object.getPrototypeOf(_) === Object.prototype || null === Object.getPrototypeOf(_));
 
-
-   /**
-    * Deep merge two objects.
-    * @param target
-    * @param source
-    */
-   // this.mergeDeep = (target, source) => {
-   //
-   //   if (this.isPlainObject(target) && this.isPlainObject(source)) {
-   //     Object.keys(source).forEach(key => {
-   //       if (this.isPlainObject(source[key])) {
-   //
-   //         if (!target[key]) target = { ...target, ...{ [key]: {} }};
-   //         target[key] = this.mergeDeep(target[key], source[key]);
-   //       } else {
-   //
-   //         target = { ...target, ...{ [key]: source[key] } };
-   //       }
-   //     });
-   //   }
-   //   return target;
-   // }
-
-
-
-   // this.clone = _ => this.mergeDeep({}, _);
-
    this.clone = function(obj) {
-       return _.cloneDeep(obj, function(value) {
-           if (_.isFunction(value) || !_.isPlainObject(value)) {
+       return cloneDeep(obj, function(value) {
+           if (typeof value === 'function' || !isPlainObject(value)) {
                return value;
            }
        })
