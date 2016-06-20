@@ -143,12 +143,6 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                     .reduce( (acc, i) => acc.concat(i), [])
                     .reduce( (acc, i) => ({ ...acc, ...i() }), {});
 
-                if (typeof window === 'undefined' && !window.selectCount) window.selectCount = 0;
-                if (typeof window === 'undefined' && !window.selectTime) window.selectTime = 0;
-                window.selectTime = window.selectTime + performance.now() - start;
-                window.selectCount++;
-                window.getSelectTime = () => window.selectTime/window.selectCount;
-
                 let data = { ...scope, ...value };
 
                 if ( !isEqual(data, atlantState.viewData[viewName] ) ) {
