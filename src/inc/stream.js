@@ -143,8 +143,8 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
                     .reduce( (acc, i) => acc.concat(i), [])
                     .reduce( (acc, i) => ({ ...acc, ...i() }), {});
 
-                if('undefined' === typeof window.selectCount) window.selectCount = 0;
-                if('undefined' === typeof window.selectTime) window.selectTime = 0;
+                if (typeof window === 'undefined' && !window.selectCount) window.selectCount = 0;
+                if (typeof window === 'undefined' && !window.selectTime) window.selectTime = 0;
                 window.selectTime = window.selectTime + performance.now() - start;
                 window.selectCount++;
                 window.getSelectTime = () => window.selectTime/window.selectCount;

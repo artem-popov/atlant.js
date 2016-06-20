@@ -83,7 +83,7 @@ function Atlant() {
 
   // Browser specific actions.
   // registering wrapHistoryApi, attaching atlant events to links
-  if (window !== 'undefined') {
+  if (typeof window !== 'undefined') {
     if (!window.stores) window.stores = {}; // Should be defined for debuggins reasons
 
     // Clearing current history state
@@ -105,7 +105,7 @@ function Atlant() {
 
   const routeChangedStream = atlantState.devStreams.publishStream
     .merge(Bacon.fromBinder(function (sink) {
-      if (window === 'undefined') return;
+      if (typeof window === 'undefined') return;
       const routeChanged = function routeChanged(sink, event) {
         try {
           // Using state from event. At this point the history.state is stil old.
@@ -296,7 +296,7 @@ function Atlant() {
         depData = { ...depData, ...whenData.params };
         atlantState.whenData = depData;
 
-        if (whenData.when.type === types.WhenOrMatch.when && (typeof whenData.scrollToTop.value === 'function' ? whenData.scrollToTop.value(depData) : whenData.scrollToTop.value) && window !== 'undefined') {
+        if (whenData.when.type === types.WhenOrMatch.when && (typeof whenData.scrollToTop.value === 'function' ? whenData.scrollToTop.value(depData) : whenData.scrollToTop.value) && typeof window !== 'undefined') {
           window.scrollTo(0, 0);
         }
 
@@ -485,7 +485,7 @@ function Atlant() {
   };
 
   let _moveTo = function (url) {
-    if ('undefined' !== typeof window)
+    if (typeof window !== 'undefined')
       return window.location.assign(url);
     else
       console.error('no window object, cannot do window.location.assign(url)...');
@@ -757,8 +757,8 @@ function Atlant() {
   this.build = build;
 
   this.destroy = _destroy;
-  this.isServer = function () { return 'undefined' === typeof window; };
-  this.isBrowser = function () { return 'undefined' !== typeof window; };
+  this.isServer = function isServer() { return typeof window === 'undefined'; };
+  this.isBrowser = function isServer() { return typeof window !== 'undefined'; };
 
   this.utils = tools; // @TODO: rename to 'tools'
   this.utils.setTitle = this.utils.setTitle.bind(void 0, atlantState.titleStore);
@@ -820,8 +820,7 @@ function Atlant() {
 
 
   return this;
-
 }
 
-if ('undefined' !== typeof window) window.Atlant = Atlant;
+if (typeof window !== 'undefined') window.Atlant = Atlant;
 module.exports = Atlant;
