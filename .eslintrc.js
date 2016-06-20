@@ -15,7 +15,8 @@ module.exports = {
         }
     },
     "rules": {
-      "max-len": "off"
+      "max-len": "off",
+      "no-shadow": "off"
     }
 };
 
