@@ -80,24 +80,24 @@ function Atlant(){
     // Patching goTo for further use
     var safeGoToCopy = utils.goTo;
     utils.goTo = safeGoToCopy.bind(utils, false);
-    if ('undefined' !== typeof window) {  // Should be defined for debuggins reasons
-        if (!window.stores) window.stores = {};
-    }
 
-    //Clearing current history state
-    if('scrollRestoration' in history) {
-        history.scrollRestoration = 'manual';
-    }
-    utils.clearState();
 
     // Browser specific actions.
     // registering wrapHistoryApi, attaching atlant events to links
-    if ('undefined' !== typeof window) {
-        wrapHistoryApi(window);
+  if ('undefined' !== typeof window) {
+    if (!window.stores) window.stores = {}; // Should be defined for debuggins reasons
 
-        // Subscribe to clicks and keyboard immediatelly. Document already exists.
-        utils.attachGuardToLinks();
+    // Clearing current history state
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
     }
+    utils.clearState();
+
+    wrapHistoryApi(window);
+
+    // Subscribe to clicks and keyboard immediatelly. Document already exists.
+    utils.attachGuardToLinks();
+  }
 
     // can be removed, just informational
     baseStreams.onValue(atlantState.devStreams.renderEndStream, s.baconTryD(_ => console.log('render end:', _)));
@@ -497,7 +497,7 @@ function Atlant(){
         if( 'undefined' !== typeof window)
             return window.location.assign(url)
         else
-            console.error('no window object...')
+            console.error('no window object, cannot do window.location.assign(url)...');
     }
 
     var _store = function(storeName) {
@@ -540,7 +540,7 @@ function Atlant(){
             var newState = updater(s.copy(state)); // Copying here is necessary for successfull equality checks: else this checks will return always true
             atlantState.stores[storeName].staticValue = newState;
 
-            window.stores[storeName] = newState;
+            if (typeof window !== 'undefined') window.stores[storeName] = newState;
 
             {
                 let serialize = atlantState.stores[storeName]._serialize;

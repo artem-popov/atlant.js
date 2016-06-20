@@ -98,6 +98,8 @@ var utils = function() {
 
 utils.isIE = function()
 {
+  if(typeof window === 'undefined') return false;
+
     var isIE11 = navigator.userAgent.indexOf(".NET") > -1;
     var isIELess11 = navigator.appVersion.indexOf("MSIE") > -1;
     var isMobileIE = navigator.userAgent.indexOf('IEMobile') > -1
