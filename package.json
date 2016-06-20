@@ -16,6 +16,7 @@
     "browserify": "~4.2.1",
     "connect": "^3.0.2",
     "envify": "~1.2.1",
+    "eslint-config-airbnb": "^9.0.1",
     "flowcheck": "^0.2.7",
     "gulp": "~3.6.2",
     "gulp-babel": "^5.1.0",

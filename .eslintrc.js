@@ -7,11 +7,15 @@ module.exports = {
     "plugins": [
         "react"
     ],
+    "extends": "airbnb",
     "parserOptions": {
         "sourceType": "module",
         "ecmaFeatures": {
           "experimentalObjectRestSpread": true
         }
+    },
+    "rules": {
+      "max-len": "off"
     }
 };
 
