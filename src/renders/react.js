@@ -1,7 +1,3 @@
-"use strict";
-var s = require('../utils/lib')
-     ,u = require('../utils/utils')
-
 import console from '../utils/log';
 
 var State = function(React){

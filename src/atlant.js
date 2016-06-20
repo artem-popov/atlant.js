@@ -1,10 +1,8 @@
-"use strict";
-
 import console from './utils/log';
 import { AtlantStreamConstructor, AtlantStream } from './inc/stream';
-import baseStreams from "./inc/base-streams";
+import baseStreams from './inc/base-streams';
 import { uniqueId } from './utils/lib';
-import views from "./views/views";
+import views from './views/views';
 import uniq from 'lodash/uniq';
 
 let build = require('./atlant-build');

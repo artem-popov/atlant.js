@@ -1,5 +1,5 @@
 var Storage = {
-    storage: localStorage,
+    storage: typeof window !== 'undefined' && window.localStorage,
     listen: function(){
         window.addEventListener('storage', this.onChange)
     },

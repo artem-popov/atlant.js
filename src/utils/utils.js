@@ -150,8 +150,8 @@ utils.saveScroll = debounce(function(event){
     scrollState[window.location.pathname] = window.pageYOffset;
 }, 100)
 
-utils.body = document.querySelector('body');
-utils.html = document.documentElement;
+utils.body = typeof document !== 'undefined' ? document.querySelector('body') : void 0;
+utils.html = typeof document !== 'undefined' ? document.documentElement : void 0;
 
 utils.getPageHeight = function height() {
     return Math.max(utils.body.scrollHeight, utils.body.offsetHeight, utils.html.clientHeight, utils.html.scrollHeight, utils.html.offsetHeight);

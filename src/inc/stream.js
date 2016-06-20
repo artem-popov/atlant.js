@@ -7,8 +7,8 @@ var baseStreams = require('./base-streams')
         ,interfaces = require('./interfaces')
         ,clientFuncs = require('./clientFuncs')
         ,utils = require('../utils/utils')
-        ,performance = require('./performance')
-    ;
+import performance from './performance';
+
 var Bacon = require('baconjs');
 
 import isEqual from 'lodash/isEqual';
