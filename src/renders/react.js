@@ -13,18 +13,34 @@ var State = function(React){
         this.getOrCreate = function(name) {
             if ( !wrappers[name] ) {
                 wrappers[name] = React.createClass({
-                    render: function(){ // name in this function is passed by value
-                        thises[name] = this;
-                        if ( !views[name] ) views[name] = React.createElement('div');
+                    displayName: name + '.AtlantWrap',
 
-                        if ( Array.isArray( views[name] ) )
-                            return  views[name][0]( { ...this.props, ...views[name][1] } )
-                        else
+                    render: function render() {
+                        // name in this function is passed by value
+                        thises[name] = this;
+                        if (!views[name]) views[name] = React.createElement('div');
+
+                        if (Array.isArray(views[name])) { //came from .draw
+                            let el;
+                            const view = views[name][0];
+                            const props = views[name][1];
+                            if(typeof(view) == 'function'){  // .draw(props=><Component {...props}/>, 'myView')
+                                if(!view.type){  
+                                    el = view(props) || React.createElement('noscript');
+                                } else { // react component, .draw(Component, 'myView')
+                                    el = React.createElement(view, props);
+                                }
+                            } else {
+                                el = view;
+                            }
+                            return React.cloneElement(el, this.props);
+                        }else {
                             return views[name];
+                        }
                     }
             })}
             if ( !instances[name] ) {
-                instances[name] = React.createFactory(wrappers[name])();
+                instances[name] = React.createElement(wrappers[name]);
             }
         }
 
