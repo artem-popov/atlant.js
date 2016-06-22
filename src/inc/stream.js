@@ -1,15 +1,16 @@
-'use strict';
+import baseStreams from './base-streams';
 
-var baseStreams = require('./base-streams')
-        , s = require('../utils/lib')
+        let s = require('../utils/lib')
         , StateClass = require('./state')
         , types = require('./types')
         , interfaces = require('./interfaces')
         , clientFuncs = require('./clientFuncs')
-        , utils = require('../utils/utils');
+       , utils = require('../utils/utils');
 import performance from './performance';
+import { getPathname, assign } from '../utils/location';
 
 var Bacon = require('baconjs');
+
 
 import isEqual from 'lodash/isEqual';
 import views from '../views/views';
@@ -17,9 +18,12 @@ import console from '../utils/log';
 import { uniqueId } from '../utils/lib';
 
 export function AtlantStream(name, atlantState, from = 'fromUser') {
+  const context = atlantState.context;
   let bus = baseStreams.bus();
   let resolveBus = baseStreams.bus();
   let fn;
+
+
 
   let subscribers = []; // fn's which subscribed to stream.
   let waiters = []; // here pushes which come before stream has fn attached.
@@ -87,6 +91,7 @@ export function AtlantStream(name, atlantState, from = 'fromUser') {
 }
 
 export function AtlantStreamConstructor(name, atlantState, prefs) {
+  const context = atlantState.context;
 
   var TopState = new StateClass(); // State which up to when
   var State = new StateClass(); // State which up to any last conditional: when, if
@@ -167,11 +172,13 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
       try {
         var viewName = s.dot('.render.viewName', upstream);
         if (!viewName) return;
-                        // Choose appropriate render.
+
+        // Choose appropriate render.
         var render;
 
         if (types.RenderOperation.refresh === upstream.render.renderOperation) {
-          utils.goTo(window.location.pathname, void 0, true);
+          const pathname = context::getPathname();
+          utils.goTo(pathname, void 0, true);
 
           return Promise.resolve(upstream);
         }
@@ -189,10 +196,10 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
 
           return Promise.resolve(upstream);
         } else if (types.RenderOperation.move === upstream.render.renderOperation) {
-          if ('function' === typeof viewProvider) {
-            window.location.assign(viewProvider(scope));
+          if (typeof viewProvider === 'function') {
+            context::assign(viewProvider(scope));
           } else {
-            window.location.assign(viewProvider);
+            context::assign(viewProvider);
           }
 
           return Promise.resolve(upstream);

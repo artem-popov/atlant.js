@@ -4,6 +4,7 @@ import baseStreams from './inc/base-streams';
 import { uniqueId } from './utils/lib';
 import views from './views/views';
 import uniq from 'lodash/uniq';
+import { getPathname, getLocation, assign } from './utils/location';
 
 const build = require('./atlant-build');
 const version = require('./atlant-version');
@@ -70,7 +71,13 @@ function Atlant() {
     interceptors: [],
     atlant: this,
     scrollState: utils.getScrollState(),
+    context: typeof window !== 'undefined' ? window : void 0,
   };
+
+
+
+
+
 
   const unsubscribeView = views(atlantState);
 
@@ -111,9 +118,9 @@ function Atlant() {
           // Using state from event. At this point the history.state is stil old.
           let state = event instanceof PopStateEvent ? event.state : event.detail.state; // CustomEvent has details and state inside. PopStateEvent has just state inside.
 
-          // On pushstate event the utils.getLocation() will give url of previous route.
-          // Otherwise on popstate utils.getLocation() return current URI.
-          let path = event instanceof PopStateEvent ? utils.getLocation() : event.detail.url;
+          // On pushstate event the context::getLocation() will give url of previous route.
+          // Otherwise on popstate context.getLocation() return current URI.
+          let path = event instanceof PopStateEvent ? atlantState.context::getLocation() : event.detail.url;
 
           path = utils.rebuildURL(path);
 
@@ -200,7 +207,7 @@ function Atlant() {
       if (upstream.path) { // get from sink
         stream = upstream;
       } else { // get from published
-        let path = utils.rebuildURL(utils.getLocation());
+        const path = utils.rebuildURL(atlantState.context::getLocation());
         let referrer = utils.rebuildURL(utils.getReferrer());
 
         stream = {
@@ -485,10 +492,7 @@ function Atlant() {
   };
 
   let _moveTo = function (url) {
-    if (typeof window !== 'undefined')
-      return window.location.assign(url);
-    else
-      console.error('no window object, cannot do window.location.assign(url)...');
+    atlantState.context::assign(url);
   };
 
   let _store = function (storeName) {
@@ -745,7 +749,6 @@ function Atlant() {
   this.stringify = _stringify;
   this.setTimeout = _setTimeout;
   this.setInterval = _setInterval;
-
 
 
   // Utils

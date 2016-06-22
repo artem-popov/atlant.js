@@ -60,9 +60,6 @@ var utils = function() {
                             return obj;
                         }, {});
         })
-        ,getLocation: function() {
-            return window.location.pathname + window.location.search;
-        }
         ,rebuildURL: function(path) {
             path = this.parseURL( path );
             if(path) {
@@ -117,8 +114,8 @@ utils.getScrollState = function(){
  * @returns {*}
  */
 utils.goTo = function(awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO scrollTop should be not 0, but from preferences
+  if (typeof window === 'undefined') { console.error('Here should be redirect to other page!'); return; }
 
-    if ('undefined' === typeof window) return;
     if ( !redirectForce && (window.location.origin + url) === window.location.href )  return;
 
     if ('undefined' !== typeof awaitLoadForce) awaitLoad = awaitLoadForce;
@@ -166,8 +163,8 @@ utils.getPageHeight = function height() {
  * @returns {*}
  */
 utils.replace = function(url) {
+  if (typeof window === 'undefined') { console.error('Here should be redirect to other page!'); return; }
 
-    if ('undefined' === typeof window) return;
     if ( (window.location.origin + url) === window.location.href)  return;
 
     setTimeout( history.replaceState.bind(history, null, null, url), 0);
@@ -179,8 +176,8 @@ utils.replace = function(url) {
  * @returns {*}
  */
 utils.change = function(url) {
+  if (typeof window === 'undefined') { console.error('Here should be url change!'); return; }
 
-    if ('undefined' === typeof window) return;
     if ( (window.location.origin + url) === window.location.href) return;
 
     setTimeout( history.pushState.bind(history, { eventless: true }, null, url), 0);

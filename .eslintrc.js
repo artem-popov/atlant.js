@@ -1,4 +1,5 @@
 module.exports = {
+    "parser": "babel-eslint",
     "env": {
         "browser": true,
         "node": true,
@@ -16,7 +17,8 @@ module.exports = {
     },
     "rules": {
       "max-len": "off",
-      "no-shadow": "off"
-    }
+      "no-shadow": "off",
+      "no-console": "off"
+   }
 };
 
