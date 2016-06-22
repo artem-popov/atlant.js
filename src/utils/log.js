@@ -1,60 +1,60 @@
-"use strict";
+'use strict';
 
 var s = require('./lib');
 
-var Log = function Log(){
-    var on = false;
-    var level;
-    var atlantPrefix = 'Atlant.js: ';
+var Log = function Log() {
+  var on = false;
+  var level;
+  var atlantPrefix = 'Atlant.js: ';
 
-    Object.defineProperty(this, 'verbose', {
-        get: () => on
-        ,set: _ => { on = _; return on }
-    });
+  Object.defineProperty(this, 'verbose', {
+    get: () => on
+        , set: _ => { on = _; return on; },
+  });
 
-    Object.defineProperty(this, 'level', {
-        get: () => level
-        ,set: _ => { if(_ === 'errors' || _ === 'warnings') level = _; return level }
-    });
+  Object.defineProperty(this, 'level', {
+    get: () => level
+        , set: _ => { if (_ === 'errors' || _ === 'warnings') level = _; return level; },
+  });
 
-    this.log = function(...args) {
-        if (!on) return;
-        if(level === 'errors' || level === 'warnings') return;
+  this.log = function (...args) {
+    if (!on) return;
+    if (level === 'errors' || level === 'warnings') return;
 
-        console.log(atlantPrefix, ...args)
+    console.log(atlantPrefix, ...args);
+  };
+
+  this.warn = function (...args) {
+    if (!on) return;
+    if (level === 'errors') return;
+
+    console.warn(atlantPrefix, ...args);
+  };
+
+  this.error = function (...args) {
+    console.error(atlantPrefix, ...args);
+  };
+
+  this.time = function (name) {
+    if (!on) return;
+    if (level === 'errors' || level === 'warnings') return;
+
+    if (console.time) {
+      return console.time(atlantPrefix + name);
     }
+  };
 
-    this.warn = function(...args) {
-        if (!on) return;
-        if(level === 'errors') return;
+  this.timeEnd = function (name) {
+    if (!on) return;
+    if (level === 'errors' || level === 'warnings') return;
 
-        console.warn(atlantPrefix, ...args)
+    if (console.timeEnd) {
+      return console.timeEnd(atlantPrefix + name);
     }
+  };
 
-    this.error = function(...args) {
-        console.error(atlantPrefix, ...args)
-    }
-
-    this.time = function(name) {
-        if (!on) return;
-        if(level === 'errors'|| level === 'warnings') return;
-
-        if (console.time) {
-            return console.time(atlantPrefix + name)
-        }
-    }
-
-    this.timeEnd = function(name) {
-        if (!on) return;
-        if(level === 'errors'|| level === 'warnings') return;
-
-        if (console.timeEnd) {
-            return console.timeEnd(atlantPrefix + name)
-        }
-    }
-
-    return this;
-}
+  return this;
+};
 
 var instance = new Log();
 

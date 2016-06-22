@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 var Bacon = require('baconjs');
 
@@ -9,29 +9,29 @@ var unsubs = [];
 
 baseStreams.destructorStream = new Bacon.Bus();
 
-baseStreams.bus = function(){
-    var bus = new Bacon.Bus();
-    unnamed.push(bus);
-    return bus;
-}
+baseStreams.bus = function () {
+  var bus = new Bacon.Bus();
+  unnamed.push(bus);
+  return bus;
+};
 
-baseStreams.onValue = function(stream, f){
-    var unsub = stream.onValue(f);
-    unsubs.push(unsub);
-    return unsub;
-}
+baseStreams.onValue = function (stream, f) {
+  var unsub = stream.onValue(f);
+  unsubs.push(unsub);
+  return unsub;
+};
 
-baseStreams.destroy = function() {
-    baseStreams.destructorStream.push();
-    unnamed.map(function(bus){
-        bus.end();
-    })
-    unsubs.map(function(handler){
-        handler();
-    })
-    unnamed.length = 0;
-    unsubs.length = 0;
-}
+baseStreams.destroy = function () {
+  baseStreams.destructorStream.push();
+  unnamed.map(function (bus) {
+    bus.end();
+  });
+  unsubs.map(function (handler) {
+    handler();
+  });
+  unnamed.length = 0;
+  unsubs.length = 0;
+};
 
 export default baseStreams;
 

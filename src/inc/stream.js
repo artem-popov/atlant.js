@@ -1,6 +1,6 @@
 import baseStreams from './base-streams';
 
-        let s = require('../utils/lib')
+let s = require('../utils/lib')
         , StateClass = require('./state')
         , types = require('./types')
         , interfaces = require('./interfaces')

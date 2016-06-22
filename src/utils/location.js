@@ -5,7 +5,7 @@
 
 
 export function getPathname() {
-  console.log('this:', this)
+  console.log('this:', this);
   return this.pathname;
 }
 
