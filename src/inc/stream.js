@@ -45,6 +45,8 @@ export function AtlantStream(name, atlantState, from = 'fromUser') {
     if (!userStream || !(userStream instanceof AtlantStream)) { console.warn('Failed stream source:', fn); throw new Error('Constructor function should return AtlantStream.'); }
 
     userStream.then(resolve);
+
+    console.log('action', name, depValue);
     userStream.push(depValue); // AtlantStream
 
     return promise;

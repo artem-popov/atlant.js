@@ -51,43 +51,34 @@ var _parseAll = function (path, masks) {
         .reduce((acc, i) => ({ ...acc, ...i }), {});
 };
 
-var _setTitle = function (titleStore, title) {
+// This function should have titleStore as context
+const _setTitle = function setTitle(title) {
   if (!title) return;
 
   if (typeof document !== 'undefined') {
     document.title = title;
   } else {
-    titleStore.value = title;
+    this.value = title;
   }
-
 };
 
-var _getTitle = function (titleStore, title) {
-  return titleStore.value;
-};
-
-var _blockScroll = function () {
-  return utils.blockScroll();
-};
-
-var _unblockScroll = function () {
-  return utils.unblockScroll();
+// This function should have titleStore as context
+const _getTitle = function getTitle() {
+  return this.value;
 };
 
 module.exports = {
-    // test :: path -> mask -> Bool
-  test: _test
-    // testAll :: path -> [mask] -> Bool
-    , testAll: _testAll
-    , return: _return
-    , returnAll: _returnAll
-    // parse :: path -> mask -> {params}
-    , parse: _parse
-    // parseAll :: path -> [mask] -> {params}
-    , parseAll: _parseAll
-    , setTitle: _setTitle
-    , getTitle: _getTitle
-    , unblockScroll: _unblockScroll
-    , blockScroll: _blockScroll,
+  // test :: path -> mask -> Bool
+  test: _test,
+  // testAll :: path -> [mask] -> Bool
+  testAll: _testAll,
+  return: _return,
+  returnAll: _returnAll,
+  // parse :: path -> mask -> {params}
+  parse: _parse,
+  // parseAll :: path -> [mask] -> {params}
+  parseAll: _parseAll,
+  setTitle: _setTitle,
+  getTitle: _getTitle,
 };
 

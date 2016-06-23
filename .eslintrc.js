@@ -18,7 +18,10 @@ module.exports = {
     "rules": {
       "max-len": "off",
       "no-shadow": "off",
-      "no-console": "off"
+      "no-console": "off",
+      "no-return-assign": "off",
+      "no-param-reassign": "off",
+      "no-sequences": "off",
    }
 };
 

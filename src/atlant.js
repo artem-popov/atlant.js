@@ -4,7 +4,12 @@ import baseStreams from './inc/base-streams';
 import { uniqueId } from './utils/lib';
 import views from './views/views';
 import uniq from 'lodash/uniq';
-import { getPathname, getLocation, assign } from './utils/location';
+import { getLocation, assign } from './utils/location';
+
+import * as location from './utils/location';
+import * as history from './utils/history';
+
+import { map, convertGetters } from './utils/iterables';
 
 const build = require('./atlant-build');
 const version = require('./atlant-version');
@@ -763,12 +768,13 @@ function Atlant() {
   this.isServer = function isServer() { return typeof window === 'undefined'; };
   this.isBrowser = function isServer() { return typeof window !== 'undefined'; };
 
+  // This functions can be used either on server and on client
   this.utils = tools; // @TODO: rename to 'tools'
-  this.utils.setTitle = this.utils.setTitle.bind(void 0, atlantState.titleStore);
-  this.utils.getTitle = this.utils.getTitle.bind(void 0, atlantState.titleStore);
-  // Needed only for browsers not supporting canceling history.scrollRestoration
-  this.utils.blockScroll = this.utils.blockScroll;
-  this.utils.unblockScroll = this.utils.unblockScroll;
+  this.utils.setTitle = atlantState.titleStore::this.utils.setTitle;
+  this.utils.getTitle = atlantState.titleStore::this.utils.getTitle;
+
+  this.utils.history = history::map(_ => _.bind(atlantState.context))::convertGetters();
+  this.utils.location = location::map(_ => _.bind(atlantState.context))::convertGetters();
 
   this.state = {};
 

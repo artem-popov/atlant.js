@@ -1,61 +1,60 @@
-'use strict';
-
-var s = require('./lib');
-
-var Log = function Log() {
-  var on = false;
-  var level;
-  var atlantPrefix = 'Atlant.js: ';
+const Log = function Log() {
+  let on = false;
+  let level;
+  const atlantPrefix = 'Atlant.js: ';
 
   Object.defineProperty(this, 'verbose', {
-    get: () => on
-        , set: _ => { on = _; return on; },
+    get: () => on,
+    set: _ => { on = _; return on; },
   });
 
   Object.defineProperty(this, 'level', {
-    get: () => level
-        , set: _ => { if (_ === 'errors' || _ === 'warnings') level = _; return level; },
+    get: () => level,
+    set: _ => { if (_ === 'errors' || _ === 'warnings') level = _; return level; },
   });
 
-  this.log = function (...args) {
+  this.log = function log(...args) {
     if (!on) return;
     if (level === 'errors' || level === 'warnings') return;
 
     console.log(atlantPrefix, ...args);
   };
 
-  this.warn = function (...args) {
+  this.warn = function warn(...args) {
     if (!on) return;
     if (level === 'errors') return;
 
     console.warn(atlantPrefix, ...args);
   };
 
-  this.error = function (...args) {
+  this.error = function error(...args) {
     console.error(atlantPrefix, ...args);
   };
 
-  this.time = function (name) {
+  this.time = function time(name) {
     if (!on) return;
     if (level === 'errors' || level === 'warnings') return;
 
     if (console.time) {
-      return console.time(atlantPrefix + name);
+      console.time(atlantPrefix + name);
+      return;
     }
   };
 
-  this.timeEnd = function (name) {
+  this.timeEnd = function timeEnd(name) {
     if (!on) return;
     if (level === 'errors' || level === 'warnings') return;
 
     if (console.timeEnd) {
-      return console.timeEnd(atlantPrefix + name);
+      console.timeEnd(atlantPrefix + name);
+      return;
     }
+    return;
   };
 
   return this;
 };
 
-var instance = new Log();
+const instance = new Log();
 
 export default instance;
