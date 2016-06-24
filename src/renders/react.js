@@ -79,7 +79,7 @@ var Render = function (React) {
       try {
         instance.forceUpdate();
       } catch (e) {
-        console.error(e.stack);
+        console.error(e.message, e.stack);
         error = true;
       }
     };

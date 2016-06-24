@@ -8,7 +8,7 @@ var unsubscribeView = curry(function (atlantState, viewName) {
       atlantState.viewSubscriptionsUnsubscribe[viewName]();
     }
   } catch (e) {
-    console.error('unsubscribe error', e.stack);
+    console.error('unsubscribe error', e.message, e.stack);
   }
 });
 

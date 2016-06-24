@@ -32,7 +32,7 @@ var wrapHistoryApi = function (window) {
     try {
       return pushState.apply(window.history, params);
     } catch (e) {
-      console.error("Can't push state:", e);
+      console.error("Can't push state:", e.message, e.stack);
       if (params[2]) {
         window.location.assign(params[2]); // Fallback to location Api
       } else {
@@ -57,7 +57,7 @@ var wrapHistoryApi = function (window) {
     try {
       return replaceState.apply(window.history, params);
     } catch (e) {
-      console.error('Can\'t replace state:', e.stack, 'Fallback to location Api');
+      console.error('Can\'t replace state:', e.message, e.stack, 'Fallback to location Api');
       if (params[2]) {
         window.location.replace(params[2]);  // Fallback to location Api
       }

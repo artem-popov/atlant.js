@@ -183,7 +183,7 @@ function Atlant() {
           if (!('scrollRestoration' in history)) loader.style.visibility = null;
           utils.body.style.minHeight = null;
           // utils.unblockScroll();
-          console.error(e.stack);
+          console.error(e.message, e.stack);
         }
       }.bind(void 0, sink);
       window.addEventListener('popstate', routeChanged);

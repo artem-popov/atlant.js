@@ -242,7 +242,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
             upstream.render.component = renderResult;
             return upstream;
           })
-                            .catch((e) => { console.error(e.stack); atlantState.devStreams.errorStream.push(); return Bacon.End(); });
+            .catch((e) => { console.error(e.message, e.stack); atlantState.devStreams.errorStream.push(); return Bacon.End(); });
 
 
           return renderResult;
@@ -638,7 +638,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
         try {
           value = atlantState.stores[storeName].parts[partName](atlantState.stores[storeName].staticValue, id());
         } catch (e) {
-          console.error('select', partName, 'from', storeName, 'failed:', e.stack);
+          console.error('select', partName, 'from', storeName, 'failed:', e.message, e.stack);
           value = void 0;
         }
         return value;

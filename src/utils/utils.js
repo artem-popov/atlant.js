@@ -176,7 +176,7 @@ utils.replace = function (url) {
  * @returns {*}
  */
 utils.change = function (url) {
-  if (typeof window === 'undefined') { console.error('Here should be url change!'); return; }
+  if (typeof window === 'undefined') { console.error('Cannot apply url change on nodejs environment'); return; }
 
   if ((window.location.origin + url) === window.location.href) return;
 

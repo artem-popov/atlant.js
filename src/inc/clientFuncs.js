@@ -106,7 +106,7 @@ var catchError = function (e) {
   if (e && e.stack) {
     console.error(e.message, e.stack);
   } else {
-    console.error('Unknown error');
+    console.error('Unknown error', e);
   }
   return e;
 };
