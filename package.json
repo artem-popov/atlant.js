@@ -33,8 +33,9 @@
   },
   "scripts": {
     "build": "babel src -d build",
+    "start": "babel --watch src -d build & npm run bower-watch",
     "doc": "./node_modules/.bin/esdoc -c esdoc.json",
     "prepublish": "npm run build",
-    "watch": "webpack --progress --colors --watch"
+    "bower-watch": "webpack --progress --colors --watch"
   }
 }
