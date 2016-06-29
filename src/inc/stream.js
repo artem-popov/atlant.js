@@ -18,33 +18,43 @@ import console from '../utils/log';
 import { uniqueId } from '../utils/lib';
 
 export function AtlantStream(name, atlantState, from = 'fromUser') {
-  const context = atlantState.context;
-  let bus = baseStreams.bus();
-  let resolveBus = baseStreams.bus();
+  const bus = baseStreams.bus();
+  const resolveBus = baseStreams.bus();
   let fn;
 
 
+  /*
+    * subscriptions
+  */
+  const subscribers = []; // fn's which subscribed to stream.
+  const unsubscribe = (index) => delete subscribers[index];
+  this.then = fn => { // Register subscribers
+    const index = subscribers.push(fn);
+    return unsubscribe.bind(this, index);
+  };
+  resolveBus.onValue(scope => {
+    console.warn('resolveBus!:', scope);
+    subscribers.forEach(_ => _(scope));
+  });
 
-  let subscribers = []; // fn's which subscribed to stream.
+  /* workers */
   let waiters = []; // here pushes which come before stream has fn attached.
-  let unsubscribe = () => subscribers = [];
-  let worker = depValue => {
-    const { promise, resolve, reject } = s.deferred();
+  const worker = depValue => {
+    const { promise, resolve } = s.deferred();
 
-    if ('undefined' === typeof depValue) {
-
+    if (typeof depValue === 'undefined') {
       depValue = {};
     }
-    if ('object' === typeof depValue) {
+    if (typeof depValue === 'object') {
       depValue = { ...{ params: atlantState.whenData }, ...depValue };
     }
 
-    var userStream = fn();
+    const userStream = fn();
 
     if (userStream instanceof AtlantStreamConstructor) { console.warn('Failed stream source:', fn); throw new Error('You should end the AtlantStreamConstructor to create AtlantStream. Try add more .end()\'s '); }
     if (!userStream || !(userStream instanceof AtlantStream)) { console.warn('Failed stream source:', fn); throw new Error('Constructor function should return AtlantStream.'); }
 
-    userStream.then(resolve);
+    userStream.then(_ => { console.log('RenderEnd!:', _); resolve(); });
 
     console.log('action', name, depValue);
     userStream.push(depValue); // AtlantStream
@@ -67,10 +77,10 @@ export function AtlantStream(name, atlantState, from = 'fromUser') {
     return promise;
   };
 
-  let pushBus = (isSync, args) => {
-    let syncCall = () => bus.push(args);
-    let asyncCall = () => setTimeout(() => bus.push(args)); // We don'y neet to return a promise here
-    let pusher = isSync ? syncCall : asyncCall;
+  const pushBus = (isSync, args) => {
+    const syncCall = () => bus.push(args);
+    const asyncCall = () => setTimeout(() => bus.push(args)); // We don'y neet to return a promise here
+    const pusher = isSync ? syncCall : asyncCall;
     return pusher();
   };
 
@@ -84,7 +94,6 @@ export function AtlantStream(name, atlantState, from = 'fromUser') {
 
   this.pushSync = (args) => from === 'fromUser' ? push(true, args) : pushBus(true, args);
   this.push = (args) => from === 'fromUser' ? push(false, args) : pushBus(false, args);
-  this.then = fn => (subscribers.push(fn), unsubscribe); // Register subscribers
 
   this._exportBus = () => bus; // @TODO deprecated
   this._exportResolveBus = () => resolveBus; // @TODO deprecated
@@ -130,6 +139,13 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
                 });
     };
 
+    const resolveStatus = (scope) => {
+      if (streamState.resolveWhen && streamState.resolveWhen(scope)) {
+        streamState.resolveBus.push(scope);
+      }
+    };
+
+
     let subscribeView = function (viewName, doRenderIntoView, scope, upstream) {
 
       if (!('chains' in upstream) || !Object.keys(upstream.chains).length) return;  // If no store is selected for this view, then we should not subscribe on anything.
@@ -157,9 +173,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
           atlantState.viewData[viewName] = data;
           doRenderIntoView(data); // Here we using scope updated from store!
 
-          if (streamState.resolveWhen && streamState.resolveWhen(data)) {
-            streamState.resolveBus.push(data);
-          }
+          resolveStatus(data);
         }
 
         return upstream;
@@ -238,6 +252,8 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
           var renderResult = doRenderIntoView(scope).then(() => {
             if (upstream.render.subscribe && types.RenderOperation.clear !== upstream.render.renderOperation)  // Subscriber only after real render - Bacon evaluates subscriber immediately
               subscribeView(viewName, doRenderIntoView, scope, upstream);
+
+            resolveStatus(scope);
 
             upstream.render.component = renderResult;
             return upstream;
@@ -547,7 +563,6 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
 
       return this;
     } else {
-            // State.state.lastOp.onValue(_ => console.log('did last op'));
       return atlantStream;
     }
 

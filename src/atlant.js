@@ -76,13 +76,8 @@ function Atlant() {
     interceptors: [],
     atlant: this,
     scrollState: utils.getScrollState(),
-    context: typeof window !== 'undefined' ? window : void 0,
+    context: typeof window !== 'undefined' ? window : {},
   };
-
-
-
-
-
 
   const unsubscribeView = views(atlantState);
 
@@ -156,7 +151,7 @@ function Atlant() {
               }, 100);
             }).bind(void 0, scrollTop, minHeightBody);
 
-            if (window && !window.history.pushState.overloaded) wrapHistoryApi(window);
+            if (!window.history.pushState.overloaded) wrapHistoryApi(window);
           };
 
           const savedScrollTop = atlantState.scrollState[path];
@@ -705,6 +700,8 @@ function Atlant() {
   this.scrollElement = _scrollElement;
   // the default value of to scroll or not to scroll to top on route change. Default is true.
   this.defaultScrollToTop = _defaultScrollToTop;
+  // set default context. It could be either a "window" for browser either a { request, response } pair on server
+  this.setContext = context => atlantState.context = context;
 
 
   // Commands!

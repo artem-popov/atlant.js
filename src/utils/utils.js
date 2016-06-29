@@ -128,7 +128,7 @@ utils.goTo = function (awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO
     }
   }
 
-  var state = { url: url, referrer: window.location.href, forceRouteChange: redirectForce };
+  const state = { url, referrer: typeof window !== 'undefined' ? window.location.href : void 0, forceRouteChange: redirectForce };
 
   scrollState[url] = 0;
 
@@ -138,6 +138,7 @@ utils.goTo = function (awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO
 
 
 utils.clearState = function () {
+  if (typeof window === 'undefined') { console.error('Here should be Utils.clearState!'); return; }
   var state = { ...window.history.state };
   delete state.forceRouteChange;
   delete state.referrer;
@@ -163,7 +164,7 @@ utils.getPageHeight = function height() {
  * @returns {*}
  */
 utils.replace = function (url) {
-  if (typeof window === 'undefined') { console.error('Here should be redirect to other page!'); return; }
+  if (typeof window === 'undefined') { console.error('Here should be redirect to other page!', url); return; }
 
   if ((window.location.origin + url) === window.location.href) return;
 
@@ -176,7 +177,7 @@ utils.replace = function (url) {
  * @returns {*}
  */
 utils.change = function (url) {
-  if (typeof window === 'undefined') { console.error('Cannot apply url change on nodejs environment'); return; }
+  if (typeof window === 'undefined') { console.error('Cannot apply url change on nodejs environment', url); return; }
 
   if ((window.location.origin + url) === window.location.href) return;
 
@@ -189,6 +190,7 @@ utils.getPattern = function (masks) {
 };
 
 utils.attachGuardToLinks = function () {
+  if (typeof window === 'undefined') { console.error('Will not attachGuardToLinks on server'); return; }
 
   var linkDefender = function (event) {
     if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which) return;
@@ -322,25 +324,25 @@ utils.sanitizeUrl = function (url) {
   return escapedRoute;
 };
 
-utils.blockScroll = function (titleStore, title) {// freezing view;
-  var scrollPosition = window.scrollY;
-  if (utils.body && !('scrollRestoration' in history)) {
-    utils.body.style.position = 'fixed';
-    utils.body.style.width = '100%';
-    utils.body.style.marginTop = - scrollPosition + 'px';
-    return true;
-  }
-  return false;
-};
-
-utils.unblockScroll = function (titleStore, title) {
-  if (utils.body && !('scrollRestoration' in history)) {
-    utils.body.style.position = null;
-    utils.body.style.width = null;
-    utils.body.style.marginTop = null;
-    return true;
-  }
-  return false;
-};
+// utils.blockScroll = function (titleStore, title) {// freezing view;
+//   var scrollPosition = window.scrollY;
+//   if (utils.body && !('scrollRestoration' in history)) {
+//     utils.body.style.position = 'fixed';
+//     utils.body.style.width = '100%';
+//     utils.body.style.marginTop = - scrollPosition + 'px';
+//     return true;
+//   }
+//   return false;
+// };
+//
+// utils.unblockScroll = function (titleStore, title) {
+//   if (utils.body && !('scrollRestoration' in history)) {
+//     utils.body.style.position = null;
+//     utils.body.style.width = null;
+//     utils.body.style.marginTop = null;
+//     return true;
+//   }
+//   return false;
+// };
 
 module.exports = utils;

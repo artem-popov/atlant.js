@@ -1,10 +1,10 @@
 const Storage = {
   storage: typeof window !== 'undefined' && window.localStorage,
   listen() {
-    window.addEventListener('storage', this.onChange);
+    //window.addEventListener('storage', this.onChange);
   },
   stopListen() {
-    window.removeEventListener('storage', this.onChange);
+    //window.removeEventListener('storage', this.onChange);
   },
   onChange(key, newValue, oldValue, storageArea, url) {
     console.log('storage changed', key, newValue, oldValue, storageArea, url);
