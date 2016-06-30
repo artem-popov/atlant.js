@@ -21,9 +21,22 @@ export function AtlantStream(name, atlantState, from = 'fromUser'){
     let resolveBus = baseStreams.bus();
     let fn;
 
-    let subscribers = []; // fn's which subscribed to stream.
+    /*
+     * subscriptions
+     */
+    const subscribers = []; // fn's which subscribed to stream.
+    const unsubscribe = (index) => delete subscribers[index];
+    this.then = fn => { // Register subscribers
+      const index = subscribers.push(fn);
+      return unsubscribe.bind(this, index);
+    };
+    resolveBus.onValue(scope => {
+      console.warn('resolveBus!:', scope);
+      subscribers.forEach(_ => _(scope));
+    });
+
+
     let waiters = []; // here pushes which come before stream has fn attached.
-    let unsubscribe = () => subscribers = [];
     let worker = depValue => {
         const { promise, resolve, reject } = s.deferred();
 
