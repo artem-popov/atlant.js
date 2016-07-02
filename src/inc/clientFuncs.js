@@ -1,10 +1,8 @@
-'use strict';
+import { Console as console, error } from '../utils/log';
+import curry from 'lodash/curry';
 
 var s = require('../utils/lib')
         , Bacon = require('baconjs');
-
-import curry from 'lodash/curry';
-import console from '../utils/log';
 
 var catchError;
 
@@ -104,9 +102,9 @@ var createScope = function (upstream) {
 
 var catchError = function (e) {
   if (e && e.stack) {
-    console.error(e.message, e.stack);
+    error::console.error(e.message, e.stack);
   } else {
-    console.error('Unknown error', e);
+    error::console.error('Unknown error', e);
   }
   return e;
 };

@@ -1,27 +1,22 @@
+import React from 'react';
+import { Console as console, server, error, action, render, client } from '../utils/log';
 import baseStreams from './base-streams';
-
-let s = require('../utils/lib')
-        , StateClass = require('./state')
-        , types = require('./types')
-        , interfaces = require('./interfaces')
-        , clientFuncs = require('./clientFuncs')
-       , utils = require('../utils/utils');
-import performance from './performance';
+import Bacon from 'baconjs';
+import s from '../utils/lib';
+import StateClass from './state';
+import types from './types';
+import interfaces from './interfaces';
+import clientFuncs from './clientFuncs';
+import utils from '../utils/utils';
 import { getPathname, assign } from '../utils/location';
-
-var Bacon = require('baconjs');
-
-
 import isEqual from 'lodash/isEqual';
 import views from '../views/views';
-import console from '../utils/log';
 import { uniqueId } from '../utils/lib';
 
 export function AtlantStream(name, atlantState, from = 'fromUser') {
   const bus = baseStreams.bus();
   const resolveBus = baseStreams.bus();
   let fn;
-
 
   /*
     * subscriptions
@@ -33,7 +28,6 @@ export function AtlantStream(name, atlantState, from = 'fromUser') {
     return unsubscribe.bind(this, index);
   };
   resolveBus.onValue(scope => {
-    console.warn('resolveBus!:', scope);
     subscribers.forEach(_ => _(scope));
   });
 
@@ -51,12 +45,12 @@ export function AtlantStream(name, atlantState, from = 'fromUser') {
 
     const userStream = fn();
 
-    if (userStream instanceof AtlantStreamConstructor) { console.warn('Failed stream source:', fn); throw new Error('You should end the AtlantStreamConstructor to create AtlantStream. Try add more .end()\'s '); }
-    if (!userStream || !(userStream instanceof AtlantStream)) { console.warn('Failed stream source:', fn); throw new Error('Constructor function should return AtlantStream.'); }
+    if (userStream instanceof AtlantStreamConstructor) { error::console.warn('Failed stream source:', fn); throw new Error('You should end the AtlantStreamConstructor to create AtlantStream. Try add more .end()\'s '); }
+    if (!userStream || !(userStream instanceof AtlantStream)) { error::console.warn('Failed stream source:', fn); throw new Error('Constructor function should return AtlantStream.'); }
 
-    userStream.then(_ => { console.log('RenderEnd!:', _); resolve(); });
+    userStream.then(resolve);
 
-    console.log('action', name, depValue);
+    action::console.log('action', name, depValue);
     userStream.push(depValue); // AtlantStream
 
     return promise;
@@ -71,7 +65,7 @@ export function AtlantStream(name, atlantState, from = 'fromUser') {
     let workerAsync = () => s.onNextEventLoop(() => worker(args)).then(resolve).catch(reject);
     let pusher = isSync ? workerSync : workerAsync;
 
-    if (!this.isAttached()) { console.log('action:', name, 'is not ready!'); waiters.push(pusher); }
+    if (!this.isAttached()) { action::console.log('action:', name, 'is not ready!'); waiters.push(pusher); }
     else { pusher(); }
 
     return promise;
@@ -116,12 +110,22 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
 
   let unsubscribeView = views(atlantState);
 
-  let streamState = {
-    name: name,
+  const streamState = {
+    name,
     root: atlantStream._exportBus(),
     resolveBus: atlantStream._exportResolveBus(),
     canBeIntercepted: true,
+    resolveWhen: () => true,
+    resolved: false,
   };
+
+  const resolveStatus = (scope) => {
+    if (!streamState.resolved && streamState.resolveWhen && streamState.resolveWhen(scope)) {
+      streamState.resolved = true;
+      streamState.resolveBus.push(scope);
+    }
+  };
+
 
   var renderView = function () {
 
@@ -139,13 +143,6 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
                 });
     };
 
-    const resolveStatus = (scope) => {
-      if (streamState.resolveWhen && streamState.resolveWhen(scope)) {
-        streamState.resolveBus.push(scope);
-      }
-    };
-
-
     let subscribeView = function (viewName, doRenderIntoView, scope, upstream) {
 
       if (!('chains' in upstream) || !Object.keys(upstream.chains).length) return;  // If no store is selected for this view, then we should not subscribe on anything.
@@ -158,8 +155,6 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
             // if (upstream.render.subscribe) streamState.subscribersCount++;
 
       atlantState.viewSubscriptionsUnsubscribe[viewName] = atlantState.viewSubscriptions[viewName].onValue(function (upstream, viewName, scope, doRenderIntoView, value) {
-        let start = performance.now();
-
         value = Object.keys(upstream.chains)
                     .map(_ => upstream.chains[_])
                     .reduce((acc, i) => acc.concat(i), [])
@@ -190,7 +185,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
         if (!viewName) return;
 
         // Choose appropriate render.
-        var render;
+        let render;
 
         if (types.RenderOperation.refresh === upstream.render.renderOperation) {
           const pathname = context::getPathname();
@@ -258,7 +253,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
             upstream.render.component = renderResult;
             return upstream;
           })
-            .catch((e) => { console.error(e.message, e.stack); atlantState.devStreams.errorStream.push(); return Bacon.End(); });
+            .catch((e) => { error::console.error(e.message, e.stack); atlantState.devStreams.errorStream.push(); return Bacon.End(); });
 
 
           return renderResult;
@@ -266,7 +261,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
         }
 
       } catch (e) {
-        console.error(e.message, e.stack);
+        error::console.error(e.message, e.stack);
       }
 
     };
@@ -350,7 +345,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
                       var treatDep = s.compose(clientFuncs.convertPromiseD, s.promiseTryD);
                       var atomValue = atomParams();
                       return treatDep(dep)(atomValue)
-                            .mapError(function (_) { console.error('Network error: status === ', _.status); return _;})
+                            .mapError(function (_) { error::console.error('Network error: status === ', _.status); return _;})
                             .flatMap(function (upstream, atomParams, results) {
                               if ('function' === typeof results) results = results.bind(void 0, atomParams);
 
@@ -397,7 +392,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
                 .map(function (depName, injects, upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
                   return injectsGrabber.add(depName, upstream.depends[depName], injects, upstream);
                 }.bind(void 0, depName, injects))
-                .mapError(function (_) { console.error('Unhandled error', _);});
+                .mapError(function (_) { error::console.error('Unhandled error', _);});
 
       stream = stream // Add select subscriptions
                 .map(function (depName, store, dep, isAtom, upstream) { // upstream.dependNames store name of all dependencies stored in upstream.
@@ -548,24 +543,26 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
     return this;
   };
 
-  var closeBlock = (renderOperation, viewName) => {
+  const closeBlock = (renderOperation) => {
     if (void 0 !== renderOperation && renderOperation === types.RenderOperation.draw) return this;
 
-    if (void 0 !== State.state.lastIf) {
-
-      var dep = State.state.lastDep ? State.state.lastDep.merge(State.state.lastElse) : void 0;
-      var op = State.state.lastOp.merge(State.state.lastElse);
+    const finishedStream = void 0 === State.state.lastIf;
+    if (!finishedStream) {
+      const dep = State.state.lastDep ? State.state.lastDep.merge(State.state.lastElse) : void 0;
+      const op = State.state.lastOp.merge(State.state.lastElse);
 
       State.rollback();
 
       State.state.lastDep = dep;
       State.state.lastOp = op;
-
-      return this;
     } else {
-      return atlantStream;
+      State.state.lastOp.onValue(upstream => {
+        const scope = clientFuncs.createScope(clientFuncs.getScopeDataFromStream(upstream));
+        resolveStatus(scope);
+      });
     }
 
+    return !finishedStream ? this : atlantStream;
   };
 
 
@@ -585,7 +582,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
             // /check
       if (! State.state.lastOp) throw new Error('"render" should nest something');
       if ('function' !== typeof renderProvider && 'string' !== typeof renderProvider && renderOperation != types.RenderOperation.refresh) {
-        console.log('Atlant.js: render first param should be function or URI', renderProvider, renderOperation);
+        error::console.log('Atlant.js: render first param should be function or URI', renderProvider, renderOperation);
         throw new Error('Atlant.js: render first param should be function or URI');
       }
       s.type(viewName, 'string');
@@ -593,7 +590,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
 
       if (!viewName) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
 
-      var closeThisBlock = closeBlock.bind(this, renderOperation, viewName);
+      const closeThisBlock = closeBlock.bind(this, renderOperation);
 
             // ------end of check/
 
@@ -610,6 +607,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
       });
 
 
+      render::console.log('register:', viewName);
       if (renderOperation === types.RenderOperation.draw) {
         State.state.lastOp = renderStream;
         State.state.lastOpId = renderId;
@@ -635,7 +633,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
 
     return _depends.bind(this)(function (key, id) {
       if (key in atlantState.emitStreams) atlantState.emitStreams[key].push(id);
-      else console.log('\nAtlant.js: Warning: event key' + key + ' is not defined');
+      else error::console.log('\nAtlant.js: Warning: event key' + key + ' is not defined');
     }.bind(void 0, key), dependsBehaviour);
 
 
@@ -653,7 +651,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
         try {
           value = atlantState.stores[storeName].parts[partName](atlantState.stores[storeName].staticValue, id());
         } catch (e) {
-          console.error('select', partName, 'from', storeName, 'failed:', e.message, e.stack);
+          error::console.error('select', partName, 'from', storeName, 'failed:', e.message, e.stack);
           value = void 0;
         }
         return value;
@@ -664,7 +662,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
   var _log = function (...args) {
     return _depends.bind(this)(function (args, scope) {
       try {
-        console.log.apply(console, args.concat(scope));
+        client::console.log(...args, ...scope);
         return void 0;
       } catch (e) {
         return void 0;
@@ -702,7 +700,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
   var _with = function (scopeProvider) {
     var scopeProvider = (typeof(scopeProvider) === 'undefined') ? _ => ({}) : scopeProvider;
     if (typeof scopeProvider !== 'function') {
-      console.warn('param passed:', scopeProvider);
+      error::console.warn('param passed:', scopeProvider);
       throw new Error('.with should receive a function');
     }
 
@@ -806,7 +804,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
   this.move = function (redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.move);};
 
     // This 2 methods actually not exists in stream. They can be called if streams is already declared, but then trryed to continue to configure
-  this.onValue = () => console.error('You have lost at least 1 .end() in stream declaration:', fn);
+  this.onValue = () => error::console.error('You have lost at least 1 .end() in stream declaration:', fn);
 
 }
 

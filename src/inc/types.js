@@ -1,5 +1,3 @@
-'use strict';
-
 var Symbol = Symbol;
 
 if (void 0 === Symbol) Symbol = _ => _;

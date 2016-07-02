@@ -1,3 +1,4 @@
+import { Console as console, error } from '../utils/log';
 import curry from 'lodash/curry';
 var s = require('../utils/lib');
 
@@ -8,7 +9,7 @@ var unsubscribeView = curry(function (atlantState, viewName) {
       atlantState.viewSubscriptionsUnsubscribe[viewName]();
     }
   } catch (e) {
-    console.error('unsubscribe error', e.message, e.stack);
+    error::console.error('unsubscribe error', e.message, e.stack);
   }
 });
 

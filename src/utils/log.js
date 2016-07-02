@@ -1,60 +1,84 @@
-const Log = function Log() {
-  let on = false;
-  let level;
-  const atlantPrefix = 'Atlant.js: ';
+const errorMessageConsoleShouldBeBinded = 'console should be binded';
+const atlantPrefixDefault = 'Atlant.js';
 
-  Object.defineProperty(this, 'verbose', {
-    get: () => on,
-    set: _ => { on = _; return on; },
-  });
+export class Console {
+  atlantPrefix = `${atlantPrefixDefault}: `;
 
-  Object.defineProperty(this, 'level', {
-    get: () => level,
-    set: _ => { if (_ === 'errors' || _ === 'warnings') level = _; return level; },
-  });
+  static log(...args) {
+    if (!('active' in this)) throw new Error(errorMessageConsoleShouldBeBinded);
+    if (!this.active) return;
 
-  this.log = function log(...args) {
-    if (!on) return;
-    if (level === 'errors' || level === 'warnings') return;
+    console.log(this.atlantPrefix, ...args);
+  }
 
-    console.log(atlantPrefix, ...args);
-  };
+  static logIt(...args) {
+    if (!('active' in this)) throw new Error(errorMessageConsoleShouldBeBinded);
+    if (!this.active) return _ => _;
 
-  this.warn = function warn(...args) {
-    if (!on) return;
-    if (level === 'errors') return;
+    return what => {
+      console.log(...args, what);
+      return what;
+    };
+  }
 
-    console.warn(atlantPrefix, ...args);
-  };
+  static warn(...args) {
+    if (!('active' in this)) throw new Error(errorMessageConsoleShouldBeBinded);
+    if (!this.active) return;
 
-  this.error = function error(...args) {
-    console.error(atlantPrefix, ...args);
-  };
+    console.warn(this.atlantPrefix, ...args);
+  }
 
-  this.time = function time(name) {
-    if (!on) return;
-    if (level === 'errors' || level === 'warnings') return;
+  static error(...args) {
+    if (!('active' in this)) throw new Error(errorMessageConsoleShouldBeBinded);
+    if (!this.active) return;
+
+    console.error(this.atlantPrefix, ...args);
+  }
+
+  static time(name) {
+    if (!('active' in this)) throw new Error(errorMessageConsoleShouldBeBinded);
+    if (!this.active) return;
 
     if (console.time) {
-      console.time(atlantPrefix + name);
+      console.time(this.atlantPrefix + name);
       return;
     }
-  };
+  }
 
-  this.timeEnd = function timeEnd(name) {
-    if (!on) return;
-    if (level === 'errors' || level === 'warnings') return;
+  static timeEnd(name) {
+    if (!('active' in this)) throw new Error(errorMessageConsoleShouldBeBinded);
+    if (!this.active) return;
 
     if (console.timeEnd) {
-      console.timeEnd(atlantPrefix + name);
+      console.timeEnd(this.atlantPrefix + name);
       return;
     }
     return;
-  };
+  }
+}
 
-  return this;
+export const error = new class error extends Console {
+  atlantPrefix = `${atlantPrefixDefault} [error] :`
+  active = true
 };
 
-const instance = new Log();
+export const server = new class server extends Console {
+  atlantPrefix = `${atlantPrefixDefault} [server] :`
+  active = true
+};
 
-export default instance;
+export const action = new class action extends Console {
+  atlantPrefix = `${atlantPrefixDefault} [action] :`
+  active = true
+};
+
+export const render = new class render extends Console {
+  atlantPrefix = `${atlantPrefixDefault} [render] :`
+  active = true
+};
+
+export const client = new class client extends Console {
+  atlantPrefix = `${atlantPrefixDefault} [client] :`
+  active = true
+};
+

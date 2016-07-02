@@ -1,5 +1,4 @@
-'use strict';
-
+import { Console as console, error } from './log';
 import { memoize, head } from './lib';
 import debounce from 'lodash/debounce';
 import curry from 'lodash/curry';
@@ -114,7 +113,7 @@ utils.getScrollState = function () {
  * @returns {*}
  */
 utils.goTo = function (awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO scrollTop should be not 0, but from preferences
-  if (typeof window === 'undefined') { console.error('Here should be redirect to other page!'); return; }
+  if (typeof window === 'undefined') { error::console.error('Here should be redirect to other page!'); return; }
 
   if (!redirectForce && (window.location.origin + url) === window.location.href) return;
 
@@ -138,7 +137,7 @@ utils.goTo = function (awaitLoad, url, awaitLoadForce, redirectForce) { // @TODO
 
 
 utils.clearState = function () {
-  if (typeof window === 'undefined') { console.error('Here should be Utils.clearState!'); return; }
+  if (typeof window === 'undefined') { error::console.error('Here should be Utils.clearState!'); return; }
   var state = { ...window.history.state };
   delete state.forceRouteChange;
   delete state.referrer;
@@ -164,7 +163,7 @@ utils.getPageHeight = function height() {
  * @returns {*}
  */
 utils.replace = function (url) {
-  if (typeof window === 'undefined') { console.error('Here should be redirect to other page!', url); return; }
+  if (typeof window === 'undefined') { error::console.error('Here should be redirect to other page!', url); return; }
 
   if ((window.location.origin + url) === window.location.href) return;
 
@@ -177,7 +176,7 @@ utils.replace = function (url) {
  * @returns {*}
  */
 utils.change = function (url) {
-  if (typeof window === 'undefined') { console.error('Cannot apply url change on nodejs environment', url); return; }
+  if (typeof window === 'undefined') { error::console.error('Cannot apply url change on nodejs environment', url); return; }
 
   if ((window.location.origin + url) === window.location.href) return;
 
@@ -190,7 +189,7 @@ utils.getPattern = function (masks) {
 };
 
 utils.attachGuardToLinks = function () {
-  if (typeof window === 'undefined') { console.error('Will not attachGuardToLinks on server'); return; }
+  if (typeof window === 'undefined') { error::console.error('Will not attachGuardToLinks on server'); return; }
 
   var linkDefender = function (event) {
     if (event.ctrlKey || event.metaKey || 2 == event.which || 3 == event.which) return;

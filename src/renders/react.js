@@ -1,4 +1,4 @@
-import console from '../utils/log';
+import { Console as console, render, error } from '../utils/log';
 
 var State = function (React) {
   var wrappers = {}
@@ -63,7 +63,7 @@ var Render = function (React) {
   var selectors = {};
 
   this.render = function (viewProvider, upstream, activeStreamId, name, scope) {
-    console.time('rendering view ' + name);
+    render::console.time('rendering view ' + name);
 
     state.getOrCreate(name); // Always should be first to ensure that it is a simple div to lower influence of React.renderToStaticMarkup
 
@@ -73,24 +73,24 @@ var Render = function (React) {
 
     var instance = state.getThis(name);
 
-    let error = false;
+    let isError = false;
 
     let update = () => {
       try {
         instance.forceUpdate();
       } catch (e) {
-        console.error(e.message, e.stack);
-        error = true;
+        error::console.error(e.message, e.stack);
+        isError = true;
       }
     };
 
-    if (!error && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) {
+    if (!isError && instance && instance.isMounted && instance.isMounted() && instance.forceUpdate) {
       update();
     }
 
-    console.timeEnd('rendering view ' + name);
+    render::console.timeEnd('rendering view ' + name);
 
-    return error ? Promise.reject() : Promise.resolve(state.getInstance(name));
+    return isError ? Promise.reject() : Promise.resolve(state.getInstance(name));
   };
 
   this.clear = function (viewProvider, upstream, activeStreamId, name, scope) {
@@ -111,7 +111,7 @@ var Render = function (React) {
       React.render(root, element);
       selectors[name] = selector;
     } catch (e) {
-      console.error(e.message, e.stack);
+      error::console.error(e.message, e.stack);
       React.unmountComponentAtNode(element);
     }
   };

@@ -1,4 +1,4 @@
-import console from './utils/log';
+import { Console as console, server, error, render, action } from './utils/log';
 import { AtlantStreamConstructor, AtlantStream } from './inc/stream';
 import baseStreams from './inc/base-streams';
 import { uniqueId } from './utils/lib';
@@ -8,8 +8,10 @@ import { getLocation, assign } from './utils/location';
 
 import * as location from './utils/location';
 import * as history from './utils/history';
+import * as events from './events';
 
 import { map, convertGetters } from './utils/iterables';
+import { inspect } from 'util';
 
 const build = require('./atlant-build');
 const version = require('./atlant-version');
@@ -81,8 +83,6 @@ function Atlant() {
 
   const unsubscribeView = views(atlantState);
 
-  console.level = '';
-
   // Patching goTo for further use
   const safeGoToCopy = utils.goTo;
   utils.goTo = safeGoToCopy.bind(utils, false);
@@ -106,7 +106,7 @@ function Atlant() {
   }
 
   // can be removed, just informational
-  baseStreams.onValue(atlantState.devStreams.renderEndStream, s.baconTryD(_ => console.log('render end:', _)));
+  baseStreams.onValue(atlantState.devStreams.renderEndStream, s.baconTryD(_ => server::console.log('render end:', _)));
 
   const TopState = new StateClass(); // State which up to when
 
@@ -178,7 +178,7 @@ function Atlant() {
           if (!('scrollRestoration' in history)) loader.style.visibility = null;
           utils.body.style.minHeight = null;
           // utils.unblockScroll();
-          console.error(e.message, e.stack);
+          error::console.error(e.message, e.stack);
         }
       }.bind(void 0, sink);
       window.addEventListener('popstate', routeChanged);
@@ -283,8 +283,8 @@ function Atlant() {
           return acc;
         }, { found: false, items: [] });
 
-      _whens.items.forEach(whenData => {
-        if (whenData.isMatch && types.Matching.once === whenData.matchingBehaviour && whenData.isDone) return;
+      const matched = _whens.items.map(whenData => {
+        if (whenData.isMatch && types.Matching.once === whenData.matchingBehaviour && whenData.isDone) return void 0;
 
         whenData.isDone = true;
 
@@ -309,17 +309,24 @@ function Atlant() {
 
         const stream = whenData.route.fn instanceof AtlantStreamConstructor ? whenData.route.fn : whenData.route.fn(); // @TODO should be a AtlantStreamConstructor.
 
-        if (stream instanceof AtlantStreamConstructor) { console.warn('Failed stream source:', whenData.route.fn); throw new Error('You should end the AtlantStreamConstructor. Try add more .end()\'s '); }
-        if (!stream || !(stream instanceof AtlantStream)) { console.warn('Failed stream source:', whenData.route.fn); throw new Error('Unknown return from AtlantStreamConstructor function, should be AtlantStream', whenData.route.fn); }
+        if (stream instanceof AtlantStreamConstructor) { error::console.warn('Failed stream source:', whenData.route.fn); throw new Error('You should end the AtlantStreamConstructor. Try add more .end()\'s '); }
+        if (!stream || !(stream instanceof AtlantStream)) { error::console.warn('Failed stream source:', whenData.route.fn); throw new Error('Unknown return from AtlantStreamConstructor function, should be AtlantStream', whenData.route.fn); }
 
-        if (whenData.when.type === types.WhenOrMatch.when) stream.then(_ => atlantState.devStreams.renderEndStream.push(_));
+        const { promise, resolve } = s.deferred();
+        stream.then(_ => (server::console.log('end stream for', whenData.mask), resolve(_)));
 
         if ('pushSync' in stream) {
           stream.pushSync(depData);
         } else {
           stream.push(depData);
         }
-      });
+
+        return promise;
+      }).filter(_ => _);
+
+      server::console.log('waiting for ', matched.length, 'end streams');
+      Promise.all(matched).then(_ => (server::console.log('finished all!'), _)).then(_ => atlantState.devStreams.renderEndStream.push(_));
+
 
       if (!_whens.items.length || !_whens.found) {  // Only matches or nothing at all
         atlantState.devStreams.otherwiseStream.push(upstream);
@@ -345,7 +352,7 @@ function Atlant() {
 
       if (!masks.length) throw new Error('At least one route mask should be specified.');
 
-      if ('function' !== typeof fn) { console.warn('Failed stream source:', fn); throw new Error('Make use "fn = _ => AtlantStream" as second parameter of atlant.when() for ' + masks); }
+      if ('function' !== typeof fn) { error::console.warn('Failed stream source:', fn); throw new Error('Make use "fn = _ => AtlantStream" as second parameter of atlant.when() for ' + masks); }
 
       TopState.state.lastMasks = masks;
 
@@ -437,15 +444,6 @@ function Atlant() {
     return this;
   };
 
-  let _onRenderEnd = function (callback) { // Use this to get early callback for server render
-    baseStreams.onValue(atlantState.devStreams.renderEndStream, s.baconTryD(callback));
-    return this;
-  };
-
-  let _onDestroy = function (callback) { // Use this to get early callback for server render
-    baseStreams.onValue(atlantState.devStreams.onDestroyStream, s.baconTryD(callback));
-    return this;
-  };
 
   let _use = function (render) {
     s.type(render, 'object');
@@ -481,8 +479,12 @@ function Atlant() {
     return this;
   };
 
-  let _verbose = function (on) {
-    console.verbose = on;
+  const _setConsoleProfile = function _setConsoleProfile(profile) {
+    error.active = profile.error;
+    server.active = profile.server;
+    render.active = profile.render;
+    action.active = profile.action;
+
     return this;
   };
 
@@ -561,8 +563,8 @@ function Atlant() {
         try {
           return updater(state, scope);
         } catch (e) {
-          console.warn('source', updater);
-          console.error('Warning: updater "' + updaterName + '" failed on store "' + storeName + '"', e);
+          error::console.warn('source', updater);
+          error::console.error('Warning: updater "' + updaterName + '" failed on store "' + storeName + '"', e);
           return state;
         }
       }.bind(void 0, scope, updater, storeName, updaterName));
@@ -601,7 +603,7 @@ function Atlant() {
   let _destroy = function () {
     Object.keys(atlantState.viewData).forEach(function (viewName) { // Destroying view scopes cache
       atlantState.viewData[viewName] = void 0;
-      console.log('clear view cache', viewName);
+      server::console.log('clear view cache', viewName);
     });
 
     prefs.render.destroy(); // Destroying view cache
@@ -687,7 +689,7 @@ function Atlant() {
   // wait or not for resources loading when going to next route when link tapped
   this.await = _await;
   // Display all internal messages.
-  this.verbose = _verbose;
+  this.setConsoleProfile = _setConsoleProfile;
   // This routes will be ignored by atlant even if they are declared by .when() or .match()
   this.skip = _skip;
   // Set view active by default (no need to mention in second parameter of .draw
@@ -701,7 +703,7 @@ function Atlant() {
   // the default value of to scroll or not to scroll to top on route change. Default is true.
   this.defaultScrollToTop = _defaultScrollToTop;
   // set default context. It could be either a "window" for browser either a { request, response } pair on server
-  this.setContext = context => atlantState.context = context;
+  this.setContext = context => do { atlantState.context = context; this; };
 
 
   // Commands!
@@ -739,11 +741,10 @@ function Atlant() {
 
 
   // Events!
+  // atlant.events.onDestory Called everytime when route/action is rendered.
+  // atlant.events.onDestroy Called when destroy initiated.
+  this.events = events::map(_ => _.bind(atlantState));
 
-  // Called everytime when route/action is rendered.
-  this.onRenderEnd = _onRenderEnd;
-  // Called when destroy initiated.
-  this.onDestroy = _onDestroy;
   // Called everytime when draw renders.
   // Accepts element. After publish and first render the contents will be attached to this element.
   this.attach = s.tryD(_attach);
@@ -795,19 +796,19 @@ function Atlant() {
   this.streams = {
     get: (name, fn) => {
       if ('string' !== typeof name) {
-        if (fn) console.warn('Failed stream source:', fn);
+        if (fn) error::console.warn('Failed stream source:', fn);
         throw new Error('Provide AtlantStream name.');
       }
 
       if (!name) {
-        if (fn) console.warn('Failed stream source:', fn);
+        if (fn) error::console.warn('Failed stream source:', fn);
         throw new Error('Atlant.js stream name is not provided!');
       }
 
       let stream = atlantState.streams[name];
 
       if (fn && stream && stream.isAttached()) {
-        console.warn('source:', fn);
+        error::console.warn('source:', fn);
         throw new Error('Several actions with 1 name is not supported. The ' + name + ' is not unique.');
       }
 

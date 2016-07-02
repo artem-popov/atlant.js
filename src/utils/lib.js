@@ -1,12 +1,9 @@
-'use strict';
-
-var container = Object.create(null);
-
-import console from './log';
+import { Console as console, error } from './log';
 import curry from 'lodash/curry';
 import cloneDeep from 'lodash/cloneDeep';
 
 const Bacon = require('baconjs');
+var container = Object.create(null);
 
 var s = (function () {
 
@@ -225,18 +222,6 @@ var s = (function () {
     return obj.split(char);
   });
 
-  this.log = function (what) {
-    console.log(what);
-    return what;
-  };
-
-  this.logIt = function (...args) {
-    return function (what) {
-      console.log.apply(console, args.concat(what));
-      return what;
-    };
-  };
-
   this.instanceOf = function (type, object) {
     return object instanceof type;
   };
@@ -296,7 +281,7 @@ var s = (function () {
 
     if (type !== typeof item && item) {
       var error = new Error('Type Error: ' + item + ' should be ' + type);
-      console.error(error.message, error.stack);
+      error::console.error(error.message, error.stack);
       throw error;
     }
   };
@@ -325,7 +310,7 @@ var s = (function () {
       try {
         return fn.apply(this, arguments);
       } catch (e) {
-        console.error(e.message, e.stack);
+        error::console.error(e.message, e.stack);
         if (errorCallback) return errorCallback(e);
       }
     };
