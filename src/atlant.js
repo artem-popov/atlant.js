@@ -5,7 +5,7 @@ import { AtlantStreamConstructor, AtlantStream } from './inc/stream';
 import baseStreams from "./inc/base-streams";
 import { uniqueId } from './utils/lib';
 import uniq from 'lodash/uniq';
-import { unsubscribeView } from 'views/views';
+import { unsubscribeView } from './views';
 
 
 
@@ -450,7 +450,12 @@ function Atlant(){
 
       const index = atlantState.callbacks.onUpdate[actionName].push(callback);
 
-      return () => splice(atlantState.callbacks.onUpdate[actionName], 1);
+      return () => atlantState.callbacks.onUpdate[actionName].splice(index, 1);
+    }
+
+    var _update = function(key, id){
+      if (key in atlantState.emitStreams) atlantState.emitStreams[key].push(id);
+      else console.log(`\nAtlant.js: Warning: event key ${key} is not defined`);
     }
 
     var _onRenderEnd = function(callback) { // Use this to get early callback for server render
@@ -736,7 +741,7 @@ function Atlant(){
     }
 
     this.views.break = function( viewName ){
-        unsubscribeView.bind(atlantState)(viewName).;
+        unsubscribeView.bind(atlantState)(viewName);
     }
 
     // Return view with viewName
@@ -758,6 +763,9 @@ function Atlant(){
     // Events!
     this.events = {}
     this.events.onUpdate = _onUpdate;
+
+    this.stores = {}
+    this.stores.update = _update;
 
     // Called everytime when route/action is rendered.
     this.onRenderEnd =  _onRenderEnd;

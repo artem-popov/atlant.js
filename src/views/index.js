@@ -1,7 +1,7 @@
 import curry from 'lodash/curry';
 var s = require('../utils/lib');
 
-var unsubscribeView = function(viewName){
+export function unsubscribeView(viewName){
     try{
         // turn off all subscriptions of selects for this view
         if( this.viewSubscriptionsUnsubscribe[viewName] ) {  // finish Bus if it exists;
@@ -11,6 +11,4 @@ var unsubscribeView = function(viewName){
         console.error('unsubscribe error', e.stack)
     }
 };
-
-export default unsubscribeView;
 

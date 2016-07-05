@@ -12,7 +12,7 @@ var baseStreams = require('./base-streams')
 var Bacon = require('baconjs');
 
 import isEqual from 'lodash/isEqual';
-import { unsubscribeView } from "../views/views";
+import { unsubscribeView } from "../views";
 import console from '../utils/log';
 import { uniqueId } from '../utils/lib';
 
