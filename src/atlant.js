@@ -2,7 +2,7 @@ import { Console as console, server, error, render, action } from './utils/log';
 import { AtlantStreamConstructor, AtlantStream } from './inc/stream';
 import baseStreams from './inc/base-streams';
 import { uniqueId } from './utils/lib';
-import views from './views/views';
+import { unsubscribeView } from './views';
 import uniq from 'lodash/uniq';
 import { getLocation, assign } from './utils/location';
 
@@ -79,9 +79,10 @@ function Atlant() {
     atlant: this,
     scrollState: utils.getScrollState(),
     context: typeof window !== 'undefined' ? window : {},
+    callbacks: {
+      onUpdate: {},
+    },
   };
-
-  const unsubscribeView = views(atlantState);
 
   // Patching goTo for further use
   const safeGoToCopy = utils.goTo;
@@ -721,7 +722,7 @@ function Atlant() {
   };
 
   this.views.break = function (viewName) {
-    unsubscribeView(viewName);
+    unsubscribeView.bind(atlantState)(viewName);
   };
 
   // Return view with viewName
@@ -738,7 +739,6 @@ function Atlant() {
 
   // Contains available renders
   this.renders = { react: reactRender, simple: simpleRender };
-
 
   // Events!
   // atlant.events.onDestory Called everytime when route/action is rendered.

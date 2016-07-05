@@ -1,16 +1,15 @@
-import React from 'react';
 import { Console as console, server, error, action, render, client } from '../utils/log';
 import baseStreams from './base-streams';
 import Bacon from 'baconjs';
 import s from '../utils/lib';
-import StateClass from './state';
 import types from './types';
+import StateClass from './state';
 import interfaces from './interfaces';
 import clientFuncs from './clientFuncs';
 import utils from '../utils/utils';
 import { getPathname, assign } from '../utils/location';
 import isEqual from 'lodash/isEqual';
-import views from '../views/views';
+import { unsubscribeView } from '../views';
 import { uniqueId } from '../utils/lib';
 
 export function AtlantStream(name, atlantState, from = 'fromUser') {
@@ -107,8 +106,6 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
   var id = uniqueId();
 
   let atlantStream = new AtlantStream(name, false, atlantState, 'fromConstructor');
-
-  let unsubscribeView = views(atlantState);
 
   const streamState = {
     name,
@@ -242,7 +239,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
 
           atlantState.viewData[viewName] = scope;
 
-          unsubscribeView(viewName);
+          unsubscribeView.bind(atlantState)(viewName);
 
           var renderResult = doRenderIntoView(scope).then(() => {
             if (upstream.render.subscribe && types.RenderOperation.clear !== upstream.render.renderOperation)  // Subscriber only after real render - Bacon evaluates subscriber immediately
@@ -253,7 +250,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
             upstream.render.component = renderResult;
             return upstream;
           })
-            .catch((e) => { error::console.error(e.message, e.stack); atlantState.devStreams.errorStream.push(); return Bacon.End(); });
+          .catch((e) => { error::console.error(e.message, e.stack); atlantState.devStreams.errorStream.push(); return Bacon.End(); });
 
 
           return renderResult;

@@ -14,3 +14,12 @@ export function onDestroy(callback : Function): Function { // Use this to get ea
   return baseStreams.onValue(this.devStreams.onDestroyStream, s.baconTryD(callback));
 }
 
+
+export function onUpdate(actionName, callback) {
+  if (!(actionName in this.callbacks.onUpdate)) this.callbacks.onUpdate[actionName] = [];
+
+  const index = this.callbacks.onUpdate[actionName].push(callback);
+
+  return () => splice(this.callbacks.onUpdate[actionName], 1);
+}
+
