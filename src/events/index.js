@@ -20,6 +20,6 @@ export function onUpdate(actionName, callback) {
 
   const index = this.callbacks.onUpdate[actionName].push(callback);
 
-  return () => splice(this.callbacks.onUpdate[actionName], 1);
+  return () => this.callbacks.onUpdate[actionName].splice(index, 1);
 }
 

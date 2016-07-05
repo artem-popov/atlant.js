@@ -616,6 +616,11 @@ function Atlant() {
     atlantState.devStreams.onDestroyStream.push();
   };
 
+  var _update = function(key, id){
+    if (key in atlantState.emitStreams) atlantState.emitStreams[key].push(id);
+    else console.log(`\nAtlant.js: Warning: event key ${key} is not defined`);
+  }
+
   // Atlant API
 
   // Creates route stream by route expression
@@ -722,7 +727,7 @@ function Atlant() {
   };
 
   this.views.break = function (viewName) {
-    unsubscribeView.bind(atlantState)(viewName);
+    atlantState::unsubscribeView(viewName);
   };
 
   // Return view with viewName
@@ -744,6 +749,11 @@ function Atlant() {
   // atlant.events.onDestory Called everytime when route/action is rendered.
   // atlant.events.onDestroy Called when destroy initiated.
   this.events = events::map(_ => _.bind(atlantState));
+
+  // Stores!
+  this.stores = {}
+  this.stores.update = _update;
+
 
   // Called everytime when draw renders.
   // Accepts element. After publish and first render the contents will be attached to this element.
