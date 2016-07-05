@@ -12,7 +12,7 @@ var baseStreams = require('./base-streams')
 var Bacon = require('baconjs');
 
 import isEqual from 'lodash/isEqual';
-import views from "../views/views";
+import { unsubscribeView } from "../views/views";
 import console from '../utils/log';
 import { uniqueId } from '../utils/lib';
 
@@ -110,8 +110,6 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
     var id = uniqueId();
 
     let atlantStream = new AtlantStream(name, false, atlantState, 'fromConstructor');
-
-    let unsubscribeView = views(atlantState);
 
     let streamState = {
         name: name,
@@ -243,7 +241,7 @@ export function AtlantStreamConstructor (name, atlantState, prefs){
 
                             atlantState.viewData[viewName] = scope;
 
-                            unsubscribeView(viewName);
+                            unsubscribeView.bind(atlantState)(viewName);
 
                             var renderResult = doRenderIntoView(scope).then( () => {
                                 if (upstream.render.subscribe && types.RenderOperation.clear !== upstream.render.renderOperation )  // Subscriber only after real render - Bacon evaluates subscriber immediately

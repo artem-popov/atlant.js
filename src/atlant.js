@@ -4,8 +4,11 @@ import console from './utils/log';
 import { AtlantStreamConstructor, AtlantStream } from './inc/stream';
 import baseStreams from "./inc/base-streams";
 import { uniqueId } from './utils/lib';
-import views from "./views/views";
 import uniq from 'lodash/uniq';
+import { unsubscribeView } from 'views/views';
+
+
+
 
 let build = require('./atlant-build');
 let version = require('./atlant-version');
@@ -73,9 +76,10 @@ function Atlant(){
         ,interceptors: []
         ,atlant: this
         ,scrollState: utils.getScrollState()
+        ,callbacks: {
+          onUpdate: {}
+        }
     }
-
-    let unsubscribeView = views(atlantState);
 
     console.level = '';
 
@@ -441,6 +445,14 @@ function Atlant(){
         return this;
     }
 
+    var _onUpdate = function(actionName, callback){
+      if(!(actionName in atlantState.callbacks.onUpdate)) atlantState.callbacks.onUpdate[actionName] = [];
+
+      const index = atlantState.callbacks.onUpdate[actionName].push(callback);
+
+      return () => splice(atlantState.callbacks.onUpdate[actionName], 1);
+    }
+
     var _onRenderEnd = function(callback) { // Use this to get early callback for server render
         baseStreams.onValue(atlantState.devStreams.renderEndStream, s.baconTryD(callback));
         return this;
@@ -724,7 +736,7 @@ function Atlant(){
     }
 
     this.views.break = function( viewName ){
-        unsubscribeView(viewName);
+        unsubscribeView.bind(atlantState)(viewName).;
     }
 
     // Return view with viewName
@@ -744,6 +756,8 @@ function Atlant(){
 
 
     // Events!
+    this.events = {}
+    this.events.onUpdate = _onUpdate;
 
     // Called everytime when route/action is rendered.
     this.onRenderEnd =  _onRenderEnd;
