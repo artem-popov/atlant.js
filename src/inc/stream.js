@@ -149,8 +149,6 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
       atlantState.viewSubscriptions[viewName] = Bacon
                 .mergeAll(keys.map(store => atlantState.stores[store].bus));
 
-            // if (upstream.render.subscribe) streamState.subscribersCount++;
-
       atlantState.viewSubscriptionsUnsubscribe[viewName] = atlantState.viewSubscriptions[viewName].onValue(function (upstream, viewName, scope, doRenderIntoView, value) {
         value = Object.keys(upstream.chains)
                     .map(_ => upstream.chains[_])
@@ -573,7 +571,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
      * @returns {*}
      */
 
-  var _render = (function () {
+  const _render = (function () {
 
     return function (renderProvider, viewName, once, renderOperation) {
             // /check
@@ -588,23 +586,20 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
       if (!viewName) throw new Error('Default render name is not provided. Use set( {view: \'viewId\' }) to go through. ');
 
       const closeThisBlock = closeBlock.bind(this, renderOperation);
+      // ------end of check/
 
-            // ------end of check/
-
-      let subscribe = 'once' !== once ? true : false;
-      var renderId = uniqueId();
+      const subscribe = once !== 'once';
+      const renderId = uniqueId();
 
 
-      var renderStream = State.state.lastOp.flatMap(function (upstream) {
+      const renderStream = State.state.lastOp.flatMap(upstream => {
         if (!upstream.isAction && upstream.id !== atlantState.activeStreamId.value) return Bacon.never(); // Obsolete streams invoked on previous route.
 
-        upstream.render = { id: renderId, renderProvider: renderProvider, viewName: viewName, renderOperation: renderOperation, type: renderOperation, subscribe: subscribe, parent: State.state.lastOpId };
+        upstream.render = { id: renderId, renderProvider, viewName, renderOperation, type: renderOperation, subscribe, parent: State.state.lastOpId };
 
         return Bacon.fromPromise(renderView(upstream));
       });
 
-
-      render::console.log('register:', viewName);
       if (renderOperation === types.RenderOperation.draw) {
         State.state.lastOp = renderStream;
         State.state.lastOpId = renderId;
@@ -779,30 +774,28 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
   this.reject = _reject.bind(this);
 
     /* Renders the view. first - render provider, second - view name. Draws immediatelly */
-  this.draw = function (renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'always', types.RenderOperation.draw);};
+  this.draw = function draw(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'always', types.RenderOperation.draw);};
 
     /* Do not subscribe selects on view */
-  this.drawOnce = function (renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'once', types.RenderOperation.draw);};
+  this.drawOnce = function drawOnce(renderProvider, viewName) {return _render.bind(this)(renderProvider, viewName, 'once', types.RenderOperation.draw);};
 
     /* clears default or provided viewName */
-  this.clear = function (viewName) {return _render.bind(this)(function () {}, viewName, 'once', types.RenderOperation.clear);};
+  this.clear = function clear(viewName) {return _render.bind(this)(() => void 0, viewName, 'once', types.RenderOperation.clear);};
 
     // Soft atlant-inside redirect.
-  this.redirect = function (redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.redirect);};
+  this.redirect = function redirect(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.redirect);};
     // Soft atlant-inside refresh.
-  this.refresh = function (redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.refresh);};
+  this.refresh = function refresh(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.refresh);};
     //  Fake redirect. Atlant will just change URL but routes will not be restarted. Referrer stays the same.
-  this.replace = function (replaceProvider) {return _render.bind(this)(replaceProvider, void 0, 'once', types.RenderOperation.replace);};
+  this.replace = function replace(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, 'once', types.RenderOperation.replace);};
     // Same as replace, but store the replaced url in html5 location history. Referrer also changed.
-  this.change = function (replaceProvider) {return _render.bind(this)(replaceProvider, void 0, 'once', types.RenderOperation.change);};
+  this.change = function change(replaceProvider) {return _render.bind(this)(replaceProvider, void 0, 'once', types.RenderOperation.change);};
     // Force redirect event to current route
     // this.force = _.force;
     // Redirects using location.assign - the page *WILL* be reloaded instead of soft atlant-inside redirect.
-  this.move = function (redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.move);};
+  this.move = function move(redirectProvider) {return _render.bind(this)(redirectProvider, void 0, 'once', types.RenderOperation.move);};
 
     // This 2 methods actually not exists in stream. They can be called if streams is already declared, but then trryed to continue to configure
   this.onValue = () => error::console.error('You have lost at least 1 .end() in stream declaration:', fn);
-
 }
-
 
