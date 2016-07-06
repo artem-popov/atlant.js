@@ -105,7 +105,7 @@ function Atlant() {
   }
 
   // can be removed, just informational
-  baseStreams.onValue(atlantState.devStreams.renderEndStream, s.baconTryD(_ => server::console.log('render end:', _)));
+  baseStreams.onValue(atlantState.devStreams.renderEndStream, s.baconTryD(_ => server::console.log('render end:')));
 
   const TopState = new StateClass(); // State which up to when
 

@@ -664,9 +664,10 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
     }.bind(void 0, args), types.Depends.continue);
   };
 
-  var _push = function (isSync, stream) {
-    return _depends.bind(this)(function (scope) {
+  const _push = function _push(isSync, stream) {
+    return _depends.bind(this)(scope => {
       stream = atlantState.atlant.streams.get(stream);
+      stream.then(_ => streamState.resolveBus.push(_));
       if (isSync) stream.pushSync(scope); else stream.push(scope);
       return void 0;
     }, false, types.Depends.continue);
