@@ -1,4 +1,5 @@
-0.4.84 fix FromUser case resolution
+0.4.86 fix passing resolve up in stream
+0.4.84-0.4.85 fix FromUser case resolution
 0.4.80 action fixes, interceptor fixes: now stream can be resolved
 0.4.79 remove appearance of Object.assign
 0.4.78 fix mistype
