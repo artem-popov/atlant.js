@@ -11,7 +11,6 @@ import * as history from './utils/history';
 import * as events from './events';
 
 import { map, convertGetters } from './utils/iterables';
-import { inspect } from 'util';
 
 const build = require('./atlant-build');
 const version = require('./atlant-version');
@@ -20,7 +19,6 @@ const utils = require('./utils/utils');
 const simpleRender = require('./renders/simple');
 const reactRender = require('./renders/react');
 const Bacon = require('baconjs');
-const interfaces = require('./inc/interfaces');
 const StateClass = require('./inc/state');
 const Storage = require('./inc/storage');
 const types = require('./inc/types');
@@ -286,7 +284,6 @@ function Atlant() {
 
       const matched = _whens.items.map(whenData => {
         if (whenData.isMatch && types.Matching.once === whenData.matchingBehaviour && whenData.isDone) return void 0;
-
         whenData.isDone = true;
 
         // Storing here the data for actions.
@@ -819,7 +816,7 @@ function Atlant() {
 
       if (fn && stream && stream.isAttached()) {
         error::console.warn('source:', fn);
-        throw new Error('Several actions with 1 name is not supported. The ' + name + ' is not unique.');
+        throw new Error(`Several actions with 1 name is not supported. The ${name} is not unique.`);
       }
 
       if (!stream) {

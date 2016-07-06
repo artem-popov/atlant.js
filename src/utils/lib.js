@@ -368,10 +368,12 @@ var s = (function () {
     return { promise, resolve, reject };
   };
 
-  this.onNextEventLoop = (f) => {
-    let { promise, resolve, reject } = this.deferred();
-    setTimeout(() => { let value = f();
-      return value.then(resolve).catch(reject); }, 0);
+  this.onNextEventLoop = f => {
+    const { promise, resolve, reject } = this.deferred();
+    setTimeout(() => {
+      const value = f();
+      return value.then(resolve).catch(reject);
+    }, 0);
     return promise;
   };
 

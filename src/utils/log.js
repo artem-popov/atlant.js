@@ -82,3 +82,8 @@ export const client = new class client extends Console {
   active = true
 };
 
+export const deprecated = new class deprecated extends Console {
+  atlantPrefix = `${atlantPrefixDefault} [client] :`
+  active = true
+};
+

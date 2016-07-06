@@ -21,14 +21,15 @@ export function AtlantStream(name, atlantState, from = 'fromUser') {
     * subscriptions
   */
   const subscribers = []; // fn's which subscribed to stream.
-  const unsubscribe = (index) => delete subscribers[index];
+  const unsubscribe = index => subscribers.splice(index, 1);
   this.then = fn => { // Register subscribers
     const index = subscribers.push(fn);
     return unsubscribe.bind(this, index);
   };
-  resolveBus.onValue(scope => {
+  const emitSubscribers = scope => {
     subscribers.forEach(_ => _(scope));
-  });
+  };
+  resolveBus.onValue(emitSubscribers);
 
   /* workers */
   let waiters = []; // here pushes which come before stream has fn attached.
@@ -48,6 +49,7 @@ export function AtlantStream(name, atlantState, from = 'fromUser') {
     if (!userStream || !(userStream instanceof AtlantStream)) { error::console.warn('Failed stream source:', fn); throw new Error('Constructor function should return AtlantStream.'); }
 
     userStream.then(resolve);
+    userStream.then(emitSubscribers); // This stream are resolved. Making subscribers happy.
 
     action::console.log('action', name, depValue);
     userStream.push(depValue); // AtlantStream
@@ -57,12 +59,12 @@ export function AtlantStream(name, atlantState, from = 'fromUser') {
 
   this.isAttached = () => !!fn;
 
-  let push = (isSync, args) => {  // If it is constructor stream, then it postpones pushes till fn generator will be attached.
-    let { promise, resolve, reject } = s.deferred();
+  const push = (isSync, args) => {  // If it is constructor stream, then it postpones pushes till fn generator will be attached.
+    const { promise, resolve, reject } = s.deferred();
 
-    let workerSync = () => worker(args).then(resolve).catch(reject);
-    let workerAsync = () => s.onNextEventLoop(() => worker(args)).then(resolve).catch(reject);
-    let pusher = isSync ? workerSync : workerAsync;
+    const workerSync = () => worker(args).then(resolve).catch(reject);
+    const workerAsync = () => s.onNextEventLoop(() => worker(args)).then(resolve).catch(reject);
+    const pusher = isSync ? workerSync : workerAsync;
 
     if (!this.isAttached()) { action::console.log('action:', name, 'is not ready!'); waiters.push(pusher); }
     else { pusher(); }
@@ -72,13 +74,13 @@ export function AtlantStream(name, atlantState, from = 'fromUser') {
 
   const pushBus = (isSync, args) => {
     const syncCall = () => bus.push(args);
-    const asyncCall = () => setTimeout(() => bus.push(args)); // We don'y neet to return a promise here
+    const asyncCall = () => setTimeout(() => bus.push(args)); // We don't need to return a promise here, because resolveStatus controlling resolving state in FromConstructor Stream
     const pusher = isSync ? syncCall : asyncCall;
     return pusher();
   };
 
   this.attach = _ => {
-    if (!this.isAttached() && _ && typeof _ === 'function') {
+    if (!this.isAttached() && typeof _ === 'function') {
       fn = _;
       waiters.forEach(_ => _());
       waiters = [];
@@ -105,7 +107,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
   var withGrabber = new interfaces.withGrabber();
   var id = uniqueId();
 
-  let atlantStream = new AtlantStream(name, false, atlantState, 'fromConstructor');
+  let atlantStream = new AtlantStream(name, atlantState, 'fromConstructor');
 
   const streamState = {
     name,
@@ -172,8 +174,8 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
 
     };
 
-    return function (upstream) {
-      if (void 0 === upstream || atlantState.activeStreamId.value !== upstream.id) return false;
+    return upstream => {
+      if (void 0 === upstream || atlantState.activeStreamId.value !== upstream.id) return Promise.reject();
 
       try {
         var viewName = s.dot('.render.viewName', upstream);
