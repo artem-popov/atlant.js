@@ -17,6 +17,7 @@ const version = require('./atlant-version');
 const s = require('./utils/lib');
 const utils = require('./utils/utils');
 const reactRender = require('./renders/react');
+const simpleRender = require('./renders/simple');
 const Bacon = require('baconjs');
 const StateClass = require('./inc/state');
 const Storage = require('./inc/storage');
