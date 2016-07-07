@@ -1,57 +1,73 @@
 import { Console as console, render, error } from '../utils/log';
 
-var State = function (React) {
-  var wrappers = {}
-        , views = {}
-        , thises = {}
-        , instances = {};
+const State = function State(React) {
+  let wrappers = {};
+  let views = {};
+  let thises = {};
+  let instances = {};
 
-  this.getOrCreate = function (name) {
-    if (!wrappers[name]) {
+  this.getOrCreate = function(name) {
+    if ( !wrappers[name] ) {
       wrappers[name] = React.createClass({
-        render: function () { // name in this function is passed by value
+        displayName: name + '.AtlantWrap',
+
+        render: function render() {
+          // name in this function is passed by value
           thises[name] = this;
           if (!views[name]) views[name] = React.createElement('div');
 
-          if (Array.isArray(views[name]))
-            return views[name][0]({ ...this.props, ...views[name][1] });
-          else
-                            return views[name];
-        },
-      });}
-    if (!instances[name]) {
-      instances[name] = React.createFactory(wrappers[name])();
+          if (Array.isArray(views[name])) { //came from .draw
+            let el;
+            const view = views[name][0];
+            const props = views[name][1];
+            if(typeof(view) == 'function'){  // .draw(props=><Component {...props}/>, 'myView')
+              if(!view.type){
+                el = view(props) || React.createElement('noscript');
+              } else { // react component, .draw(Component, 'myView')
+                el = React.createElement(view, props);
+              }
+            } else {
+              el = view;
+            }
+            return React.cloneElement(el, this.props);
+          }else {
+            return views[name];
+          }
+        }
+      })}
+    if ( !instances[name] ) {
+      instances[name] = React.createElement(wrappers[name]);
     }
-  };
+  }
 
-  this.getState = function (name) {
+  this.getState = function(name) {
     return wrappers[name];
-  };
+  }
 
-  this.getInstance = function (name) {
+  this.getInstance = function(name) {
     return instances[name];
-  };
+  }
 
-  this.getThis = function (name) {
+  this.getThis = function(name) {
     return thises[name];
-  };
+  }
 
-  this.set = function (name, view) {
+  this.set = function(name, view){
     views[name] = view;
     return void 0;
-  };
+  }
 
-  this.list = function () {
-    if (! views) return [];
+  this.list = function(){
+    if (! views ) return [];
     return Object.keys(views);
-  };
+  }
 
-  this.destroy = function () {
+  this.destroy = function(){
     wrappers = {};
     views = {};
     thises = {};
     instances = {};
-  };
+  }
 
   return this;
 };

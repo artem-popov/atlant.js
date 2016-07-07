@@ -107,7 +107,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
   var withGrabber = new interfaces.withGrabber();
   var id = uniqueId();
 
-  let atlantStream = new AtlantStream(name, atlantState, 'fromConstructor');
+  const atlantStream = new AtlantStream(name, atlantState, 'fromConstructor');
 
   const streamState = {
     name,

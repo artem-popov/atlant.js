@@ -16,7 +16,6 @@ const build = require('./atlant-build');
 const version = require('./atlant-version');
 const s = require('./utils/lib');
 const utils = require('./utils/utils');
-const simpleRender = require('./renders/simple');
 const reactRender = require('./renders/react');
 const Bacon = require('baconjs');
 const StateClass = require('./inc/state');
@@ -637,7 +636,6 @@ function Atlant() {
 
   // Match declare a route which will be ignored by .otherwise()
   this.matchOnce = function (masks, fn) { return _when.bind(this)(masks, fn, types.Matching.once, types.WhenOrMatch.match); };
-
 
   // declare branch that will work if no routes declared by .when() are matched. Routes declared by .match() will be ignored even if they matched.
   this.otherwise = function (fn) { atlant.streams.get.call(this, 'otherwise', fn, true); return this; };

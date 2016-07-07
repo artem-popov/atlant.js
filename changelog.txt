@@ -1,5 +1,8 @@
 0.4.86 fix passing resolve up in stream
 0.4.84-0.4.85 fix FromUser case resolution
+0.4.83 add atlant.stores.update('ACTION', value);
+0.4.82 fix subscriptions
+0.4.81 React 0.13!
 0.4.80 action fixes, interceptor fixes: now stream can be resolved
 0.4.79 remove appearance of Object.assign
 0.4.78 fix mistype
