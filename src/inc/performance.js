@@ -1,13 +1,12 @@
-"use strict";
+/**
+ * Small polyfill for 'performance'.
+ */
 
-var performance =
-  window.performance ||
-  window.msPerformance ||
-  window.webkitPerformance;
+let performance = typeof window !== 'undefined' && (window.performance || window.msPerformance || window.webkitPerformance);
 
 if (!performance || !performance.now) {
   performance = Date;
 }
 
 
-module.exports = performance;
+export default performance;
