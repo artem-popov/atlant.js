@@ -80,6 +80,7 @@ function Atlant() {
     callbacks: {
       onUpdate: {},
     },
+    register: false, // are tricky promises registered
   };
 
   // Patching goTo for further use
@@ -323,7 +324,7 @@ function Atlant() {
       }).filter(_ => _);
 
       server::console.log('waiting for ', matched.length, 'end streams');
-      Promise.all(matched).then(_ => (server::console.log('finished all!'), _)).then(_ => atlantState.devStreams.renderEndStream.push(_));
+      Promise.all(matched).then(_ => atlantState.devStreams.renderEndStream.push(_));
 
 
       if (!_whens.items.length || !_whens.found) {  // Only matches or nothing at all
@@ -618,6 +619,19 @@ function Atlant() {
     else console.log(`\nAtlant.js: Warning: event key ${key} is not defined`);
   }
 
+  const _register = promises => {
+    if (!atlantState.register) {
+      Promise.all(promises)
+        .then(_ => (server::console.log('Tricky promises resolved.'), _))
+        .then(_ => atlantState.devStreams.renderEndStream.push({ trickyData: _ }));
+    } else {
+      error::console.error('Tricky promises already registered!');
+    }
+
+    atlantState.register = true;
+    return this;
+  };
+
   // Atlant API
 
   // Creates route stream by route expression
@@ -668,6 +682,8 @@ function Atlant() {
 
     return this;
   };
+
+  this.register = _register;
 
   // Stores!
   // Store registration
@@ -736,6 +752,7 @@ function Atlant() {
     return prefs.render.list();
   };
 
+
   // Plugins!
 
   // Contains available renders
@@ -781,6 +798,8 @@ function Atlant() {
   this.utils.location = location::map(_ => _.bind(atlantState.context))::convertGetters();
 
   this.state = {};
+
+
 
   this.data = {
     get routes() { return uniq(atlantState.routes); },    // @TODO better not to double it for info :)

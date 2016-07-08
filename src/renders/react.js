@@ -20,7 +20,7 @@ const State = function State(React) {
             let el;
             const view = views[name][0];
             const props = views[name][1];
-            if(typeof(view) == 'function'){  // .draw(props=><Component {...props}/>, 'myView')
+            if(typeof(view) === 'function'){  // .draw(props=><Component {...props}/>, 'myView')
               if(!view.type){
                 el = view(props) || React.createElement('noscript');
               } else { // react component, .draw(Component, 'myView')

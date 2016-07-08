@@ -116,12 +116,15 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
     canBeIntercepted: true,
     resolveWhen: () => true,
     resolved: false,
+    trikyRoute: false,
   };
 
   const resolveStatus = (scope) => {
     if (!streamState.resolved && streamState.resolveWhen && streamState.resolveWhen(scope)) {
       streamState.resolved = true;
-      streamState.resolveBus.push(scope);
+      const passScope = streamState.trickyRoute ? { tricky: true } : scope;
+      streamState.trickyRoute = false;
+      streamState.resolveBus.push(passScope);
     }
   };
 
@@ -690,7 +693,6 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
     return this;
   };
 
-
     // Create scope for prefixed method (currently .select(), .update(), .depends())
   var _with = function (scopeProvider) {
     var scopeProvider = (typeof(scopeProvider) === 'undefined') ? _ => ({}) : scopeProvider;
@@ -714,6 +716,11 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
 
   var _resolveWhen = function (truthfulFn) {
     streamState.resolveWhen = truthfulFn;
+    return this;
+  };
+
+  var _trickyRoute = function () {
+    streamState.trickyRoute = true;
     return this;
   };
 
@@ -765,6 +772,7 @@ export function AtlantStreamConstructor(name, atlantState, prefs) {
   this.unless = _if.bind(this, s.negate);
   this.end = _end;
   this.resolveWhen = _resolveWhen;
+  this.trickyRoute = _trickyRoute;
     /**
      * Renders declaratins
      */
